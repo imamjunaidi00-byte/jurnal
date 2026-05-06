@@ -187,6 +187,21 @@ pm2 startup | tail -1 | bash 2>/dev/null || true
 print_ok "Aplikasi berjalan dengan PM2"
 
 # ============================================================
+# STEP BONUS: Restore database dari backup (opsional)
+# ============================================================
+echo ""
+read -p "  Apakah kamu punya file backup database untuk di-restore? (y/n): " HAS_BACKUP
+
+if [[ "$HAS_BACKUP" == "y" || "$HAS_BACKUP" == "Y" ]]; then
+  echo ""
+  print_info "Letakkan file backup (.tar.gz) di folder: ${BACKUP_DIR}"
+  print_info "Atau jalankan dari laptop: bash backup_local.sh"
+  echo ""
+  print_info "Untuk restore manual, jalankan:"
+  echo "    bash ${APP_DIR}/db.sh  → pilih menu [4] Restore"
+fi
+
+# ============================================================
 # SELESAI
 # ============================================================
 echo ""
