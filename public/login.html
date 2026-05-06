@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Guru - E-Journal SMK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .bg-pattern {
+            background-color: #1e40af;
+            background-image: radial-gradient(circle at 20% 50%, rgba(99,102,241,0.3) 0%, transparent 50%),
+                              radial-gradient(circle at 80% 20%, rgba(139,92,246,0.3) 0%, transparent 50%),
+                              radial-gradient(circle at 60% 80%, rgba(59,130,246,0.2) 0%, transparent 50%);
+        }
+        .card-shadow { box-shadow: 0 25px 60px -10px rgba(0,0,0,0.3); }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+        .fade-up { animation: fadeUp 0.5s ease-out; }
+    </style>
+</head>
+<body class="bg-pattern min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md fade-up">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+                <i class="fas fa-graduation-cap text-4xl text-blue-600"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white">E-Journal SMK</h1>
+            <p class="text-blue-200 mt-1">Sistem Jurnal Digital Guru</p>
+        </div>
+
+        <!-- Card -->
+        <div class="bg-white rounded-3xl p-8 card-shadow">
+            <!-- Tab: Login / Register -->
+            <div id="form-login">
+                <h2 class="text-2xl font-bold text-gray-900 mb-1">Selamat Datang</h2>
+                <p class="text-gray-500 text-sm mb-6">Masuk ke akun guru Anda</p>
+
+                <div id="login-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center gap-2">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="login-error-msg"></span>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Username</label>
+                        <div class="relative">
+                            <i class="fas fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="login-username" placeholder="Masukkan username"
+                                class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition-all"
+                                onkeydown="if(event.key==='Enter') doLogin()">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="password" id="login-password" placeholder="Masukkan password"
+                                class="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm transition-all"
+                                onkeydown="if(event.key==='Enter') doLogin()">
+                            <button type="button" onclick="togglePwd('login-password', this)" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="doLogin()" id="btn-login"
+                        class="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold text-sm transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
+                        <i class="fas fa-sign-in-alt"></i> Masuk
+                    </button>
+                </div>
+
+                <div id="show-register-link" class="mt-6 text-center">
+                    <p class="text-sm text-gray-500">Belum punya akun?
+                        <button onclick="showRegister()" class="text-blue-600 font-semibold hover:text-blue-700">Daftar di sini</button>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Form Register -->
+            <div id="form-register" class="hidden">
+                <div class="flex items-center gap-3 mb-6">
+                    <button onclick="showLogin()" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors">
+                        <i class="fas fa-arrow-left text-sm"></i>
+                    </button>
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Buat Akun</h2>
+                        <p class="text-gray-500 text-sm">Daftar sebagai guru</p>
+                    </div>
+                </div>
+
+                <div id="register-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center gap-2">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="register-error-msg"></span>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nama Lengkap</label>
+                        <div class="relative">
+                            <i class="fas fa-id-card absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="reg-nama" placeholder="Nama lengkap guru"
+                                class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Username</label>
+                        <div class="relative">
+                            <i class="fas fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="reg-username" placeholder="Buat username"
+                                class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+                        <div class="relative">
+                            <i class="fas fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="password" id="reg-password" placeholder="Min. 6 karakter"
+                                class="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                            <button type="button" onclick="togglePwd('reg-password', this)" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="doRegister()" id="btn-register"
+                        class="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold text-sm transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
+                        <i class="fas fa-user-plus"></i> Daftar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <p class="text-center text-blue-200 text-xs mt-6">
+            <i class="fas fa-shield-alt mr-1"></i> Akses khusus guru terdaftar
+        </p>
+    </div>
+
+    <script>
+        // Cek jika sudah login, langsung redirect
+        const token = localStorage.getItem('guru_token');
+        if (token) {
+            fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+                .then(r => r.json())
+                .then(d => { if (d.success) window.location.href = '/app'; })
+                .catch(() => {});
+        }
+
+        // Cek apakah sudah ada akun — jika belum, sembunyikan link register
+        fetch('/api/auth/check-setup')
+            .then(r => r.json())
+            .then(d => {
+                if (!d.hasAccount) {
+                    // Belum ada akun, langsung tampilkan form register
+                    showRegister();
+                    document.getElementById('show-register-link').classList.add('hidden');
+                }
+            });
+
+        function showRegister() {
+            document.getElementById('form-login').classList.add('hidden');
+            document.getElementById('form-register').classList.remove('hidden');
+        }
+
+        function showLogin() {
+            document.getElementById('form-register').classList.add('hidden');
+            document.getElementById('form-login').classList.remove('hidden');
+        }
+
+        function togglePwd(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            btn.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        }
+
+        function setLoading(btnId, loading) {
+            const btn = document.getElementById(btnId);
+            btn.disabled = loading;
+            btn.innerHTML = loading
+                ? '<i class="fas fa-spinner fa-spin"></i> Memproses...'
+                : (btnId === 'btn-login'
+                    ? '<i class="fas fa-sign-in-alt"></i> Masuk'
+                    : '<i class="fas fa-user-plus"></i> Daftar');
+        }
+
+        function showError(formType, msg) {
+            const el = document.getElementById(`${formType}-error`);
+            document.getElementById(`${formType}-error-msg`).textContent = msg;
+            el.classList.remove('hidden');
+        }
+
+        function hideError(formType) {
+            document.getElementById(`${formType}-error`).classList.add('hidden');
+        }
+
+        async function doLogin() {
+            hideError('login');
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            if (!username || !password) return showError('login', 'Username dan password wajib diisi.');
+
+            setLoading('btn-login', true);
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('guru_token', data.token);
+                    localStorage.setItem('guru_info', JSON.stringify(data.data));
+                    window.location.href = '/app';
+                } else {
+                    showError('login', data.message || 'Login gagal.');
+                }
+            } catch (e) {
+                showError('login', 'Tidak dapat terhubung ke server.');
+            } finally {
+                setLoading('btn-login', false);
+            }
+        }
+
+        async function doRegister() {
+            hideError('register');
+            const nama = document.getElementById('reg-nama').value.trim();
+            const username = document.getElementById('reg-username').value.trim();
+            const password = document.getElementById('reg-password').value;
+            if (!nama || !username || !password) return showError('register', 'Semua field wajib diisi.');
+            if (password.length < 6) return showError('register', 'Password minimal 6 karakter.');
+
+            setLoading('btn-register', true);
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nama, username, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('guru_token', data.token);
+                    localStorage.setItem('guru_info', JSON.stringify(data.data));
+                    window.location.href = '/app';
+                } else {
+                    showError('register', data.message || 'Pendaftaran gagal.');
+                }
+            } catch (e) {
+                showError('register', 'Tidak dapat terhubung ke server.');
+            } finally {
+                setLoading('btn-register', false);
+            }
+        }
+    </script>
+</body>
+</html>

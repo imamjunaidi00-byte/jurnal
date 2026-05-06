@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Materi - Portal Siswa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 min-h-screen">
+    
+    <!-- Header -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center gap-4">
+                <button onclick="window.close()" class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div>
+                    <h1 id="materi-title" class="text-xl font-bold text-gray-900">Materi Pembelajaran</h1>
+                    <p id="materi-subtitle" class="text-xs text-gray-500">-</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white rounded-2xl shadow-lg p-8">
+            <div id="materi-tree" class="space-y-3">
+                <p class="text-center text-gray-400 py-8">Memuat materi...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const api = {
+            get: async (url) => {
+                const res = await fetch(url);
+                return await res.json();
+            }
+        };
+
+        async function loadMateri() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+            
+            if (!id) {
+                alert('ID materi tidak valid');
+                return;
+            }
+
+            try {
+                const res = await api.get(`/api/mindmap/${id}`);
+                if (!res.success) {
+                    alert('Materi tidak ditemukan');
+                    return;
+                }
+
+                const data = res.data;
+                document.getElementById('materi-title').textContent = data.judul;
+                document.getElementById('materi-subtitle').textContent = `${data.mataPelajaran || ''} ${data.kelas ? '· ' + data.kelas : ''}`;
+                
+                renderTree(data.nodes);
+            } catch(e) {
+                alert('Gagal memuat materi: ' + e.message);
+            }
+        }
+
+        function renderTree(nodes) {
+            const container = document.getElementById('materi-tree');
+            const children = nodes.children || [];
+            
+            if (!children.length) {
+                container.innerHTML = '<p class="text-center text-gray-400 py-8">Belum ada konten</p>';
+                return;
+            }
+
+            container.innerHTML = children.map(child => buildNodeHTML(child, 0)).join('');
+        }
+
+        function buildNodeHTML(node, level) {
+            const hasChildren = node.children && node.children.length > 0;
+            const hasMaterials = node.materials && node.materials.length > 0;
+            const indent = level * 40;
+            
+            let html = `
+            <div style="margin-left: ${indent}px">
+                <div class="flex items-start gap-3 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-all" 
+                     style="background: linear-gradient(135deg, ${node.color || '#8b5cf6'}15 0%, transparent 100%)">
+                    
+                    ${hasChildren ? `
+                    <button onclick="toggleNode(this)" class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all"
+                            style="background: ${node.color || '#8b5cf6'}; color: white;">
+                        <i class="fas fa-chevron-down text-sm"></i>
+                    </button>` : 
+                    `<div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background: ${node.color || '#8b5cf6'}20">
+                        <i class="fas fa-circle text-xs" style="color: ${node.color || '#8b5cf6'}"></i>
+                    </div>`}
+                    
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-gray-900 text-base mb-2">${node.text}</h3>
+                        
+                        ${hasMaterials ? `
+                        <div class="space-y-2 mt-3">
+                            ${node.materials.map(m => {
+                                const icons = {link: 'fa-link', pdf: 'fa-file-pdf', video: 'fa-video', image: 'fa-image', text: 'fa-sticky-note'};
+                                const colors = {link: 'blue', pdf: 'red', video: 'purple', image: 'green', text: 'yellow'};
+                                const icon = icons[m.type] || 'fa-file';
+                                const color = colors[m.type] || 'gray';
+                                
+                                return `
+                                <div class="bg-${color}-50 border border-${color}-200 rounded-lg p-3">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-10 h-10 rounded-lg bg-${color}-100 text-${color}-600 flex items-center justify-center shrink-0">
+                                            <i class="fas ${icon}"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <h4 class="font-semibold text-gray-900 text-sm mb-1">${m.title}</h4>
+                                            ${m.type === 'text' ? 
+                                                `<p class="text-xs text-gray-600 whitespace-pre-wrap">${m.content}</p>` :
+                                                `<a href="${m.url}" target="_blank" class="inline-flex items-center gap-2 text-xs text-${color}-600 hover:text-${color}-800 font-medium">
+                                                    <i class="fas fa-external-link-alt"></i> Buka Link
+                                                </a>`
+                                            }
+                                        </div>
+                                    </div>
+                                </div>`;
+                            }).join('')}
+                        </div>` : ''}
+                    </div>
+                </div>
+                
+                ${hasChildren ? `
+                <div class="node-children mt-3 space-y-3">
+                    ${node.children.map(c => buildNodeHTML(c, level + 1)).join('')}
+                </div>` : ''}
+            </div>`;
+            
+            return html;
+        }
+
+        function toggleNode(btn) {
+            const icon = btn.querySelector('i');
+            const parent = btn.closest('div[style*="margin-left"]');
+            const children = parent.querySelector('.node-children');
+            
+            if (children) {
+                children.classList.toggle('hidden');
+                icon.classList.toggle('fa-chevron-down');
+                icon.classList.toggle('fa-chevron-right');
+            }
+        }
+
+        // Load on page load
+        loadMateri();
+    </script>
+</body>
+</html>

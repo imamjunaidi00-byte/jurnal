@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Siswa - E-Journal SMK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-effect { 
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .sidebar-item { 
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-item:hover, .sidebar-item.active {
+            background: linear-gradient(90deg, rgba(59,130,246,0.1) 0%, transparent 100%);
+            border-left-color: #3b82f6;
+            color: #2563eb;
+        }
+        .slide-in { animation: slideIn 0.4s ease-out; }
+        @keyframes slideIn { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+                        secondary: { 50: '#f0fdf4', 100: '#dcfce7', 500: '#22c55e', 600: '#16a34a' },
+                        accent: { 50: '#fefce8', 100: '#fef9c3', 500: '#eab308', 600: '#ca8a04' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fas fa-graduation-cap text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900">Portal Siswa</h1>
+                        <p class="text-xs text-gray-500">E-Journal SMK</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="hidden md:flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-xl">
+                        <i class="fas fa-user-circle text-blue-600"></i>
+                        <span id="siswa-nama" class="text-sm font-medium text-gray-700">-</span>
+                    </div>
+                    <button onclick="logout()" class="px-4 py-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-colors text-sm font-medium">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Keluar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Login Form (shown initially) -->
+        <div id="login-section" class="max-w-md mx-auto">
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <i class="fas fa-user-graduate text-3xl text-white"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Login Siswa</h2>
+                    <p class="text-gray-500 text-sm">Masukkan NISN untuk melihat data Anda</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">NISN</label>
+                        <input type="text" id="input-nisn" placeholder="Masukkan NISN" 
+                               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                               onkeypress="if(event.key==='Enter') loginSiswa()">
+                    </div>
+                    <button onclick="loginSiswa()" class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-semibold shadow-lg transition-all">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Masuk
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard (hidden initially) -->
+        <div id="dashboard-section" class="hidden">
+            
+            <!-- Student Info Card -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-8">
+                <div class="flex items-center gap-6">
+                    <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                        <span id="siswa-initial">-</span>
+                    </div>
+                    <div class="flex-1">
+                        <h2 id="siswa-nama-lengkap" class="text-2xl font-bold text-gray-900 mb-1">-</h2>
+                        <div class="flex flex-wrap gap-3 text-sm">
+                            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg font-medium">
+                                <i class="fas fa-id-card mr-1"></i><span id="siswa-nisn-display">-</span>
+                            </span>
+                            <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg font-medium">
+                                <i class="fas fa-school mr-1"></i><span id="siswa-kelas-display">-</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="flex gap-2 mb-6 bg-white rounded-2xl p-2 shadow-md overflow-x-auto">
+                <button onclick="switchTab('jadwal')" id="tab-jadwal" class="tab-btn px-6 py-3 rounded-xl text-sm font-semibold transition-all bg-blue-600 text-white shadow-md">
+                    <i class="fas fa-calendar-alt mr-2"></i>Jadwal
+                </button>
+                <button onclick="switchTab('materi')" id="tab-materi" class="tab-btn px-6 py-3 rounded-xl text-sm font-semibold transition-all text-gray-600 hover:bg-gray-100">
+                    <i class="fas fa-book mr-2"></i>Materi
+                </button>
+                <button onclick="switchTab('absensi')" id="tab-absensi" class="tab-btn px-6 py-3 rounded-xl text-sm font-semibold transition-all text-gray-600 hover:bg-gray-100">
+                    <i class="fas fa-clipboard-check mr-2"></i>Absensi
+                </button>
+                <button onclick="switchTab('nilai')" id="tab-nilai" class="tab-btn px-6 py-3 rounded-xl text-sm font-semibold transition-all text-gray-600 hover:bg-gray-100">
+                    <i class="fas fa-chart-line mr-2"></i>Nilai
+                </button>
+            </div>
+
+            <!-- Tab Content: Jadwal -->
+            <div id="content-jadwal" class="tab-content">
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-6">Jadwal Pelajaran</h3>
+                    <div id="jadwal-list" class="space-y-4">
+                        <p class="text-center text-gray-400 py-8">Memuat jadwal...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Materi -->
+            <div id="content-materi" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-6">Materi Pembelajaran</h3>
+                    <div id="materi-list" class="space-y-4">
+                        <p class="text-center text-gray-400 py-8">Memuat materi...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Absensi -->
+            <div id="content-absensi" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-6">Rekap Kehadiran</h3>
+                    
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-green-50 rounded-xl p-4 border-2 border-green-200">
+                            <div class="text-green-600 text-sm font-medium mb-1">Hadir</div>
+                            <div class="text-3xl font-bold text-green-700" id="absen-hadir">0</div>
+                        </div>
+                        <div class="bg-yellow-50 rounded-xl p-4 border-2 border-yellow-200">
+                            <div class="text-yellow-600 text-sm font-medium mb-1">Sakit</div>
+                            <div class="text-3xl font-bold text-yellow-700" id="absen-sakit">0</div>
+                        </div>
+                        <div class="bg-blue-50 rounded-xl p-4 border-2 border-blue-200">
+                            <div class="text-blue-600 text-sm font-medium mb-1">Izin</div>
+                            <div class="text-3xl font-bold text-blue-700" id="absen-izin">0</div>
+                        </div>
+                        <div class="bg-red-50 rounded-xl p-4 border-2 border-red-200">
+                            <div class="text-red-600 text-sm font-medium mb-1">Alpha</div>
+                            <div class="text-3xl font-bold text-red-700" id="absen-alpha">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Absensi Detail -->
+                    <div id="absensi-detail" class="space-y-3">
+                        <p class="text-center text-gray-400 py-8">Memuat data absensi...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Nilai -->
+            <div id="content-nilai" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-6">Nilai Pelajaran</h3>
+                    <div id="nilai-list" class="space-y-4">
+                        <p class="text-center text-gray-400 py-8">Memuat nilai...</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let currentSiswa = null;
+
+        // API Helper — portal siswa pakai endpoint khusus
+        const api = {
+            get: async (url) => {
+                const res = await fetch(url);
+                return await res.json();
+            }
+        };
+
+        // Login
+        async function loginSiswa() {
+            const nisn = document.getElementById('input-nisn').value.trim();
+            if (!nisn) return alert('Masukkan NISN');
+
+            try {
+                const res = await api.get(`/api/siswa-portal/login?nisn=${nisn}`);
+                if (res.success) {
+                    currentSiswa = res.data;
+                    showDashboard();
+                } else {
+                    alert(res.message || 'NISN tidak ditemukan');
+                }
+            } catch(e) {
+                alert('Gagal login: ' + e.message);
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('dashboard-section').classList.remove('hidden');
+            
+            // Set student info
+            document.getElementById('siswa-nama').textContent = currentSiswa.nama;
+            document.getElementById('siswa-nama-lengkap').textContent = currentSiswa.nama;
+            document.getElementById('siswa-nisn-display').textContent = currentSiswa.nisn;
+            document.getElementById('siswa-kelas-display').textContent = currentSiswa.kelas;
+            document.getElementById('siswa-initial').textContent = currentSiswa.nama.substring(0, 2).toUpperCase();
+            
+            // Load data
+            loadJadwal();
+            loadMateri();
+            loadAbsensi();
+            loadNilai();
+        }
+
+        function logout() {
+            currentSiswa = null;
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('dashboard-section').classList.add('hidden');
+            document.getElementById('input-nisn').value = '';
+        }
+
+        // Tab Switching
+        function switchTab(tab) {
+            // Update buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = 'tab-btn px-6 py-3 rounded-xl text-sm font-semibold transition-all text-gray-600 hover:bg-gray-100';
+            });
+            document.getElementById(`tab-${tab}`).className = 'tab-btn px-6 py-3 rounded-xl text-sm font-semibold transition-all bg-blue-600 text-white shadow-md';
+            
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+        }
+
+        // Load Jadwal
+        async function loadJadwal() {
+            try {
+                const nisn = encodeURIComponent(currentSiswa.nisn || '');
+                const ts = Date.now(); // cache buster
+                console.log('Loading jadwal for kelas:', currentSiswa.kelas, 'nisn:', currentSiswa.nisn);
+                const res = await api.get(`/api/siswa-portal/jadwal?nisn=${nisn}&_=${ts}`);
+                console.log('Jadwal response:', res.data?.length, 'items, kelas filter:', currentSiswa.kelas);
+                const container = document.getElementById('jadwal-list');
+                
+                if (!res.success || !res.data.length) {
+                    container.innerHTML = '<p class="text-center text-gray-400 py-8">Belum ada jadwal</p>';
+                    return;
+                }
+
+                // Tampilkan info kelas
+                const kelasInfo = `<p class="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2 mb-4 font-medium">
+                    <i class="fas fa-info-circle mr-1"></i> Menampilkan jadwal untuk kelas <strong>${currentSiswa.kelas}</strong> (${res.data.length} jadwal)
+                </p>`;
+
+                const hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                const grouped = {};
+                hariList.forEach(h => grouped[h] = []);
+                
+                res.data.forEach(j => {
+                    if (grouped[j.hari]) grouped[j.hari].push(j);
+                });
+
+                container.innerHTML = kelasInfo + hariList.map(hari => {
+                    const jadwals = grouped[hari];
+                    if (!jadwals.length) return '';
+                    
+                    return `
+                    <div class="border-2 border-gray-200 rounded-xl p-4">
+                        <h4 class="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                            <i class="fas fa-calendar-day text-blue-600"></i>${hari}
+                        </h4>
+                        <div class="space-y-2">
+                            ${jadwals.map(j => `
+                            <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                                <div class="text-blue-600 font-bold text-sm">${j.jamMulai} - ${j.jamSelesai}</div>
+                                <div class="flex-1">
+                                    <div class="font-semibold text-gray-900">${j.mataPelajaran}</div>
+                                    <div class="text-xs text-gray-500">${j.ruangan || '-'}</div>
+                                </div>
+                            </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                console.error('Error loadJadwal:', e);
+                document.getElementById('jadwal-list').innerHTML = '<p class="text-center text-red-400 py-8">Gagal memuat jadwal</p>';
+            }
+        }
+
+        // Load Materi (Mind Maps)
+        async function loadMateri() {
+            try {
+                const nisn = encodeURIComponent(currentSiswa.nisn || '');
+                console.log('Loading materi for siswa:', currentSiswa.nama, 'kelas:', currentSiswa.kelas);
+                const res = await api.get(`/api/siswa-portal/materi?nisn=${nisn}`);
+                console.log('Materi response:', res.count, 'items');
+                const container = document.getElementById('materi-list');
+                
+                const materiList = (res.success && res.data) ? res.data : [];
+
+                if (!materiList.length) {
+                    container.innerHTML = '<p class="text-center text-gray-400 py-8">Belum ada materi untuk kelas ini</p>';
+                    return;
+                }
+
+                container.innerHTML = materiList.map(m => `
+                <div class="border-2 border-gray-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer" onclick="viewMateri('${m._id}')">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl" style="background: ${m.warna || '#8b5cf6'}">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-900 mb-1">${m.judul}</h4>
+                            <p class="text-sm text-gray-500 mb-2">${m.mataPelajaran || 'Umum'}</p>
+                            <div class="flex items-center gap-2 text-xs text-gray-400">
+                                <span><i class="fas fa-calendar mr-1"></i>${new Date(m.updatedAt).toLocaleDateString('id-ID')}</span>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-400"></i>
+                    </div>
+                </div>
+                `).join('');
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function viewMateri(id) {
+            window.open(`/siswa-materi.html?id=${id}`, '_blank');
+        }
+
+        // Load Absensi
+        async function loadAbsensi() {
+            try {
+                const res = await api.get(`/api/siswa-portal/absensi?nisn=${currentSiswa.nisn}`);
+                
+                if (!res.success || !res.data.length) {
+                    document.getElementById('absensi-detail').innerHTML = '<p class="text-center text-gray-400 py-8">Belum ada data absensi</p>';
+                    return;
+                }
+
+                // Count
+                let hadir = 0, sakit = 0, izin = 0, alpha = 0;
+                res.data.forEach(a => {
+                    if (a.status === 'hadir') hadir++;
+                    else if (a.status === 'sakit') sakit++;
+                    else if (a.status === 'izin') izin++;
+                    else if (a.status === 'alpha') alpha++;
+                });
+
+                document.getElementById('absen-hadir').textContent = hadir;
+                document.getElementById('absen-sakit').textContent = sakit;
+                document.getElementById('absen-izin').textContent = izin;
+                document.getElementById('absen-alpha').textContent = alpha;
+
+                // Detail
+                const container = document.getElementById('absensi-detail');
+                container.innerHTML = res.data.slice(0, 20).map(a => {
+                    const statusColor = {
+                        hadir: 'green',
+                        sakit: 'yellow',
+                        izin: 'blue',
+                        alpha: 'red'
+                    }[a.status] || 'gray';
+                    
+                    return `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-${statusColor}-100 text-${statusColor}-600 flex items-center justify-center">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900">${new Date(a.tanggal).toLocaleDateString('id-ID', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}</div>
+                                <div class="text-xs text-gray-500">${a.mataPelajaran || '-'}</div>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 bg-${statusColor}-100 text-${statusColor}-700 rounded-lg text-sm font-medium capitalize">
+                            ${a.status}
+                        </span>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        // Load Nilai
+        async function loadNilai() {
+            try {
+                const res = await api.get(`/api/siswa-portal/nilai?nisn=${currentSiswa.nisn}`);
+                const container = document.getElementById('nilai-list');
+                
+                if (!res.success || !res.data.length) {
+                    container.innerHTML = '<p class="text-center text-gray-400 py-8">Belum ada nilai</p>';
+                    return;
+                }
+
+                // Semua nilai yang dikembalikan sudah tampilkan=true (difilter server)
+                const visibleNilai = res.data;
+
+                container.innerHTML = visibleNilai.map(n => {
+                    const naAkhir = n.naAkhir || 0;
+                    const predikat = n.predikat || '-';
+                    const predColor = naAkhir>=85?'bg-green-100 text-green-700':naAkhir>=75?'bg-blue-100 text-blue-700':naAkhir>=65?'bg-yellow-100 text-yellow-700':'bg-red-100 text-red-700';
+                    return `
+                    <div class="border-2 border-gray-200 rounded-xl p-5 hover:border-primary-300 transition-colors">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="font-bold text-gray-900">${n.mataPelajaran}</h4>
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl font-bold ${naAkhir>=75?'text-green-600':'text-red-500'}">${naAkhir}</span>
+                                <span class="px-2 py-1 rounded-lg text-sm font-bold ${predColor}">${predikat}</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-sm mb-3">
+                            <div class="bg-orange-50 rounded-lg p-2 text-center">
+                                <p class="text-xs text-gray-500">UH</p>
+                                <p class="font-bold text-orange-700">${n.uh || 0}</p>
+                            </div>
+                            <div class="bg-blue-50 rounded-lg p-2 text-center">
+                                <p class="text-xs text-gray-500">PTS</p>
+                                <p class="font-bold text-blue-700">${n.pts || 0}</p>
+                            </div>
+                            <div class="bg-purple-50 rounded-lg p-2 text-center">
+                                <p class="text-xs text-gray-500">PAS</p>
+                                <p class="font-bold text-purple-700">${n.pas || 0}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-sm mb-3">
+                            <div class="bg-green-50 rounded-lg p-2 text-center">
+                                <p class="text-xs text-gray-500">Praktek</p>
+                                <p class="font-bold text-green-700">${n.praktek || 0}</p>
+                            </div>
+                            <div class="bg-teal-50 rounded-lg p-2 text-center">
+                                <p class="text-xs text-gray-500">Proyek</p>
+                                <p class="font-bold text-teal-700">${n.proyek || 0}</p>
+                            </div>
+                            <div class="bg-pink-50 rounded-lg p-2 text-center">
+                                <p class="text-xs text-gray-500">Portofolio</p>
+                                <p class="font-bold text-pink-700">${n.portofolio || 0}</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400 border-t border-gray-100 pt-2 mt-2">
+                            <span>${n.semester} • ${n.tahunAjaran}</span>
+                            <span>Guru: ${n.guru || '-'}</span>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+</html>

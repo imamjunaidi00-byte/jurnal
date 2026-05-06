@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - E-Journal</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        h1 { color: #4ec9b0; }
+        h2 { color: #569cd6; margin-top: 30px; }
+        pre { background: #252526; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        button { background: #0e639c; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #1177bb; }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug E-Journal</h1>
+    
+    <button onclick="checkLocalStorage()">Check localStorage</button>
+    <button onclick="clearLocalStorage()">Clear localStorage</button>
+    <button onclick="checkAPI()">Test API</button>
+    <button onclick="location.href='/'">Back to App</button>
+    
+    <h2>localStorage Content:</h2>
+    <pre id="localStorage-content">Click "Check localStorage" button</pre>
+    
+    <h2>API Test Results:</h2>
+    <pre id="api-results">Click "Test API" button</pre>
+    
+    <h2>Console Logs:</h2>
+    <pre id="console-logs"></pre>
+    
+    <script>
+        const log = (msg, type = 'info') => {
+            const el = document.getElementById('console-logs');
+            const color = type === 'error' ? '#f48771' : type === 'success' ? '#4ec9b0' : '#d4d4d4';
+            el.innerHTML += `<span style="color:${color}">[${new Date().toLocaleTimeString()}] ${msg}</span>\n`;
+        };
+        
+        function checkLocalStorage() {
+            const el = document.getElementById('localStorage-content');
+            const token = localStorage.getItem('guru_token');
+            const config = localStorage.getItem('ejournal_config');
+            const info = localStorage.getItem('guru_info');
+            
+            let output = '=== GURU TOKEN ===\n';
+            output += token ? `✓ Token exists (${token.substring(0, 20)}...)\n` : '✗ No token\n';
+            
+            output += '\n=== EJOURNAL CONFIG ===\n';
+            if (config) {
+                try {
+                    const parsed = JSON.parse(config);
+                    output += JSON.stringify(parsed, null, 2);
+                } catch(e) {
+                    output += '✗ Invalid JSON: ' + config;
+                }
+            } else {
+                output += '✗ No config';
+            }
+            
+            output += '\n\n=== GURU INFO ===\n';
+            if (info) {
+                try {
+                    const parsed = JSON.parse(info);
+                    output += JSON.stringify(parsed, null, 2);
+                } catch(e) {
+                    output += '✗ Invalid JSON: ' + info;
+                }
+            } else {
+                output += '✗ No info';
+            }
+            
+            el.textContent = output;
+            log('localStorage checked', 'success');
+        }
+        
+        function clearLocalStorage() {
+            if (!confirm('Clear localStorage? You will need to login again.')) return;
+            localStorage.clear();
+            log('localStorage cleared!', 'success');
+            document.getElementById('localStorage-content').textContent = 'localStorage cleared. Check again to verify.';
+        }
+        
+        async function checkAPI() {
+            const el = document.getElementById('api-results');
+            el.textContent = 'Testing API endpoints...\n\n';
+            
+            const token = localStorage.getItem('guru_token');
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            
+            // Test jadwal
+            try {
+                log('Testing /api/jadwal...');
+                const res = await fetch('/api/jadwal?semester=Genap&tahunAjaran=2025/2026', { headers });
+                const data = await res.json();
+                el.textContent += '=== /api/jadwal ===\n';
+                el.textContent += `Status: ${res.status}\n`;
+                el.textContent += `Success: ${data.success}\n`;
+                el.textContent += `Count: ${data.data?.length || 0}\n`;
+                if (data.data?.length > 0) {
+                    el.textContent += 'Sample:\n' + JSON.stringify(data.data[0], null, 2) + '\n';
+                }
+                log(`Jadwal: ${data.data?.length || 0} items`, 'success');
+            } catch(e) {
+                el.textContent += '✗ Error: ' + e.message + '\n';
+                log('Jadwal error: ' + e.message, 'error');
+            }
+            
+            el.textContent += '\n';
+            
+            // Test mindmap
+            try {
+                log('Testing /api/mindmap...');
+                const res = await fetch('/api/mindmap', { headers });
+                const data = await res.json();
+                el.textContent += '=== /api/mindmap ===\n';
+                el.textContent += `Status: ${res.status}\n`;
+                el.textContent += `Success: ${data.success}\n`;
+                el.textContent += `Count: ${data.data?.length || 0}\n`;
+                if (data.data?.length > 0) {
+                    el.textContent += 'Sample:\n' + JSON.stringify(data.data[0], null, 2) + '\n';
+                }
+                log(`MindMap: ${data.data?.length || 0} items`, 'success');
+            } catch(e) {
+                el.textContent += '✗ Error: ' + e.message + '\n';
+                log('MindMap error: ' + e.message, 'error');
+            }
+            
+            el.textContent += '\n';
+            
+            // Test profil
+            try {
+                log('Testing /api/profil...');
+                const res = await fetch('/api/profil', { headers });
+                const data = await res.json();
+                el.textContent += '=== /api/profil ===\n';
+                el.textContent += `Status: ${res.status}\n`;
+                el.textContent += `Success: ${data.success}\n`;
+                if (data.data) {
+                    el.textContent += 'Data:\n' + JSON.stringify(data.data, null, 2) + '\n';
+                }
+                log('Profil loaded', 'success');
+            } catch(e) {
+                el.textContent += '✗ Error: ' + e.message + '\n';
+                log('Profil error: ' + e.message, 'error');
+            }
+        }
+        
+        log('Debug page loaded');
+    </script>
+</body>
+</html>

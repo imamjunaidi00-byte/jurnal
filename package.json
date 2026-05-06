@@ -1,0 +1,38 @@
+{
+  "name": "jurnal-guru",
+  "version": "1.0.0",
+  "description": "Sistem Jurnal Guru Digital dengan Node.js dan Tailwind CSS",
+  "main": "server.js",
+  "scripts": {
+    "start": "set PORT=3000 && node server.js",
+    "dev": "set PORT=3000 && nodemon server.js",
+    "build:css": "tailwindcss -i ./public/css/input.css -o ./public/css/style.css --watch"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "multer": "^1.4.5-lts.1",
+    "csv-parser": "^3.0.0",
+    "@json2csv/plainjs": "^7.0.1",
+    "xlsx": "^0.18.5",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "express-validator": "^7.0.1",
+    "moment": "^2.29.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "tailwindcss": "^3.3.3"
+  },
+  "keywords": [
+    "jurnal-guru",
+    "absensi",
+    "penilaian",
+    "sekolah",
+    "edtech"
+  ],
+  "author": "Guru Developer",
+  "license": "MIT"
+}

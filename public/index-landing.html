@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Journal SMK - Sistem Jurnal Digital</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .bg-pattern {
+            background-color: #1e40af;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(99,102,241,0.35) 0%, transparent 55%),
+                radial-gradient(circle at 85% 20%, rgba(139,92,246,0.35) 0%, transparent 55%),
+                radial-gradient(circle at 55% 85%, rgba(59,130,246,0.25) 0%, transparent 50%);
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up { animation: fadeUp 0.5s ease-out forwards; }
+        .fade-up-delay { animation: fadeUp 0.5s ease-out 0.15s forwards; opacity: 0; }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 30px 60px -10px rgba(0,0,0,0.25);
+        }
+    </style>
+</head>
+<body class="bg-pattern min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Logo & Title -->
+    <div class="text-center mb-10 fade-up">
+        <div id="landing-logo" class="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl overflow-hidden">
+            <i class="fas fa-graduation-cap text-4xl text-blue-600"></i>
+        </div>
+        <h1 id="landing-appname" class="text-3xl font-bold text-white">E-Journal SMK</h1>
+        <p id="landing-tagline" class="text-blue-200 mt-1 text-sm">Sistem Jurnal Digital Guru</p>
+    </div>
+
+    <!-- Pilihan Login -->
+    <div class="w-full max-w-sm fade-up-delay">
+        <p class="text-center text-blue-100 text-sm font-medium mb-5 tracking-wide uppercase">Masuk sebagai</p>
+
+        <div class="space-y-4">
+            <!-- Login Guru -->
+            <a href="/login" class="card-hover block bg-white rounded-2xl p-6 shadow-xl cursor-pointer">
+                <div class="flex items-center gap-5">
+                    <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center text-white text-2xl shadow-lg flex-shrink-0">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-lg font-bold text-gray-900">Guru</h2>
+                        <p class="text-sm text-gray-500 mt-0.5">Kelola absensi, nilai, dan jurnal mengajar</p>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-300 text-sm"></i>
+                </div>
+            </a>
+
+            <!-- Login Siswa -->
+            <a href="/siswa.html" class="card-hover block bg-white rounded-2xl p-6 shadow-xl cursor-pointer">
+                <div class="flex items-center gap-5">
+                    <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center text-white text-2xl shadow-lg flex-shrink-0">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-lg font-bold text-gray-900">Siswa</h2>
+                        <p class="text-sm text-gray-500 mt-0.5">Lihat jadwal, materi, absensi, dan nilai</p>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-300 text-sm"></i>
+                </div>
+            </a>
+        </div>
+
+        <p class="text-center text-blue-200 text-xs mt-8">
+            <i class="fas fa-shield-alt mr-1"></i> Sistem E-Journal Digital SMK
+        </p>
+    </div>
+
+    <script>
+        // Jika guru sudah login, langsung ke dashboard
+        const token = localStorage.getItem('guru_token');
+        if (token) {
+            fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+                .then(r => r.json())
+                .then(d => { if (d.success) window.location.href = '/app'; })
+                .catch(() => {});
+        }
+
+        // Load nama aplikasi dari profil
+        fetch('/api/profil', { headers: { Authorization: `Bearer ${token || ''}` } })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success && d.data?.app) {
+                    const { name, tagline, logo } = d.data.app;
+                    if (name) document.getElementById('landing-appname').textContent = name;
+                    if (tagline) document.getElementById('landing-tagline').textContent = tagline;
+                    if (logo) {
+                        const logoEl = document.getElementById('landing-logo');
+                        logoEl.innerHTML = `<img src="${logo}" class="w-full h-full object-cover">`;
+                    }
+                }
+            }).catch(() => {});
+    </script>
+</body>
+</html>
