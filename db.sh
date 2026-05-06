@@ -14,7 +14,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 DB_NAME="jurnal_guru"
-BACKUP_DIR="/var/backups/jurnal"
+BACKUP_DIR="/root/backups/jurnal"
 
 print_ok()   { echo -e "${GREEN}  ✓ $1${NC}"; }
 print_info() { echo -e "${YELLOW}  → $1${NC}"; }

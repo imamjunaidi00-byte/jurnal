@@ -15,11 +15,10 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Konfigurasi - SESUAIKAN INI
-APP_DIR="/var/www/jurnal"
+APP_DIR="/root/jurnal"
 APP_NAME="jurnal-guru"
 REPO_URL="https://github.com/imamjunaidi00-byte/jurnal.git"
 APP_PORT=3000
-DOMAIN=""  # Isi domain kamu, contoh: jurnal.sekolah.sch.id (kosongkan jika pakai IP)
 
 # ============================================================
 
@@ -188,36 +187,6 @@ pm2 startup | tail -1 | bash 2>/dev/null || true
 print_ok "Aplikasi berjalan dengan PM2"
 
 # ============================================================
-# STEP BONUS: Setup Nginx (opsional)
-# ============================================================
-if [ -n "$DOMAIN" ]; then
-  print_step "BONUS: Setup Nginx untuk domain $DOMAIN"
-  
-  apt-get install -y nginx
-  
-  cat > "/etc/nginx/sites-available/$APP_NAME" << EOF
-server {
-    listen 80;
-    server_name ${DOMAIN};
-
-    location / {
-        proxy_pass http://localhost:${APP_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
-EOF
-
-  ln -sf "/etc/nginx/sites-available/$APP_NAME" "/etc/nginx/sites-enabled/"
-  nginx -t && systemctl reload nginx
-  print_ok "Nginx dikonfigurasi untuk domain $DOMAIN"
-fi
-
-# ============================================================
 # SELESAI
 # ============================================================
 echo ""
@@ -230,10 +199,8 @@ echo ""
 VPS_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
 
 echo -e "  ${GREEN}✓${NC} Aplikasi berjalan di:"
-if [ -n "$DOMAIN" ]; then
-  echo -e "    ${CYAN}http://${DOMAIN}${NC}"
-fi
 echo -e "    ${CYAN}http://${VPS_IP}:${APP_PORT}${NC}"
+echo -e "    (Arahkan reverse proxy kamu ke port ${APP_PORT})"
 echo ""
 echo -e "  ${YELLOW}Perintah berguna:${NC}"
 echo -e "    pm2 status              → cek status app"

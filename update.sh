@@ -13,7 +13,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Konfigurasi - sesuaikan dengan path di VPS kamu
-APP_DIR="/var/www/jurnal"        # Ganti dengan path folder app di VPS
+APP_DIR="/root/jurnal"            # Path folder app di VPS
 APP_NAME="jurnal-guru"           # Nama PM2 process
 BRANCH="main"
 
