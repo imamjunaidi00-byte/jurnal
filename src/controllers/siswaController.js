@@ -34,7 +34,7 @@ exports.list = async (req, res) => {
 
     const { count, rows } = await Siswa.findAndCountAll({
       where,
-      include: [{ model: Kelas, as: 'kelas', attributes: ['id','nama','tingkat','jurusan'], required: false }],
+      include: [{ model: Kelas, as: 'kelasRef', attributes: ['id','nama','tingkat','jurusan'], required: false }],
       order:   [['nama', 'ASC']],
       limit,
       offset:  (page - 1) * limit,
@@ -50,7 +50,7 @@ exports.list = async (req, res) => {
 exports.getById = async (req, res) => {
   try {
     const siswa = await Siswa.findByPk(req.params.id, {
-      include: [{ model: Kelas, as: 'kelas', attributes: ['id','nama'], required: false }],
+      include: [{ model: Kelas, as: 'kelasRef', attributes: ['id','nama'], required: false }],
     });
     if (!siswa) return fail(res, 'Siswa tidak ditemukan.', 404);
     const s = siswa.toJSON();

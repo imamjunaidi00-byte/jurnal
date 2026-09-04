@@ -46,16 +46,18 @@ Kelas.hasMany(Siswa,         { foreignKey: 'kelasId', as: 'siswaList', onDelete:
 Kelas.hasMany(GuruKelas,     { foreignKey: 'kelasId', as: 'guruKelasList', onDelete: 'CASCADE' });
 
 // Siswa
-Siswa.belongsTo(Guru,        { foreignKey: 'guruId', as: 'guru' });
-Siswa.belongsTo(Kelas,       { foreignKey: 'kelasId', as: 'kelas' });
-Siswa.hasMany(Absensi,       { foreignKey: 'siswaId', as: 'absensiList', onDelete: 'CASCADE' });
-Siswa.hasMany(AbsensiHarian, { foreignKey: 'siswaId', as: 'absensiHarianList', onDelete: 'CASCADE' });
-Siswa.hasMany(Nilai,         { foreignKey: 'siswaId', as: 'nilaiList', onDelete: 'CASCADE' });
-Siswa.hasMany(Sikap,         { foreignKey: 'siswaId', as: 'sikapList', onDelete: 'CASCADE' });
+// Gunakan as: 'kelasRef' karena kolom 'kelas' (string) sudah ada di model Siswa
+Siswa.belongsTo(Guru,        { foreignKey: 'guruId',   as: 'guru' });
+Siswa.belongsTo(Kelas,       { foreignKey: 'kelasId',  as: 'kelasRef' });
+Siswa.hasMany(Absensi,       { foreignKey: 'siswaId',  as: 'absensiList',      onDelete: 'CASCADE' });
+Siswa.hasMany(AbsensiHarian, { foreignKey: 'siswaId',  as: 'absensiHarianList',onDelete: 'CASCADE' });
+Siswa.hasMany(Nilai,         { foreignKey: 'siswaId',  as: 'nilaiList',        onDelete: 'CASCADE' });
+Siswa.hasMany(Sikap,         { foreignKey: 'siswaId',  as: 'sikapList',        onDelete: 'CASCADE' });
 
 // GuruKelas
-GuruKelas.belongsTo(Guru,       { foreignKey: 'guruId', as: 'guru' });
-GuruKelas.belongsTo(Kelas,      { foreignKey: 'kelasId', as: 'kelas' });
+// Gunakan as: 'kelasRef' karena kolom di GuruKelas juga bisa bentrok
+GuruKelas.belongsTo(Guru,        { foreignKey: 'guruId',         as: 'guru' });
+GuruKelas.belongsTo(Kelas,       { foreignKey: 'kelasId',        as: 'kelasRef' });
 GuruKelas.belongsTo(MappingMapel,{ foreignKey: 'mappingMapelId', as: 'mappingMapel' });
 
 // MappingMapel

@@ -14,7 +14,7 @@ exports.list = async (req, res) => {
     const list = await GuruKelas.findAll({
       where,
       include: [
-        { model: Kelas,        as: 'kelas',       attributes: ['id','nama','tingkat','jurusan','tahunAjaran'] },
+        { model: Kelas,        as: 'kelasRef',     attributes: ['id','nama','tingkat','jurusan','tahunAjaran'] },
         { model: MappingMapel, as: 'mappingMapel', attributes: ['id','nama','kode'] },
       ],
       order: [['createdAt','DESC']],
@@ -29,11 +29,11 @@ exports.kelasList = async (req, res) => {
   try {
     const list = await GuruKelas.findAll({
       where:      { guruId: req.guru.id, aktif: true },
-      include:    [{ model: Kelas, as: 'kelas', attributes: ['id','nama','tingkat','jurusan'] }],
+      include:    [{ model: Kelas, as: 'kelasRef', attributes: ['id','nama','tingkat','jurusan'] }],
       attributes: ['kelasId'],
       group:      ['kelasId'],
     });
-    return ok(res, list.map(r => r.kelas));
+    return ok(res, list.map(r => r.kelasRef));
   } catch (err) {
     return fail(res, 'Gagal mengambil daftar kelas.', 500);
   }
