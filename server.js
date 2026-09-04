@@ -82,6 +82,9 @@ const { protect, adminOnly } = require('./src/middleware/auth');
 // Auth — rate limit ketat untuk login
 app.use('/api/auth', rateLimit(15), require('./src/routes/auth'));
 
+// Sync dari SDMS — hanya admin
+app.use('/api/sync', require('./src/routes/sync'));
+
 // Admin
 app.use('/api/admin',        require('./src/routes/admin'));
 app.use('/api/admin/kelas',  adminOnly, require('./src/routes/kelas'));
