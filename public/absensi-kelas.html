@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Input Absensi Kelas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"></noscript>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap&font-display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .bg-pattern {
+      background-color: #1e40af;
+      background-image: radial-gradient(circle at 20% 50%, rgba(99,102,241,.3) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(139,92,246,.3) 0%, transparent 50%);
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .fade-up { animation: fadeUp .4s ease-out; }
+    .status-btn { transition: all .2s; }
+    .status-btn.active-hadir       { background:#16a34a; color:#fff; border-color:#16a34a; }
+    .status-btn.active-sakit       { background:#d97706; color:#fff; border-color:#d97706; }
+    .status-btn.active-izin        { background:#2563eb; color:#fff; border-color:#2563eb; }
+    .status-btn.active-alpha       { background:#dc2626; color:#fff; border-color:#dc2626; }
+    .status-btn.active-dispensasi  { background:#7c3aed; color:#fff; border-color:#7c3aed; }
+    .status-btn.active-pulang_cepat{ background:#ea580c; color:#fff; border-color:#ea580c; }
+    .toast { position:fixed; bottom:20px; right:20px; z-index:9999; padding:12px 20px;
+      border-radius:12px; font-size:14px; font-weight:600; color:#fff;
+      box-shadow:0 8px 24px rgba(0,0,0,.2); transform:translateY(80px); opacity:0;
+      transition:all .3s ease; pointer-events:none; }
+    .toast.show { transform:translateY(0); opacity:1; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="login-screen" class="bg-pattern min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-sm fade-up">
+    <div class="text-center mb-8">
+      <div class="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+        <i class="fas fa-user-check text-4xl text-blue-600"></i>
+      </div>
+      <h1 class="text-3xl font-bold text-white">Absensi Kelas</h1>
+      <p class="text-blue-200 mt-1 text-sm">Portal Pengurus Kelas</p>
+    </div>
+    <div class="bg-white rounded-3xl p-8" style="box-shadow:0 25px 60px -10px rgba(0,0,0,.3)">
+      <h2 class="text-xl font-bold text-gray-900 mb-1">Login Pengurus</h2>
+      <p class="text-gray-500 text-sm mb-6">Masukkan akun yang diberikan wali kelas</p>
+      <div id="login-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center gap-2">
+        <i class="fas fa-exclamation-circle flex-shrink-0"></i><span id="login-error-msg"></span>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Username</label>
+          <div class="relative">
+            <i class="fas fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="text" id="p-username" placeholder="Username pengurus"
+              class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+              onkeydown="if(event.key==='Enter') doLogin()">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+          <div class="relative">
+            <i class="fas fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="password" id="p-password" placeholder="Password"
+              class="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+              onkeydown="if(event.key==='Enter') doLogin()">
+            <button type="button" onclick="const e=document.getElementById('p-password');e.type=e.type==='password'?'text':'password'"
+              class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <i class="fas fa-eye"></i>
+            </button>
+          </div>
+        </div>
+        <button onclick="doLogin()" id="btn-login"
+          class="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-lg">
+          <i class="fas fa-sign-in-alt"></i> Masuk
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD PENGURUS ══ -->
+<div id="dashboard-screen" class="hidden min-h-screen bg-gray-100">
+  <!-- Header -->
+  <header class="bg-blue-800 text-white px-4 py-3 flex items-center justify-between shadow-lg sticky top-0 z-40">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-blue-700 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-user-check"></i>
+      </div>
+      <div>
+        <p id="hdr-nama" class="font-bold text-sm leading-tight">Pengurus Kelas</p>
+        <p id="hdr-kelas" class="text-blue-300 text-xs">—</p>
+      </div>
+    </div>
+    <button onclick="doLogout()"
+      class="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors">
+      <i class="fas fa-sign-out-alt"></i> Keluar
+    </button>
+  </header>
+
+  <div class="max-w-2xl mx-auto p-4 space-y-4">
+    <!-- Info hari ini -->
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
+      <div>
+        <p class="text-xs text-gray-500">Tanggal</p>
+        <p id="info-tanggal" class="font-bold text-gray-900 text-lg"></p>
+      </div>
+      <div class="text-right">
+        <p class="text-xs text-gray-500">Kelas</p>
+        <p id="info-kelas" class="font-bold text-blue-600 text-lg"></p>
+      </div>
+    </div>
+
+    <!-- Pilih tanggal & semester -->
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-3">
+      <h3 class="font-semibold text-gray-800 text-sm flex items-center gap-2">
+        <i class="fas fa-calendar-alt text-blue-500"></i> Pengaturan Absensi
+      </h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Tanggal</label>
+          <input type="date" id="absen-tanggal"
+            class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-300 bg-gray-50">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Semester</label>
+          <select id="absen-semester"
+            class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-300 bg-gray-50">
+            <option value="Ganjil">Ganjil</option>
+            <option value="Genap">Genap</option>
+          </select>
+        </div>
+      </div>
+      <!-- Info tahun ajaran (otomatis dari data guru, tidak perlu diisi manual) -->
+      <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700">
+        <i class="fas fa-info-circle flex-shrink-0"></i>
+        <span>Tahun Ajaran: <strong id="info-tahun-ajaran">—</strong></span>
+      </div>
+      <!-- Field tersembunyi untuk menyimpan nilai tahun ajaran -->
+      <input type="hidden" id="absen-tahun">
+      <button onclick="muatSiswa()"
+        class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
+        <i class="fas fa-users"></i> Muat Daftar Siswa
+      </button>
+    </div>
+
+    <!-- Status absensi hari ini -->
+    <div id="status-banner" class="hidden rounded-2xl p-4 flex items-center gap-3">
+      <i id="status-icon" class="fas fa-info-circle text-2xl flex-shrink-0"></i>
+      <div>
+        <p id="status-title" class="font-bold text-sm"></p>
+        <p id="status-desc" class="text-xs mt-0.5"></p>
+      </div>
+    </div>
+
+    <!-- Form absensi siswa -->
+    <div id="form-absensi" class="hidden bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fas fa-list-check text-blue-600"></i>
+          <span class="font-semibold text-gray-900 text-sm" id="form-kelas-title">Absensi Kelas</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs flex-wrap">
+          <span class="text-green-600 font-semibold" id="counter-hadir">0 H</span>
+          <span class="text-yellow-600 font-semibold" id="counter-sakit">0 S</span>
+          <span class="text-blue-600 font-semibold" id="counter-izin">0 I</span>
+          <span class="text-red-600 font-semibold" id="counter-alpha">0 A</span>
+          <span class="text-purple-600 font-semibold" id="counter-dispensasi">0 D</span>
+          <span class="text-orange-600 font-semibold" id="counter-pulang">0 P</span>
+        </div>
+      </div>
+
+      <!-- Aksi cepat -->
+      <div class="px-4 py-3 border-b border-gray-100 flex gap-2 flex-wrap">
+        <button onclick="setAllStatus('hadir')"
+          class="px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-xs font-semibold transition-colors">
+          <i class="fas fa-check-circle mr-1"></i>Semua Hadir
+        </button>
+        <button onclick="setAllStatus('alpha')"
+          class="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-xs font-semibold transition-colors">
+          <i class="fas fa-times-circle mr-1"></i>Semua Alpha
+        </button>
+      </div>
+
+      <!-- Daftar siswa -->
+      <div id="siswa-list" class="divide-y divide-gray-50"></div>
+
+      <!-- Tombol simpan -->
+      <div class="p-4 bg-gray-50 border-t border-gray-100">
+        <button onclick="simpanAbsensi()" id="btn-simpan"
+          class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-md">
+          <i class="fas fa-save"></i> Simpan Absensi
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────
+let token = localStorage.getItem('pengabsen_token') || '';
+let info  = JSON.parse(localStorage.getItem('pengabsen_info') || '{}');
+let siswaData = [];
+let absensiMap = {}; // siswaId -> { status, keterangan }
+
+// ── Toast ──────────────────────────────────────────────────
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = type==='success'?'#16a34a':type==='error'?'#dc2626':'#2563eb';
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+// ── API Helper ─────────────────────────────────────────────
+const api = {
+  h: () => ({ 'Content-Type':'application/json', 'Authorization':'Bearer '+token }),
+  get: (url) => fetch(url, { headers: {'Authorization':'Bearer '+token} }).then(r=>r.json()),
+  post: (url, data) => fetch(url, { method:'POST', headers:api.h(), body:JSON.stringify(data) }).then(r=>r.json()),
+};
+
+// ── Login ──────────────────────────────────────────────────
+async function doLogin() {
+  const username = document.getElementById('p-username').value.trim();
+  const password = document.getElementById('p-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.add('hidden');
+  if (!username || !password) {
+    document.getElementById('login-error-msg').textContent = 'Username dan password wajib diisi.';
+    errEl.classList.remove('hidden'); return;
+  }
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Masuk...';
+  try {
+    const res = await fetch('/api/wali-kelas/pengabsen-login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ username, password })
+    }).then(r=>r.json());
+    if (res.success) {
+      token = res.token;
+      info  = res.data;
+      localStorage.setItem('pengabsen_token', token);
+      localStorage.setItem('pengabsen_info', JSON.stringify(info));
+      showDashboard();
+    } else {
+      document.getElementById('login-error-msg').textContent = res.message || 'Login gagal.';
+      errEl.classList.remove('hidden');
+    }
+  } catch(e) {
+    document.getElementById('login-error-msg').textContent = 'Tidak dapat terhubung ke server.';
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Masuk';
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('pengabsen_token');
+  localStorage.removeItem('pengabsen_info');
+  token = ''; info = {};
+  document.getElementById('dashboard-screen').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('p-username').value = '';
+  document.getElementById('p-password').value = '';
+}
+
+function applyInfoToDashboard() {
+  document.getElementById('hdr-nama').textContent = info.nama || 'Pengurus';
+  document.getElementById('hdr-kelas').textContent = 'Kelas: ' + (info.kelas || '-');
+  document.getElementById('info-kelas').textContent = info.kelas || '-';
+  const semEl = document.getElementById('absen-semester');
+  if (semEl) semEl.value = info.semester || 'Ganjil';
+  document.getElementById('absen-tahun').value = info.tahunAjaran || '';
+  document.getElementById('info-tahun-ajaran').textContent =
+    info.tahunAjaran || '(belum diatur, hubungi wali kelas)';
+}
+
+async function showDashboard() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('dashboard-screen').classList.remove('hidden');
+  // Set tanggal hari ini
+  const now = new Date();
+  const tglVal = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  document.getElementById('absen-tanggal').value = tglVal;
+  document.getElementById('info-tanggal').textContent = now.toLocaleDateString('id-ID',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  // Tampilkan dulu dari cache
+  applyInfoToDashboard();
+  // Selalu fetch info terbaru dari server agar tahunAjaran & semester selalu fresh
+  // (mengatasi kasus localStorage lama tidak punya tahunAjaran)
+  try {
+    const res = await api.get('/api/wali-kelas/info-pengabsen');
+    if (res.success && res.data) {
+      info = res.data;
+      localStorage.setItem('pengabsen_info', JSON.stringify(info));
+      applyInfoToDashboard();
+    }
+  } catch(e) { /* gunakan cache jika server tidak bisa dihubungi */ }
+}
+</script>
+
+<script>
+// ── Muat daftar siswa ──────────────────────────────────────
+async function muatSiswa() {
+  const tanggal = document.getElementById('absen-tanggal').value;
+  const semester = document.getElementById('absen-semester').value;
+  const tahunAjaran = document.getElementById('absen-tahun').value.trim();
+  if (!tanggal) { toast('Pilih tanggal absensi terlebih dahulu.','error'); return; }
+  if (!tahunAjaran) { toast('Tahun ajaran belum tersedia. Minta wali kelas untuk mengatur profil.','error'); return; }
+
+  document.getElementById('form-kelas-title').textContent = 'Absensi ' + (info.kelas||'') + ' — ' + new Date(tanggal).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+
+  // Cek absensi hari ini sudah ada?
+  const cekRes = await api.get('/api/wali-kelas/absensi-hari-ini?tanggal='+tanggal);
+  const sudahAbsen = cekRes.sudahAbsen && cekRes.data?.length > 0;
+
+  // Tampilkan banner status
+  const banner = document.getElementById('status-banner');
+  const icon = document.getElementById('status-icon');
+  const title = document.getElementById('status-title');
+  const desc = document.getElementById('status-desc');
+  banner.classList.remove('hidden');
+  if (sudahAbsen) {
+    banner.className = 'rounded-2xl p-4 flex items-center gap-3 bg-green-50 border border-green-200';
+    icon.className = 'fas fa-check-circle text-2xl flex-shrink-0 text-green-600';
+    title.className = 'font-bold text-sm text-green-800';
+    title.textContent = 'Absensi sudah diinput (' + cekRes.data.length + ' siswa)';
+    desc.className = 'text-xs mt-0.5 text-green-700';
+    desc.textContent = 'Anda bisa mengubah absensi dengan menyimpan ulang.';
+    // Preload data dari yang sudah ada
+    cekRes.data.forEach(a => {
+      absensiMap[a.siswa?._id || a.siswa] = { status: a.status, keterangan: a.keterangan || '' };
+    });
+  } else {
+    banner.className = 'rounded-2xl p-4 flex items-center gap-3 bg-blue-50 border border-blue-200';
+    icon.className = 'fas fa-info-circle text-2xl flex-shrink-0 text-blue-600';
+    title.className = 'font-bold text-sm text-blue-800';
+    title.textContent = 'Belum ada absensi untuk hari ini';
+    desc.className = 'text-xs mt-0.5 text-blue-700';
+    desc.textContent = 'Silakan isi dan simpan absensi kelas.';
+    absensiMap = {};
+  }
+
+  // Load daftar siswa
+  const res = await api.get('/api/wali-kelas/siswa-kelas');
+  if (!res.success) { toast(res.message || 'Gagal memuat siswa.','error'); return; }
+  siswaData = res.data || [];
+
+  if (!siswaData.length) {
+    toast('Tidak ada siswa aktif di kelas ini.','error');
+    document.getElementById('form-absensi').classList.add('hidden'); return;
+  }
+
+  // Default semua hadir jika belum ada data
+  if (!sudahAbsen) {
+    siswaData.forEach(s => { absensiMap[s._id] = { status:'hadir', keterangan:'' }; });
+  }
+
+  renderSiswaList();
+  document.getElementById('form-absensi').classList.remove('hidden');
+  updateCounter();
+}
+
+function renderSiswaList() {
+  const container = document.getElementById('siswa-list');
+  container.innerHTML = siswaData.map((s, i) => {
+    const ab = absensiMap[s._id] || { status:'hadir', keterangan:'' };
+    const ikons = { hadir:'fa-check', sakit:'fa-procedures', izin:'fa-file-alt', alpha:'fa-times', dispensasi:'fa-id-card', pulang_cepat:'fa-walking' };
+    const colors = { hadir:'text-green-700 border-green-200', sakit:'text-yellow-700 border-yellow-200', izin:'text-blue-700 border-blue-200', alpha:'text-red-700 border-red-200', dispensasi:'text-purple-700 border-purple-200', pulang_cepat:'text-orange-700 border-orange-200' };
+    const statuses = ['hadir','sakit','izin','alpha','dispensasi','pulang_cepat'];
+    const label = { hadir:'H', sakit:'S', izin:'I', alpha:'A', dispensasi:'D', pulang_cepat:'P' };
+    const labelFull = { hadir:'Hadir', sakit:'Sakit', izin:'Izin', alpha:'Alpha', dispensasi:'Dispensasi', pulang_cepat:'Pulang Cepat' };
+    return '<div class="px-4 py-3 hover:bg-gray-50 transition-colors" id="row-'+s._id+'">' +
+      '<div class="flex items-start gap-3">' +
+      '<div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm flex-shrink-0 mt-0.5">' + (i+1) + '</div>' +
+      '<div class="flex-1 min-w-0">' +
+      '<p class="font-semibold text-gray-900 text-sm">' + s.nama + '</p>' +
+      '<p class="text-xs text-gray-500">' + (s.nisn||'') + ' · ' + (s.jenisKelamin==='L'?'Laki-laki':'Perempuan') + '</p>' +
+      '<div class="flex gap-1.5 mt-2 flex-wrap">' +
+      statuses.map(st => '<button onclick="setStatus(\''+s._id+'\',\''+st+'\')" id="btn-'+s._id+'-'+st+'" ' +
+        'title="'+labelFull[st]+'" ' +
+        'class="status-btn px-2.5 py-1 border-2 rounded-lg text-xs font-semibold ' + colors[st] + (ab.status===st?' active-'+st:' bg-white') + '">' +
+        '<i class="fas ' + ikons[st] + ' mr-1"></i>' + label[st] + '</button>'
+      ).join('') +
+      '</div>' +
+      '<input type="text" placeholder="Keterangan (opsional)" value="' + (ab.keterangan||'') + '" ' +
+        'oninput="absensiMap[\''+s._id+'\'].keterangan=this.value" ' +
+        'class="mt-2 w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50">' +
+      '</div></div></div>';
+  }).join('');
+}
+
+function setStatus(siswaId, status) {
+  if (!absensiMap[siswaId]) absensiMap[siswaId] = { status:'hadir', keterangan:'' };
+  absensiMap[siswaId].status = status;
+  // Update button UI
+  ['hadir','sakit','izin','alpha','dispensasi','pulang_cepat'].forEach(st => {
+    const btn = document.getElementById('btn-'+siswaId+'-'+st);
+    if (!btn) return;
+    btn.classList.remove('active-hadir','active-sakit','active-izin','active-alpha','active-dispensasi','active-pulang_cepat','bg-white');
+    if (st === status) btn.classList.add('active-'+st);
+    else btn.classList.add('bg-white');
+  });
+  updateCounter();
+}
+
+function setAllStatus(status) {
+  siswaData.forEach(s => setStatus(s._id, status));
+}
+
+function updateCounter() {
+  const vals = Object.values(absensiMap);
+  const count = (st) => vals.filter(a=>a.status===st).length;
+  document.getElementById('counter-hadir').textContent      = count('hadir') + ' H';
+  document.getElementById('counter-sakit').textContent      = count('sakit') + ' S';
+  document.getElementById('counter-izin').textContent       = count('izin')  + ' I';
+  document.getElementById('counter-alpha').textContent      = count('alpha') + ' A';
+  document.getElementById('counter-dispensasi').textContent = count('dispensasi') + ' D';
+  document.getElementById('counter-pulang').textContent     = count('pulang_cepat') + ' P';
+}
+
+async function simpanAbsensi() {
+  const tanggal = document.getElementById('absen-tanggal').value;
+  const semester = document.getElementById('absen-semester').value;
+  const tahunAjaran = document.getElementById('absen-tahun').value.trim();
+  if (!tanggal || !tahunAjaran) { toast('Data tanggal/tahun ajaran tidak lengkap.','error'); return; }
+  if (!siswaData.length) { toast('Belum ada siswa dimuat.','error'); return; }
+
+  const data = siswaData.map(s => ({
+    siswaId: s._id,
+    status: absensiMap[s._id]?.status || 'hadir',
+    keterangan: absensiMap[s._id]?.keterangan || ''
+  }));
+
+  const btn = document.getElementById('btn-simpan');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+  try {
+    const res = await api.post('/api/wali-kelas/input-absensi', { tanggal, semester, tahunAjaran, data });
+    if (res.success) {
+      toast('✅ Absensi ' + res.count + ' siswa berhasil disimpan!');
+      // Reload banner
+      muatSiswa();
+    } else toast(res.message || 'Gagal menyimpan.','error');
+  } catch(e) { toast('Gagal terhubung ke server.','error'); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Simpan Absensi'; }
+}
+
+// ── Init: cek session yang masih aktif ─────────────────────
+if (token) {
+  // Gunakan info-pengabsen untuk validasi token sekaligus refresh data terbaru
+  fetch('/api/wali-kelas/info-pengabsen', { headers:{'Authorization':'Bearer '+token} })
+    .then(r=>r.json())
+    .then(d=>{
+      if (d.success) {
+        info = d.data;
+        localStorage.setItem('pengabsen_info', JSON.stringify(info));
+        showDashboard();
+      } else {
+        localStorage.removeItem('pengabsen_token');
+        localStorage.removeItem('pengabsen_info');
+      }
+    })
+    .catch(()=>{});
+}
+</script>
+</body>
+</html>

@@ -1,88 +1,71 @@
 #!/bin/bash
+# =============================================================================
+# E-Journal SMK — Script Update Aplikasi
+# Jalankan dari direktori app atau sebagai user app:
+#   bash update.sh
+#   atau: sudo -u ejournal bash update.sh
+# =============================================================================
 
-# ============================================
-#   update.sh - Update Aplikasi di VPS
-#   Aplikasi: jurnal-guru
-#   Jalankan di VPS: bash update.sh
-# ============================================
+set -euo pipefail
 
-# Warna output
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
+info()  { echo -e "${BLUE}[INFO]${NC}  $*"; }
+ok()    { echo -e "${GREEN}[OK]${NC}    $*"; }
+warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
+error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 
-# Konfigurasi - sesuaikan dengan path di VPS kamu
-APP_DIR="/root/jurnal"            # Path folder app di VPS
-APP_NAME="jurnal-guru"           # Nama PM2 process
-BRANCH="main"
+APP_DIR="${APP_DIR:-$(pwd)}"
+APP_NAME="${APP_NAME:-ejournal-smk}"
 
-echo -e "${YELLOW}==============================${NC}"
-echo -e "${YELLOW}   UPDATE jurnal-guru di VPS  ${NC}"
-echo -e "${YELLOW}==============================${NC}"
-
-# Masuk ke direktori aplikasi
-if [ ! -d "$APP_DIR" ]; then
-  echo -e "${RED}[ERROR] Folder $APP_DIR tidak ditemukan!${NC}"
-  echo -e "${YELLOW}[INFO] Clone dulu dengan perintah:${NC}"
-  echo "  git clone https://github.com/imamjunaidi00-byte/jurnal.git $APP_DIR"
-  exit 1
-fi
+# Pastikan di direktori app
+[[ ! -f "$APP_DIR/server.js" ]] && error "server.js tidak ditemukan. Pastikan APP_DIR benar: $APP_DIR"
 
 cd "$APP_DIR"
 
-# Cek apakah ini git repo
-if [ ! -d ".git" ]; then
-  echo -e "${RED}[ERROR] Bukan git repository. Clone ulang dulu.${NC}"
-  exit 1
+info "=== E-Journal SMK Update ==="
+info "Direktori: $APP_DIR"
+echo ""
+
+# ─── 1. Backup .env ───────────────────────────────────────────────────────────
+info "1/5 Backup .env..."
+cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+ok ".env di-backup."
+
+# ─── 2. Pull dari GitHub ──────────────────────────────────────────────────────
+info "2/5 Pull kode terbaru dari GitHub..."
+git fetch origin
+git reset --hard origin/main 2>/dev/null || git reset --hard origin/master
+ok "Kode terbaru berhasil diunduh."
+
+# Restore .env (jaga-jaga tertimpa)
+LATEST_BACKUP=$(ls -t .env.backup.* 2>/dev/null | head -1)
+if [[ -n "$LATEST_BACKUP" ]] && [[ ! -f ".env" ]]; then
+  cp "$LATEST_BACKUP" .env
+  warn ".env dikembalikan dari backup."
 fi
 
-# Pull dari GitHub
-echo ""
-echo -e "${YELLOW}[1/4] Pull update dari GitHub...${NC}"
-git pull origin "$BRANCH"
+# ─── 3. Install / update dependencies ────────────────────────────────────────
+info "3/5 Update npm dependencies..."
+npm install --production --no-audit
+ok "Dependencies diperbarui."
 
-if [ $? -ne 0 ]; then
-  echo -e "${RED}[ERROR] Git pull gagal!${NC}"
-  exit 1
-fi
+# ─── 4. Jalankan migrasi database ────────────────────────────────────────────
+info "4/5 Jalankan migrasi database (alter safe)..."
+node src/database/migrate.js
+ok "Migrasi database selesai."
 
-# Install/update dependencies jika package.json berubah
-echo ""
-echo -e "${YELLOW}[2/4] Install dependencies (jika ada yang baru)...${NC}"
-npm install --production
-
-if [ $? -ne 0 ]; then
-  echo -e "${RED}[ERROR] npm install gagal!${NC}"
-  exit 1
-fi
-
-# Cek apakah PM2 sudah running
-echo ""
-echo -e "${YELLOW}[3/4] Restart aplikasi dengan PM2...${NC}"
-
-if pm2 list | grep -q "$APP_NAME"; then
-  # Sudah running, restart saja
-  pm2 restart "$APP_NAME"
+# ─── 5. Restart aplikasi via PM2 ─────────────────────────────────────────────
+info "5/5 Restart aplikasi PM2..."
+if pm2 describe "$APP_NAME" &>/dev/null; then
+  pm2 reload "$APP_NAME" --update-env
+  ok "Aplikasi '$APP_NAME' berhasil direload."
 else
-  # Belum running, start baru
-  echo -e "${YELLOW}[INFO] Aplikasi belum berjalan, menjalankan untuk pertama kali...${NC}"
-  pm2 start server.js --name "$APP_NAME"
+  warn "Proses PM2 '$APP_NAME' tidak ditemukan. Memulai ulang..."
+  pm2 start ecosystem.config.js
   pm2 save
+  ok "Aplikasi dimulai."
 fi
 
-if [ $? -ne 0 ]; then
-  echo -e "${RED}[ERROR] PM2 restart gagal!${NC}"
-  exit 1
-fi
-
-# Tampilkan status
 echo ""
-echo -e "${YELLOW}[4/4] Status aplikasi:${NC}"
-pm2 show "$APP_NAME" | grep -E "status|uptime|restarts|memory"
-
-echo ""
-echo -e "${GREEN}==============================${NC}"
-echo -e "${GREEN}   UPDATE BERHASIL!           ${NC}"
-echo -e "${GREEN}   App: $APP_NAME             ${NC}"
-echo -e "${GREEN}==============================${NC}"
+ok "=== Update selesai! ==="
+pm2 status "$APP_NAME"

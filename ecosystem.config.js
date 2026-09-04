@@ -1,0 +1,43 @@
+// PM2 Ecosystem Config — E-Journal SMK v2.0
+// Gunakan: pm2 start ecosystem.config.js
+// Lihat status: pm2 status
+// Lihat log: pm2 logs ejournal-smk
+
+module.exports = {
+  apps: [
+    {
+      name:         'ejournal-smk',
+      script:       'server.js',
+      cwd:          __dirname,
+      instances:    1,           // gunakan 'max' jika ingin cluster mode
+      exec_mode:    'fork',
+      watch:        false,
+      ignore_watch: ['node_modules', 'uploads', 'logs', '.git'],
+      max_memory_restart: '350M',
+
+      env: {
+        NODE_ENV: 'development',
+        PORT:     3000,
+      },
+      env_production: {
+        NODE_ENV: 'production',
+        PORT:     3000,
+      },
+
+      // Logging
+      error_file:      './logs/error.log',
+      out_file:        './logs/out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs:      true,
+
+      // Auto-restart settings
+      restart_delay:   3000,
+      max_restarts:    10,
+      min_uptime:      '10s',
+
+      // Graceful shutdown
+      kill_timeout:    10000,
+      listen_timeout:  5000,
+    },
+  ],
+};

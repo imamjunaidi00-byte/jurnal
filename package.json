@@ -1,38 +1,40 @@
 {
-  "name": "jurnal-guru",
-  "version": "1.0.0",
-  "description": "Sistem Jurnal Guru Digital dengan Node.js dan Tailwind CSS",
+  "name": "ejournal-smk",
+  "version": "2.0.0",
+  "description": "E-Journal Guru Digital - Sistem Jurnal Mengajar SMK berbasis Node.js & MariaDB",
   "main": "server.js",
   "scripts": {
-    "start": "set PORT=3000 && node server.js",
-    "dev": "set PORT=3000 && nodemon server.js",
-    "build:css": "tailwindcss -i ./public/css/input.css -o ./public/css/style.css --watch"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build:css": "tailwindcss -i ./public/css/input.css -o ./public/css/style.css --minify",
+    "watch:css": "tailwindcss -i ./public/css/input.css -o ./public/css/style.css --watch",
+    "db:migrate": "node src/database/migrate.js",
+    "db:seed": "node src/database/seed.js",
+    "db:reset": "node src/database/migrate.js --reset"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "mongoose": "^7.5.0",
+    "sequelize": "^6.35.2",
+    "mysql2": "^3.6.5",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "csv-parser": "^3.0.0",
     "@json2csv/plainjs": "^7.0.1",
     "xlsx": "^0.18.5",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "express-validator": "^7.0.1",
-    "moment": "^2.29.4"
+    "helmet": "^7.1.0",
+    "express-validator": "^7.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",
     "tailwindcss": "^3.3.3"
   },
-  "keywords": [
-    "jurnal-guru",
-    "absensi",
-    "penilaian",
-    "sekolah",
-    "edtech"
-  ],
-  "author": "Guru Developer",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["ejournal", "jurnal-guru", "absensi", "penilaian", "smk", "edtech"],
+  "author": "E-Journal SMK Developer",
   "license": "MIT"
 }

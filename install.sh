@@ -1,229 +1,250 @@
 #!/bin/bash
+# =============================================================================
+# E-Journal SMK v2.0 — Script Instalasi Otomatis untuk Ubuntu 24 LTS
+# Jalankan sebagai root atau user dengan sudo:
+#   sudo bash install.sh
+# =============================================================================
 
-# ============================================================
-#   install.sh - Auto Install jurnal-guru di VPS (Ubuntu)
-#   Jalankan sebagai root: bash install.sh
-#   Atau: sudo bash install.sh
-# ============================================================
+set -euo pipefail
 
-# Warna
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m'
+# ─── Warna output ──────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
+info()  { echo -e "${BLUE}[INFO]${NC}  $*"; }
+ok()    { echo -e "${GREEN}[OK]${NC}    $*"; }
+warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
+error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 
-# Konfigurasi - SESUAIKAN INI
-APP_DIR="/root/jurnal"
-APP_NAME="jurnal-guru"
-REPO_URL="https://github.com/imamjunaidi00-byte/jurnal.git"
-APP_PORT=3000
+# ─── Cek root ──────────────────────────────────────────────────────────────────
+[[ $EUID -ne 0 ]] && error "Script harus dijalankan sebagai root. Gunakan: sudo bash install.sh"
 
-# ============================================================
-
-print_step() {
-  echo ""
-  echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-  echo -e "${CYAN}  $1${NC}"
-  echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-}
-
-print_ok()   { echo -e "${GREEN}  ✓ $1${NC}"; }
-print_info() { echo -e "${YELLOW}  → $1${NC}"; }
-print_err()  { echo -e "${RED}  ✗ $1${NC}"; }
-
-# Cek root
-if [ "$EUID" -ne 0 ]; then
-  print_err "Jalankan sebagai root: sudo bash install.sh"
-  exit 1
-fi
+# ─── Variabel konfigurasi (ubah sesuai kebutuhan) ────────────────────────────
+APP_USER="${APP_USER:-ejournal}"
+APP_DIR="${APP_DIR:-/var/www/ejournal}"
+APP_PORT="${APP_PORT:-3000}"
+DB_NAME="${DB_NAME:-ejournal_smk}"
+DB_USER="${DB_USER:-ejournal_user}"
+DB_PASS="${DB_PASS:-$(openssl rand -base64 24)}"
+JWT_SECRET="$(openssl rand -hex 64)"
+NODE_VERSION="20"   # Node.js LTS
 
 echo ""
-echo -e "${BLUE}╔══════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║     INSTALLER jurnal-guru - VPS Setup        ║${NC}"
-echo -e "${BLUE}╚══════════════════════════════════════════════╝${NC}"
+echo "================================================================="
+echo "   E-Journal SMK v2.0 — Instalasi Ubuntu 24 LTS"
+echo "================================================================="
 echo ""
-echo -e "  Repo   : ${REPO_URL}"
-echo -e "  Folder : ${APP_DIR}"
-echo -e "  Port   : ${APP_PORT}"
+info "Konfigurasi:"
+echo "  App Dir   : $APP_DIR"
+echo "  App Port  : $APP_PORT"
+echo "  App User  : $APP_USER"
+echo "  DB Name   : $DB_NAME"
+echo "  DB User   : $DB_USER"
 echo ""
-read -p "  Lanjutkan instalasi? (y/n): " CONFIRM
-if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
-  echo "Instalasi dibatalkan."
-  exit 0
-fi
+read -rp "Lanjutkan instalasi? [y/N]: " CONFIRM
+[[ "${CONFIRM,,}" != "y" ]] && { info "Instalasi dibatalkan."; exit 0; }
 
-# ============================================================
-# STEP 1: Update sistem
-# ============================================================
-print_step "STEP 1/7: Update sistem"
+# ─── 1. Update sistem ─────────────────────────────────────────────────────────
+info "1/9 Update paket sistem..."
 apt-get update -y && apt-get upgrade -y
-print_ok "Sistem diupdate"
+ok "Sistem diperbarui."
 
-# ============================================================
-# STEP 2: Install Node.js 18 LTS
-# ============================================================
-print_step "STEP 2/7: Install Node.js 18 LTS"
+# ─── 2. Install dependensi dasar ─────────────────────────────────────────────
+info "2/9 Install dependensi dasar..."
+apt-get install -y curl wget git unzip build-essential ufw fail2ban
+ok "Dependensi dasar terinstal."
 
-if command -v node &>/dev/null; then
-  NODE_VER=$(node -v)
-  print_info "Node.js sudah terinstall: $NODE_VER"
-else
-  print_info "Menginstall Node.js 18..."
-  curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+# ─── 3. Install Node.js via NodeSource ───────────────────────────────────────
+info "3/9 Install Node.js ${NODE_VERSION}..."
+if ! command -v node &>/dev/null; then
+  curl -fsSL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash -
   apt-get install -y nodejs
-  print_ok "Node.js $(node -v) berhasil diinstall"
+else
+  INSTALLED_NODE=$(node -v | cut -d'.' -f1 | tr -d 'v')
+  if [[ "$INSTALLED_NODE" -lt "$NODE_VERSION" ]]; then
+    warn "Node.js $INSTALLED_NODE terdeteksi. Upgrade ke $NODE_VERSION..."
+    curl -fsSL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash -
+    apt-get install -y nodejs
+  fi
+fi
+ok "Node.js $(node -v) & npm $(npm -v) terinstal."
+
+# ─── 4. Install PM2 ──────────────────────────────────────────────────────────
+info "4/9 Install PM2..."
+npm install -g pm2
+pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" || true
+ok "PM2 terinstal."
+
+# ─── 5. Install MariaDB ───────────────────────────────────────────────────────
+info "5/9 Install MariaDB..."
+apt-get install -y mariadb-server mariadb-client
+systemctl enable --now mariadb
+ok "MariaDB terinstal dan berjalan."
+
+# Setup database & user
+info "   Setup database MariaDB..."
+mysql -u root <<MYSQL_SCRIPT
+CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';
+GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';
+FLUSH PRIVILEGES;
+MYSQL_SCRIPT
+ok "Database '$DB_NAME' dan user '$DB_USER' berhasil dibuat."
+
+# ─── 6. Install Nginx ─────────────────────────────────────────────────────────
+info "6/9 Install Nginx..."
+apt-get install -y nginx
+systemctl enable --now nginx
+ok "Nginx terinstal."
+
+# ─── 7. Buat app user & direktori ────────────────────────────────────────────
+info "7/9 Setup app user & direktori..."
+if ! id -u "$APP_USER" &>/dev/null; then
+  useradd -r -m -s /bin/bash "$APP_USER"
+  ok "User '$APP_USER' dibuat."
 fi
 
-# ============================================================
-# STEP 3: Install MongoDB
-# ============================================================
-print_step "STEP 3/7: Install MongoDB"
+mkdir -p "$APP_DIR"
+chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
+ok "Direktori '$APP_DIR' siap."
 
-if command -v mongod &>/dev/null; then
-  print_info "MongoDB sudah terinstall: $(mongod --version | head -1)"
-else
-  print_info "Menginstall MongoDB 7.0..."
-  
-  # Import MongoDB GPG key
-  curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | \
-    gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
-
-  # Tambah repo MongoDB
-  echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] \
-    https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
-    tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-
-  apt-get update -y
-  apt-get install -y mongodb-org
-
-  # Start dan enable MongoDB
-  systemctl start mongod
-  systemctl enable mongod
-
-  print_ok "MongoDB berhasil diinstall dan dijalankan"
-fi
-
-# Pastikan MongoDB berjalan
-systemctl start mongod
-print_ok "MongoDB status: $(systemctl is-active mongod)"
-
-# ============================================================
-# STEP 4: Install PM2
-# ============================================================
-print_step "STEP 4/7: Install PM2"
-
-if command -v pm2 &>/dev/null; then
-  print_info "PM2 sudah terinstall: $(pm2 -v)"
-else
-  npm install -g pm2
-  print_ok "PM2 $(pm2 -v) berhasil diinstall"
-fi
-
-# ============================================================
-# STEP 5: Clone / Update aplikasi
-# ============================================================
-print_step "STEP 5/7: Clone aplikasi dari GitHub"
-
-if [ -d "$APP_DIR/.git" ]; then
-  print_info "Folder sudah ada, melakukan git pull..."
-  cd "$APP_DIR"
-  git pull origin main
-else
-  print_info "Cloning dari GitHub..."
-  git clone "$REPO_URL" "$APP_DIR"
-  cd "$APP_DIR"
-fi
-
-# Install dependencies
-print_info "Menginstall npm dependencies..."
-npm install --production
-print_ok "Dependencies terinstall"
-
-# ============================================================
-# STEP 6: Setup file .env
-# ============================================================
-print_step "STEP 6/7: Setup konfigurasi .env"
-
-if [ -f "$APP_DIR/.env" ]; then
-  print_info "File .env sudah ada, melewati..."
-else
-  print_info "Membuat file .env dari template..."
-  
-  # Generate JWT secret otomatis
-  JWT_SECRET=$(openssl rand -hex 32)
-  
-  cat > "$APP_DIR/.env" << EOF
+# ─── 8. Buat file .env produksi ───────────────────────────────────────────────
+info "8/9 Membuat file .env produksi..."
+cat > "$APP_DIR/.env" <<ENV
 NODE_ENV=production
 PORT=${APP_PORT}
-MONGODB_URI=mongodb://127.0.0.1:27017/jurnal_guru
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=${DB_NAME}
+DB_USER=${DB_USER}
+DB_PASS=${DB_PASS}
+
+DB_POOL_MAX=10
+DB_POOL_MIN=2
+DB_POOL_ACQ=30000
+DB_POOL_IDLE=10000
+
 JWT_SECRET=${JWT_SECRET}
 JWT_EXPIRE=30d
-EOF
 
-  print_ok "File .env berhasil dibuat"
-  print_info "JWT_SECRET sudah di-generate otomatis"
-fi
+CORS_ORIGIN=*
 
-# ============================================================
-# STEP 7: Start aplikasi dengan PM2
-# ============================================================
-print_step "STEP 7/7: Menjalankan aplikasi"
+ADMIN_USER=admin
+ADMIN_PASS=Admin@1234
+ADMIN_NAMA=Administrator
+ENV
+chmod 600 "$APP_DIR/.env"
+chown "$APP_USER":"$APP_USER" "$APP_DIR/.env"
+ok "File .env dibuat di $APP_DIR/.env"
 
-cd "$APP_DIR"
+# ─── 9. Konfigurasi Nginx ─────────────────────────────────────────────────────
+info "9/9 Konfigurasi Nginx..."
+DOMAIN="${DOMAIN:-_}"   # Default: terima semua domain
+cat > /etc/nginx/sites-available/ejournal <<NGINX
+server {
+    listen 80;
+    server_name ${DOMAIN};
 
-if pm2 list | grep -q "$APP_NAME"; then
-  print_info "Merestart aplikasi..."
-  pm2 restart "$APP_NAME"
-else
-  print_info "Menjalankan aplikasi untuk pertama kali..."
-  pm2 start server.js --name "$APP_NAME"
-fi
+    client_max_body_size 10M;
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
 
-pm2 save
-pm2 startup | tail -1 | bash 2>/dev/null || true
+    location / {
+        proxy_pass         http://127.0.0.1:${APP_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade \$http_upgrade;
+        proxy_set_header   Connection 'upgrade';
+        proxy_set_header   Host \$host;
+        proxy_set_header   X-Real-IP \$remote_addr;
+        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 10s;
+    }
 
-print_ok "Aplikasi berjalan dengan PM2"
+    # Cache static assets
+    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff2|woff|ttf)$ {
+        proxy_pass http://127.0.0.1:${APP_PORT};
+        proxy_set_header Host \$host;
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+    }
 
-# ============================================================
-# STEP BONUS: Restore database dari backup (opsional)
-# ============================================================
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+}
+NGINX
+
+ln -sf /etc/nginx/sites-available/ejournal /etc/nginx/sites-enabled/ejournal
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl reload nginx
+ok "Nginx dikonfigurasi."
+
+# ─── Konfigurasi UFW firewall ─────────────────────────────────────────────────
+info "Setup firewall UFW..."
+ufw allow ssh
+ufw allow 'Nginx Full'
+ufw --force enable
+ok "Firewall UFW aktif."
+
+# ─── Buat PM2 ecosystem config ────────────────────────────────────────────────
+cat > "$APP_DIR/ecosystem.config.js" <<PM2
+module.exports = {
+  apps: [{
+    name:        'ejournal-smk',
+    script:      'server.js',
+    cwd:         '${APP_DIR}',
+    instances:   1,
+    exec_mode:   'fork',
+    watch:       false,
+    max_memory_restart: '300M',
+    env: {
+      NODE_ENV: 'production',
+    },
+    error_file:  '/var/log/ejournal/error.log',
+    out_file:    '/var/log/ejournal/out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    restart_delay: 3000,
+    max_restarts:  10,
+  }]
+};
+PM2
+mkdir -p /var/log/ejournal
+chown -R "$APP_USER":"$APP_USER" /var/log/ejournal
+chown "$APP_USER":"$APP_USER" "$APP_DIR/ecosystem.config.js"
+
+# ─── Selesai ──────────────────────────────────────────────────────────────────
 echo ""
-read -p "  Apakah kamu punya file backup database untuk di-restore? (y/n): " HAS_BACKUP
-
-if [[ "$HAS_BACKUP" == "y" || "$HAS_BACKUP" == "Y" ]]; then
-  echo ""
-  print_info "Letakkan file backup (.tar.gz) di folder: ${BACKUP_DIR}"
-  print_info "Atau jalankan dari laptop: bash backup_local.sh"
-  echo ""
-  print_info "Untuk restore manual, jalankan:"
-  echo "    bash ${APP_DIR}/db.sh  → pilih menu [4] Restore"
-fi
-
-# ============================================================
-# SELESAI
-# ============================================================
+echo "================================================================="
+ok "Instalasi infrastruktur selesai!"
+echo "================================================================="
 echo ""
-echo -e "${GREEN}╔══════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║         INSTALASI SELESAI!                   ║${NC}"
-echo -e "${GREEN}╚══════════════════════════════════════════════╝${NC}"
+echo "  Langkah selanjutnya:"
 echo ""
-
-# Dapatkan IP VPS
-VPS_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
-
-echo -e "  ${GREEN}✓${NC} Aplikasi berjalan di:"
-echo -e "    ${CYAN}http://${VPS_IP}:${APP_PORT}${NC}"
-echo -e "    (Arahkan reverse proxy kamu ke port ${APP_PORT})"
+echo "  1. Deploy kode aplikasi:"
+echo "     cd $APP_DIR"
+echo "     git clone https://github.com/USERNAME/REPO.git ."
 echo ""
-echo -e "  ${YELLOW}Perintah berguna:${NC}"
-echo -e "    pm2 status              → cek status app"
-echo -e "    pm2 logs $APP_NAME      → lihat log"
-echo -e "    pm2 restart $APP_NAME   → restart app"
-echo -e "    bash $APP_DIR/update.sh → update dari GitHub"
+echo "  2. Install dependencies Node.js:"
+echo "     cd $APP_DIR && npm install --production"
 echo ""
-echo -e "  ${YELLOW}MongoDB:${NC}"
-echo -e "    mongosh                 → masuk MongoDB shell"
-echo -e "    bash $APP_DIR/db.sh     → kelola database"
+echo "  3. Jalankan migrasi database:"
+echo "     cd $APP_DIR && node src/database/migrate.js"
 echo ""
+echo "  4. Buat akun admin pertama:"
+echo "     cd $APP_DIR && node src/database/seed.js"
+echo ""
+echo "  5. Start aplikasi dengan PM2:"
+echo "     pm2 start $APP_DIR/ecosystem.config.js"
+echo "     pm2 save"
+echo ""
+echo "  ─── Kredensial Database ───────────────────────────"
+echo "  DB Name  : $DB_NAME"
+echo "  DB User  : $DB_USER"
+echo "  DB Pass  : $DB_PASS"
+echo ""
+echo "  SIMPAN KREDENSIAL DI ATAS DI TEMPAT AMAN!"
+echo "================================================================="
