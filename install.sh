@@ -43,17 +43,17 @@ read -rp "Lanjutkan instalasi? [y/N]: " CONFIRM
 [[ "${CONFIRM,,}" != "y" ]] && { info "Instalasi dibatalkan."; exit 0; }
 
 # ─── 1. Update sistem ─────────────────────────────────────────────────────────
-info "1/9 Update paket sistem..."
+info "1/6 Update paket sistem..."
 apt-get update -y && apt-get upgrade -y
 ok "Sistem diperbarui."
 
 # ─── 2. Install dependensi dasar ─────────────────────────────────────────────
-info "2/9 Install dependensi dasar..."
+info "2/6 Install dependensi dasar..."
 apt-get install -y curl wget git unzip build-essential ufw fail2ban
 ok "Dependensi dasar terinstal."
 
 # ─── 3. Install Node.js via NodeSource ───────────────────────────────────────
-info "3/9 Install Node.js ${NODE_VERSION}..."
+info "3/6 Install Node.js ${NODE_VERSION}..."
 if ! command -v node &>/dev/null; then
   curl -fsSL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash -
   apt-get install -y nodejs
@@ -68,13 +68,13 @@ fi
 ok "Node.js $(node -v) & npm $(npm -v) terinstal."
 
 # ─── 4. Install PM2 ──────────────────────────────────────────────────────────
-info "4/9 Install PM2..."
+info "4/6 Install PM2..."
 npm install -g pm2
 pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" || true
 ok "PM2 terinstal."
 
 # ─── 5. Install MariaDB ───────────────────────────────────────────────────────
-info "5/9 Install MariaDB..."
+info "5/6 Install MariaDB..."
 apt-get install -y mariadb-server mariadb-client
 systemctl enable --now mariadb
 ok "MariaDB terinstal dan berjalan."
@@ -90,14 +90,8 @@ FLUSH PRIVILEGES;
 MYSQL_SCRIPT
 ok "Database '$DB_NAME' dan user '$DB_USER' berhasil dibuat."
 
-# ─── 6. Install Nginx ─────────────────────────────────────────────────────────
-info "6/9 Install Nginx..."
-apt-get install -y nginx
-systemctl enable --now nginx
-ok "Nginx terinstal."
-
-# ─── 7. Buat app user & direktori ────────────────────────────────────────────
-info "7/9 Setup app user & direktori..."
+# ─── 6. Buat app user & direktori ────────────────────────────────────────────
+info "6/6 Setup app user & direktori..."
 if ! id -u "$APP_USER" &>/dev/null; then
   useradd -r -m -s /bin/bash "$APP_USER"
   ok "User '$APP_USER' dibuat."
@@ -107,8 +101,8 @@ mkdir -p "$APP_DIR"
 chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
 ok "Direktori '$APP_DIR' siap."
 
-# ─── 8. Buat file .env produksi ───────────────────────────────────────────────
-info "8/9 Membuat file .env produksi..."
+# ─── Buat file .env produksi ──────────────────────────────────────────────────
+info "Membuat file .env produksi..."
 cat > "$APP_DIR/.env" <<ENV
 NODE_ENV=production
 PORT=${APP_PORT}
@@ -137,56 +131,13 @@ chmod 600 "$APP_DIR/.env"
 chown "$APP_USER":"$APP_USER" "$APP_DIR/.env"
 ok "File .env dibuat di $APP_DIR/.env"
 
-# ─── 9. Konfigurasi Nginx ─────────────────────────────────────────────────────
-info "9/9 Konfigurasi Nginx..."
-DOMAIN="${DOMAIN:-_}"   # Default: terima semua domain
-cat > /etc/nginx/sites-available/ejournal <<NGINX
-server {
-    listen 80;
-    server_name ${DOMAIN};
-
-    client_max_body_size 10M;
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
-
-    location / {
-        proxy_pass         http://127.0.0.1:${APP_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header   Upgrade \$http_upgrade;
-        proxy_set_header   Connection 'upgrade';
-        proxy_set_header   Host \$host;
-        proxy_set_header   X-Real-IP \$remote_addr;
-        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header   X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-        proxy_read_timeout 60s;
-        proxy_connect_timeout 10s;
-    }
-
-    # Cache static assets
-    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff2|woff|ttf)$ {
-        proxy_pass http://127.0.0.1:${APP_PORT};
-        proxy_set_header Host \$host;
-        expires 7d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
-}
-NGINX
-
-ln -sf /etc/nginx/sites-available/ejournal /etc/nginx/sites-enabled/ejournal
-rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx
-ok "Nginx dikonfigurasi."
-
 # ─── Konfigurasi UFW firewall ─────────────────────────────────────────────────
 info "Setup firewall UFW..."
 ufw allow ssh
-ufw allow 'Nginx Full'
+# Buka port aplikasi hanya untuk Caddy server (ganti IP_CADDY dengan IP server Caddy Anda)
+# ufw allow from IP_CADDY to any port ${APP_PORT}
+# Atau buka untuk semua jika Caddy di jaringan yang sama:
+ufw allow ${APP_PORT}/tcp
 ufw --force enable
 ok "Firewall UFW aktif."
 
@@ -222,29 +173,43 @@ echo "================================================================="
 ok "Instalasi infrastruktur selesai!"
 echo "================================================================="
 echo ""
+echo "  Yang sudah terinstall:"
+echo "  ✅ Node.js $(node -v)"
+echo "  ✅ npm $(npm -v)"
+echo "  ✅ PM2 $(pm2 -v)"
+echo "  ✅ MariaDB"
+echo "  ✅ UFW Firewall"
+echo "  ℹ️  Nginx/Certbot TIDAK diinstall (pakai Caddy eksternal)"
+echo ""
 echo "  Langkah selanjutnya:"
 echo ""
-echo "  1. Deploy kode aplikasi:"
+echo "  1. Clone aplikasi:"
 echo "     cd $APP_DIR"
-echo "     git clone https://github.com/USERNAME/REPO.git ."
+echo "     git clone https://github.com/imamjunaidi00-byte/jurnal.git ."
 echo ""
-echo "  2. Install dependencies Node.js:"
-echo "     cd $APP_DIR && npm install --production"
+echo "  2. Install dependencies:"
+echo "     npm install --production"
 echo ""
-echo "  3. Jalankan migrasi database:"
-echo "     cd $APP_DIR && node src/database/migrate.js"
+echo "  3. Edit .env (isi DB_PASS dan JWT_SECRET):"
+echo "     nano $APP_DIR/.env"
 echo ""
-echo "  4. Buat akun admin pertama:"
-echo "     cd $APP_DIR && node src/database/seed.js"
+echo "  4. Migrasi database:"
+echo "     node src/database/migrate.js"
 echo ""
-echo "  5. Start aplikasi dengan PM2:"
-echo "     pm2 start $APP_DIR/ecosystem.config.js"
-echo "     pm2 save"
+echo "  5. Buat admin pertama:"
+echo "     node src/database/seed.js"
+echo ""
+echo "  6. Start aplikasi:"
+echo "     pm2 start ecosystem.config.js --env production"
+echo "     pm2 save && pm2 startup"
+echo ""
+echo "  7. Arahkan Caddy ke:"
+echo "     http://IP_SERVER_INI:${APP_PORT}"
 echo ""
 echo "  ─── Kredensial Database ───────────────────────────"
 echo "  DB Name  : $DB_NAME"
 echo "  DB User  : $DB_USER"
 echo "  DB Pass  : $DB_PASS"
 echo ""
-echo "  SIMPAN KREDENSIAL DI ATAS DI TEMPAT AMAN!"
+echo "  ⚠️  SIMPAN KREDENSIAL DI ATAS DI TEMPAT AMAN!"
 echo "================================================================="
