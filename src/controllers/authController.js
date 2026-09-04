@@ -30,7 +30,13 @@ exports.login = async (req, res) => {
     const token = generateToken({ id: guru.id, role: guru.role });
     const guruData = guru.toJSON(); // password sudah di-strip
 
-    return ok(res, { token, guru: guruData }, 'Login berhasil.');
+    // Format response: { success, token, data } agar kompatibel dengan frontend
+    return res.json({
+      success: true,
+      message: 'Login berhasil.',
+      token,
+      data: guruData,
+    });
   } catch (err) {
     console.error('login error:', err);
     return fail(res, 'Terjadi kesalahan server.', 500);
@@ -57,7 +63,12 @@ exports.register = async (req, res) => {
     const guru = await Guru.create({ username, password, nama, role: 'admin' });
     const token = generateToken({ id: guru.id, role: guru.role });
 
-    return ok(res, { token, guru: guru.toJSON() }, 'Registrasi berhasil.', 201);
+    return res.json({
+      success: true,
+      message: 'Registrasi berhasil.',
+      token,
+      data: guru.toJSON(),
+    });
   } catch (err) {
     console.error('register error:', err);
     return fail(res, 'Terjadi kesalahan server.', 500);

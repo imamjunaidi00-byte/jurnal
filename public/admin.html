@@ -1046,12 +1046,16 @@ async function doAdminLogin() {
   const btn = document.getElementById('btn-login');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
   try {
-    const res = await fetch('/api/auth/admin-login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username, password}) });
+    const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username, password}) });
     const data = await res.json();
-    if (data.success) {
+    if (data.success && data.data?.role === 'admin') {
       adminToken = data.token;
       localStorage.setItem('admin_token', adminToken);
       localStorage.setItem('admin_info', JSON.stringify(data.data));
+      showDashboard();
+    } else if (data.success && data.data?.role !== 'admin') {
+      document.getElementById('login-error-msg').textContent = 'Akun ini bukan admin.';
+      errEl.classList.remove('hidden');
       showDashboard();
     } else {
       document.getElementById('login-error-msg').textContent = data.message || 'Login gagal.';
