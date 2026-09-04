@@ -12,7 +12,9 @@ const cache = require('../utils/cache');
 // ─── GET /api/admin/guru ─────────────────────────────────────────────────────
 exports.listGuru = async (req, res) => {
   try {
+    // Hanya tampilkan role 'guru', bukan admin
     const gurus = await Guru.findAll({
+      where: { role: 'guru' },
       attributes: { exclude: ['password'] },
       order: [['createdAt', 'DESC']],
     });
@@ -264,5 +266,101 @@ exports.exportGuruExcel = async (req, res) => {
     return res.send(buffer);
   } catch (err) {
     return fail(res, 'Gagal mengekspor data guru.', 500);
+  }
+};
+
+// ─── GET /api/admin/admins — daftar semua akun admin ─────────────────────────
+exports.listAdmins = async (req, res) => {
+  try {
+    const admins = await Guru.findAll({
+      where: { role: 'admin' },
+      attributes: { exclude: ['password'] },
+      order: [['createdAt', 'ASC']],
+    });
+    return ok(res, admins);
+  } catch (err) {
+    return fail(res, 'Gagal mengambil daftar admin.', 500);
+  }
+};
+
+// ─── POST /api/admin/admins — buat akun admin baru ───────────────────────────
+exports.createAdmin = async (req, res) => {
+  try {
+    const { username, password, nama } = req.body;
+    if (!username || !password || !nama)
+      return fail(res, 'Username, password, dan nama wajib diisi.', 400);
+    if (password.length < 6)
+      return fail(res, 'Password minimal 6 karakter.', 400);
+
+    const exists = await Guru.findOne({ where: { username: username.toLowerCase().trim() } });
+    if (exists) return fail(res, 'Username sudah digunakan.', 409);
+
+    const admin = await Guru.create({ username, password, nama, role: 'admin' });
+    return ok(res, admin.toJSON(), 'Akun admin berhasil dibuat.', 201);
+  } catch (err) {
+    console.error(err);
+    return fail(res, 'Gagal membuat akun admin.', 500);
+  }
+};
+
+// ─── PUT /api/admin/admins/:id/reset-password ────────────────────────────────
+exports.resetAdminPassword = async (req, res) => {
+  try {
+    const admin = await Guru.findOne({ where: { id: req.params.id, role: 'admin' } });
+    if (!admin) return fail(res, 'Admin tidak ditemukan.', 404);
+
+    const newPass = req.body.password || 'Password@123';
+    if (newPass.length < 6) return fail(res, 'Password minimal 6 karakter.', 400);
+
+    admin.password = newPass;
+    await admin.save();
+    const { invalidateGuruTokens } = require('../middleware/auth');
+    invalidateGuruTokens(admin.id);
+
+    return ok(res, null, `Password admin berhasil direset.`);
+  } catch (err) {
+    return fail(res, 'Gagal mereset password admin.', 500);
+  }
+};
+
+// ─── DELETE /api/admin/admins/:id ────────────────────────────────────────────
+exports.deleteAdmin = async (req, res) => {
+  try {
+    if (String(req.params.id) === String(req.guru.id))
+      return fail(res, 'Tidak bisa menghapus akun sendiri.', 400);
+
+    const admin = await Guru.findOne({ where: { id: req.params.id, role: 'admin' } });
+    if (!admin) return fail(res, 'Admin tidak ditemukan.', 404);
+
+    const { invalidateGuruTokens } = require('../middleware/auth');
+    invalidateGuruTokens(admin.id);
+    await admin.destroy();
+
+    return ok(res, null, 'Akun admin berhasil dihapus.');
+  } catch (err) {
+    return fail(res, 'Gagal menghapus akun admin.', 500);
+  }
+};
+
+// ─── GET /api/admin/stats — statistik dashboard ──────────────────────────────
+exports.getStats = async (req, res) => {
+  try {
+    const { Siswa, Kelas } = require('../models/index');
+    const { Op } = require('sequelize');
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [totalGuru, totalSiswa, totalKelas, guruBaru] = await Promise.all([
+      Guru.count({ where: { role: 'guru' } }),
+      Siswa.count({ where: { status: 'Aktif' } }),
+      Kelas.count({ where: { guruId: null } }),
+      Guru.count({ where: { role: 'guru', createdAt: { [Op.gte]: startOfMonth } } }),
+    ]);
+
+    return ok(res, { totalGuru, totalSiswa, totalKelas, guruBaru });
+  } catch (err) {
+    return fail(res, 'Gagal mengambil statistik.', 500);
   }
 };
