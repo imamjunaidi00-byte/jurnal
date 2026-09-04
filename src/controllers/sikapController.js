@@ -12,8 +12,8 @@ exports.list = async (req, res) => {
 
     const list = await Sikap.findAll({
       where,
-      include: [{ model: Siswa, as: 'siswa', attributes: ['id','nama','nisn'] }],
-      order:   [[{ model: Siswa, as: 'siswa' }, 'nama', 'ASC']],
+      include: [{ model: Siswa, as: 'siswaRef', attributes: ['id','nama','nisn'] }],
+      order:   [[{ model: Siswa, as: 'siswaRef' }, 'nama', 'ASC']],
     });
     return ok(res, list);
   } catch (err) {

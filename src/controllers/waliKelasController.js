@@ -69,7 +69,7 @@ exports.listAbsensiHarian = async (req, res) => {
 
     const list = await AbsensiHarian.findAll({
       where,
-      include: [{ model: Siswa, as: 'siswa', attributes: ['id','nama','nisn'] }],
+      include: [{ model: Siswa, as: 'siswaRef', attributes: ['id','nama','nisn'] }],
       order:   [['tanggal','DESC']],
     });
     return ok(res, list);
@@ -95,7 +95,7 @@ exports.rekapAbsensiHarian = async (req, res) => {
         [fn('SUM', literal("status = 'dispensasi'")), 'dispensasi'],
         [fn('COUNT', col('id')),                      'total'],
       ],
-      include: [{ model: Siswa, as: 'siswa', attributes: ['id','nama','nisn'] }],
+      include: [{ model: Siswa, as: 'siswaRef', attributes: ['id','nama','nisn'] }],
       group:   ['siswaId'],
     });
     return ok(res, results);
@@ -140,13 +140,13 @@ exports.downloadAbsensiHarian = async (req, res) => {
         [fn('SUM', literal("status = 'dispensasi'")), 'Dispensasi'],
         [fn('COUNT', col('id')),                      'Total'],
       ],
-      include: [{ model: Siswa, as: 'siswa', attributes: ['nama','nisn'] }],
+      include: [{ model: Siswa, as: 'siswaRef', attributes: ['nama','nisn'] }],
       group:   ['siswaId'],
-      order:   [[{ model: Siswa, as: 'siswa' }, 'nama', 'ASC']],
+      order:   [[{ model: Siswa, as: 'siswaRef' }, 'nama', 'ASC']],
       raw: true, nest: true,
     });
     const data = results.map(r => ({
-      Nama: r.siswa.nama, NISN: r.siswa.nisn,
+      Nama: r.siswaRef.nama, NISN: r.siswaRef.nisn,
       Hadir: r.Hadir, Sakit: r.Sakit, Izin: r.Izin,
       Alpha: r.Alpha, Dispensasi: r.Dispensasi, Total: r.Total,
     }));

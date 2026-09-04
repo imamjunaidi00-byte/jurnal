@@ -188,7 +188,7 @@ exports.updateAppIdentity = async (req, res) => {
 exports.getAktivitas = async (req, res) => {
   try {
     const logs = await LoginLog.findAll({
-      include: [{ model: Guru, as: 'guru', attributes: ['nama', 'username', 'role'] }],
+      include: [{ model: Guru, as: 'guruRef', attributes: ['nama', 'username', 'role'] }],
       order:   [['loginAt', 'DESC']],
       limit:   20,
     });
@@ -207,7 +207,7 @@ exports.getAktivitasStats = async (req, res) => {
         [sequelize.fn('COUNT', sequelize.col('id')), 'totalLogin'],
         [sequelize.fn('MAX',   sequelize.col('loginAt')), 'lastLogin'],
       ],
-      include: [{ model: Guru, as: 'guru', attributes: ['nama', 'username'] }],
+      include: [{ model: Guru, as: 'guruRef', attributes: ['nama', 'username'] }],
       group:   ['guruId', 'guru.id'],
       order:   [[sequelize.fn('MAX', sequelize.col('loginAt')), 'DESC']],
     });

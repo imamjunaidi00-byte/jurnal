@@ -15,8 +15,8 @@ exports.list = async (req, res) => {
 
     const list = await Nilai.findAll({
       where,
-      include: [{ model: Siswa, as: 'siswa', attributes: ['id','nama','nisn'] }],
-      order:   [[{ model: Siswa, as: 'siswa' }, 'nama', 'ASC']],
+      include: [{ model: Siswa, as: 'siswaRef', attributes: ['id','nama','nisn'] }],
+      order:   [[{ model: Siswa, as: 'siswaRef' }, 'nama', 'ASC']],
     });
     return ok(res, list);
   } catch (err) {
@@ -83,7 +83,7 @@ exports.ranking = async (req, res) => {
 
     const list = await Nilai.findAll({
       where,
-      include: [{ model: Siswa, as: 'siswa', attributes: ['id','nama','nisn'] }],
+      include: [{ model: Siswa, as: 'siswaRef', attributes: ['id','nama','nisn'] }],
       order:   [['naAkhir','DESC']],
     });
     return ok(res, list);
@@ -103,13 +103,13 @@ exports.download = async (req, res) => {
 
     const list = await Nilai.findAll({
       where,
-      include: [{ model: Siswa, as: 'siswa', attributes: ['nama','nisn'] }],
-      order:   [[{ model: Siswa, as: 'siswa' }, 'nama', 'ASC']],
+      include: [{ model: Siswa, as: 'siswaRef', attributes: ['nama','nisn'] }],
+      order:   [[{ model: Siswa, as: 'siswaRef' }, 'nama', 'ASC']],
       raw: true, nest: true,
     });
     const data = list.map((n, i) => ({
       No: i + 1,
-      Nama: n.siswa.nama, NISN: n.siswa.nisn,
+      Nama: n.siswaRef.nama, NISN: n.siswaRef.nisn,
       'Mata Pelajaran': n.mataPelajaran, Kelas: n.kelas,
       'UH': n.uh, 'PTS': n.pts, 'PAS': n.pas,
       'Praktek': n.praktek, 'Proyek': n.proyek, 'Portofolio': n.portofolio,

@@ -21,7 +21,7 @@ exports.list = async (req, res) => {
     const where = buildWhere(req.query, req.guru.id);
     const list  = await Absensi.findAll({
       where,
-      include: [{ model: Siswa, as: 'siswa', attributes: ['id','nama','nisn'] }],
+      include: [{ model: Siswa, as: 'siswaRef', attributes: ['id','nama','nisn'] }],
       order:   [['tanggal','DESC']],
     });
     return ok(res, list);
@@ -83,9 +83,9 @@ exports.rekap = async (req, res) => {
         [fn('SUM', literal("status = 'pulang_cepat'")),'pulang_cepat'],
         [fn('COUNT', col('id')),                      'total'],
       ],
-      include: [{ model: Siswa, as: 'siswa', attributes: ['id','nama','nisn'] }],
+      include: [{ model: Siswa, as: 'siswaRef', attributes: ['id','nama','nisn'] }],
       group:   ['siswaId'],
-      order:   [[{ model: Siswa, as: 'siswa' }, 'nama', 'ASC']],
+      order:   [[{ model: Siswa, as: 'siswaRef' }, 'nama', 'ASC']],
     });
     return ok(res, results);
   } catch (err) {
@@ -126,15 +126,15 @@ exports.downloadRekap = async (req, res) => {
         [fn('SUM', literal("status = 'dispensasi'")), 'Dispensasi'],
         [fn('COUNT', col('id')),                      'Total'],
       ],
-      include: [{ model: Siswa, as: 'siswa', attributes: ['nama','nisn'] }],
+      include: [{ model: Siswa, as: 'siswaRef', attributes: ['nama','nisn'] }],
       group:   ['siswaId'],
-      order:   [[{ model: Siswa, as: 'siswa' }, 'nama', 'ASC']],
+      order:   [[{ model: Siswa, as: 'siswaRef' }, 'nama', 'ASC']],
       raw:     true,
       nest:    true,
     });
 
     const data = results.map(r => ({
-      Nama:       r.siswa.nama, NISN: r.siswa.nisn,
+      Nama:       r.siswaRef.nama, NISN: r.siswaRef.nisn,
       Hadir: r.Hadir, Sakit: r.Sakit, Izin: r.Izin,
       Alpha: r.Alpha, Dispensasi: r.Dispensasi, Total: r.Total,
     }));
