@@ -1,8 +1,8 @@
 'use strict';
 
-const { GuruKelas, Kelas, MappingMapel } = require('../models/index');
+const { GuruKelas, Kelas, MappingMapel, Siswa, sequelize } = require('../models/index');
 const { ok, fail } = require('../utils/response');
-const { Op } = require('sequelize');
+const { Op, literal } = require('sequelize');
 
 exports.list = async (req, res) => {
   try {
@@ -14,13 +14,36 @@ exports.list = async (req, res) => {
     const list = await GuruKelas.findAll({
       where,
       include: [
-        { model: Kelas,        as: 'kelasRef',     attributes: ['id','nama','tingkat','jurusan','tahunAjaran'] },
+        {
+          model: Kelas,
+          as: 'kelasRef',
+          attributes: {
+            include: [
+              // Hitung siswa aktif aktual dari subquery
+              [
+                literal(`(SELECT COUNT(*) FROM siswas WHERE siswas.kelasId = \`kelasRef\`.id AND siswas.status = 'Aktif')`),
+                'jumlahSiswa',
+              ],
+            ],
+          },
+        },
         { model: MappingMapel, as: 'mappingMapel', attributes: ['id','nama','kode'] },
       ],
       order: [['createdAt','DESC']],
     });
-    return ok(res, list);
+
+    // Normalisasi jumlahSiswa ke integer
+    const data = list.map(gk => {
+      const plain = gk.toJSON();
+      if (plain.kelasRef) {
+        plain.kelasRef.jumlahSiswa = parseInt(plain.kelasRef.jumlahSiswa || 0, 10);
+      }
+      return plain;
+    });
+
+    return ok(res, data);
   } catch (err) {
+    console.error('guruKelas list error:', err.message);
     return fail(res, 'Gagal mengambil data kelas guru.', 500);
   }
 };
