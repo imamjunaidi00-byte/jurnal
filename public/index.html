@@ -2656,11 +2656,11 @@
                 // Simpan ke global agar getAbsenMapel() bisa lookup kelas→mapel
                 window.dataGuruKelas = gkData;
                 const kelasSet = new Set();
-                gkData.forEach(gk => { if (gk.kelasId?.nama) kelasSet.add(gk.kelasId.nama); });
+                gkData.forEach(gk => { if (gk.kelasRef?.nama) kelasSet.add(gk.kelasRef?.nama); });
                 kelasDariGK = [...kelasSet].sort();
                 // Bangun kelasMapelMapping otomatis dari GuruKelas
                 gkData.forEach(gk => {
-                    const namaKelas = gk.kelasId?.nama;
+                    const namaKelas = gk.kelasRef?.nama;
                     const namaMapel = gk.mapelNama;
                     if (namaKelas && namaMapel && !CONFIG.kelasMapelMapping?.[namaKelas]) {
                         if (!CONFIG.kelasMapelMapping) CONFIG.kelasMapelMapping = {};
@@ -3025,7 +3025,7 @@
                 if (jurnalKelasFilter) {
                     try {
                         const resGK = await api.get('/api/guru-kelas');
-                        const kelasList = [...new Set((resGK.data||[]).map(gk => gk.kelasId?.nama).filter(Boolean))].sort();
+                        const kelasList = [...new Set((resGK.data||[]).map(gk => gk.kelasRef?.nama).filter(Boolean))].sort();
                         jurnalKelasFilter.innerHTML = '<option value="">Semua Kelas</option>' +
                             kelasList.map(k => `<option value="${k}">${k}</option>`).join('');
                     } catch(e) {
@@ -3156,7 +3156,7 @@
                 if (res.success) {
                     detailNilaiData = {};
                     res.data.forEach(n => {
-                        const sid = n.siswa._id;
+                        const sid = n.siswa.id;
                         detailNilaiData[sid] = detailNilaiData[sid] || {};
                         // Load detail dari uhDetail JSON
                         if (n.uhDetail) {
@@ -3223,7 +3223,7 @@
                 <th class="px-2 py-3 text-center font-semibold bg-pink-100 text-pink-800 text-xs">Rata PO</th>`;
 
             tbody.innerHTML = siswaKelas.map((s, i) => {
-                const data = detailNilaiData[s._id] || {};
+                const data = detailNilaiData[s.id] || {};
 
                 const rataOf = (keys) => {
                     const vals = keys.map(k => gradeToNum(data[k]||'')).filter(v=>v>0);
@@ -3231,13 +3231,13 @@
                 };
 
                 const uhCells = kolomList.uh.map(u =>
-                    `<td class="px-1 py-3 text-center bg-orange-50">${gradeSelect(s._id, u, data[u]||'')}</td>`).join('');
+                    `<td class="px-1 py-3 text-center bg-orange-50">${gradeSelect(s.id, u, data[u]||'')}</td>`).join('');
                 const ptCells = kolomList.praktek.map(u =>
-                    `<td class="px-1 py-3 text-center bg-green-50">${gradeSelect(s._id, u, data[u]||'')}</td>`).join('');
+                    `<td class="px-1 py-3 text-center bg-green-50">${gradeSelect(s.id, u, data[u]||'')}</td>`).join('');
                 const prCells = kolomList.proyek.map(u =>
-                    `<td class="px-1 py-3 text-center bg-purple-50">${gradeSelect(s._id, u, data[u]||'')}</td>`).join('');
+                    `<td class="px-1 py-3 text-center bg-purple-50">${gradeSelect(s.id, u, data[u]||'')}</td>`).join('');
                 const poCells = kolomList.portofolio.map(u =>
-                    `<td class="px-1 py-3 text-center bg-pink-50">${gradeSelect(s._id, u, data[u]||'')}</td>`).join('');
+                    `<td class="px-1 py-3 text-center bg-pink-50">${gradeSelect(s.id, u, data[u]||'')}</td>`).join('');
 
                 return `<tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
                     <td class="px-3 py-3 text-xs text-gray-500 sticky left-0 bg-white">${i+1}</td>
@@ -3275,7 +3275,7 @@
             };
 
             const data = siswaKelas.map(s => {
-                const d = detailNilaiData[s._id] || {};
+                const d = detailNilaiData[s.id] || {};
                 const rataUH = rataOf(kolomList.uh, d);
                 const rataPT = rataOf(kolomList.praktek, d);
                 const rataPR = rataOf(kolomList.proyek, d);
@@ -3287,7 +3287,7 @@
                     .forEach(k => { if (d[k]) allDetail[k] = d[k]; });
 
                 return {
-                    siswa: s._id, kelas,
+                    siswa: s.id, kelas,
                     semester: CONFIG.semester, tahunAjaran: CONFIG.tahunAjaran,
                     mataPelajaran: mapel, guru: CONFIG.guru.nama,
                     uh: rataUH, pts: 0, pas: 0,
@@ -3573,7 +3573,7 @@
                 if (res.success && res.data?.length) {
                     res.data.forEach(j => {
                         notifData.push({
-                            id: `jadwal-${j._id}`,
+                            id: `jadwal-${j.id}`,
                             type: 'info',
                             icon: 'fas fa-calendar-check',
                             color: 'text-blue-500 bg-blue-50',
@@ -3592,7 +3592,7 @@
                 if (res.success && res.data?.length) {
                     const alphaCount = {};
                     res.data.filter(a => a.status === 'alpha').forEach(a => {
-                        const key = a.siswa?._id;
+                        const key = a.siswa?.id;
                         if (key) alphaCount[key] = (alphaCount[key] || { nama: a.siswa?.nama, kelas: a.kelas, count: 0 });
                         if (key) alphaCount[key].count++;
                     });
@@ -3953,9 +3953,9 @@
 
             // Build map: siswaId -> { tanggal -> status }
             const map = {};
-            siswaKelas.forEach(s => { map[s._id.toString()] = { nama: s.nama }; });
+            siswaKelas.forEach(s => { map[s.id.toString()] = { nama: s.nama }; });
             filtered.forEach(a => {
-                const sid = (a.siswa?._id || a.siswa || '').toString();
+                const sid = (a.siswa?.id || a.siswa || '').toString();
                 if (map[sid]) {
                     const d = new Date(a.tanggal);
                     const tgl = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -3975,7 +3975,7 @@
             }).join('');
 
             const rows = siswaKelas.map((s, i) => {
-                const data = map[s._id.toString()] || {};
+                const data = map[s.id.toString()] || {};
                 const cells = tanggalList.map(t => {
                     const st = data[t];
                     if (!st) return `<td class="px-1 py-3 text-center"><span class="text-gray-200 text-xs">-</span></td>`;
@@ -4111,13 +4111,13 @@
             // Hitung per siswa — gunakan string ID untuk matching
             const rekapMap = {};
             siswaKelas.forEach(s => {
-                const idStr = (s._id || s.id || '').toString();
+                const idStr = (s.id || s.id || '').toString();
                 rekapMap[idStr] = { nama: s.nama, hadir:0, sakit:0, izin:0, alpha:0, dispensasi:0, pulang_cepat:0 };
             });
 
             filtered.forEach(a => {
                 // a.siswa bisa object (populate) atau string/ObjectId langsung
-                const sid = (a.siswa?._id || a.siswa?.id || a.siswa || '').toString();
+                const sid = (a.siswa?.id || a.siswa?.id || a.siswa || '').toString();
                 if (rekapMap[sid]) {
                     const st = a.status || 'hadir';
                     rekapMap[sid][st] = (rekapMap[sid][st] || 0) + 1;
@@ -4414,9 +4414,9 @@
                 if (resSiswa.success && resSiswa.data?.length) {
                     siswaKelas = resSiswa.data;
                     // Merge ke dataSiswa global agar halaman lain bisa pakai
-                    const existingIds = new Set(dataSiswa.map(s => s._id?.toString()));
+                    const existingIds = new Set(dataSiswa.map(s => s.id?.toString()));
                     resSiswa.data.forEach(s => {
-                        if (!existingIds.has(s._id?.toString())) {
+                        if (!existingIds.has(s.id?.toString())) {
                             dataSiswa.push(s);
                         }
                     });
@@ -4424,18 +4424,18 @@
 
                 // Reset absensiData untuk kelas ini
                 siswaKelas.forEach(s => {
-                    delete absensiData[`${kelas}-${s._id}`];
-                    delete absensiData[`${kelas}-${s._id}-ket`];
-                    delete absensiData[`${kelas}-${s._id}-id`];
+                    delete absensiData[`${kelas}-${s.id}`];
+                    delete absensiData[`${kelas}-${s.id}-ket`];
+                    delete absensiData[`${kelas}-${s.id}-id`];
                 });
 
                 // Isi absensiData dari hasil fetch absensi
                 if (resAbsen.success && resAbsen.data?.length) {
                     resAbsen.data.forEach(a => {
-                        const sid = (a.siswa?._id || a.siswa || '').toString();
+                        const sid = (a.siswa?.id || a.siswa || '').toString();
                         absensiData[`${kelas}-${sid}`] = a.status;
                         if (a.keterangan) absensiData[`${kelas}-${sid}-ket`] = a.keterangan;
-                        if (a._id) absensiData[`${kelas}-${sid}-id`] = a._id;
+                        if (a.id) absensiData[`${kelas}-${sid}-id`] = a.id;
                     });
                 }
             } catch(e) {
@@ -4452,7 +4452,7 @@
             let html = '';
             let counts = {hadir: 0, sakit: 0, izin: 0, alpha: 0, dispensasi: 0, pulang_cepat: 0};
             siswaKelas.forEach((s, i) => {
-                const key = `${kelas}-${s._id}`;
+                const key = `${kelas}-${s.id}`;
                 const status = absensiData[key] || null;
                 if (status) counts[status] = (counts[status] || 0) + 1;
                 const ket = absensiData[`${key}-ket`] || '';
@@ -4485,7 +4485,7 @@
                     <td class="px-4 py-4">
                         <div class="flex gap-1.5 justify-center flex-wrap">
                             ${btnD('hadir','H')}${btnD('sakit','S')}${btnD('izin','I')}${btnD('alpha','A')}${btnD('dispensasi','D')}${btnD('pulang_cepat','P')}
-                            ${status ? `<button onclick="resetSiswa('${key}','${s._id}','${kelas}')" class="attendance-btn px-2 py-2 rounded-lg text-xs font-bold transition-all bg-gray-200 text-gray-500 hover:bg-red-100 hover:text-red-500"><i class="fas fa-times"></i></button>` : ''}
+                            ${status ? `<button onclick="resetSiswa('${key}','${s.id}','${kelas}')" class="attendance-btn px-2 py-2 rounded-lg text-xs font-bold transition-all bg-gray-200 text-gray-500 hover:bg-red-100 hover:text-red-500"><i class="fas fa-times"></i></button>` : ''}
                         </div>
                     </td>
                     <td class="px-4 py-4">
@@ -4511,7 +4511,7 @@
                             </div>
                             <div class="grid grid-cols-3 gap-2 mb-2">
                                 ${btnM('dispensasi','D')}${btnM('pulang_cepat','P')}
-                                <button onclick="resetSiswa('${key}','${s._id}','${kelas}')" class="py-3 rounded-xl text-sm border-2 border-gray-200 bg-white text-gray-400 hover:bg-red-50 hover:text-red-400 transition-all"><i class="fas fa-times"></i></button>
+                                <button onclick="resetSiswa('${key}','${s.id}','${kelas}')" class="py-3 rounded-xl text-sm border-2 border-gray-200 bg-white text-gray-400 hover:bg-red-50 hover:text-red-400 transition-all"><i class="fas fa-times"></i></button>
                             </div>
                             <input type="text" value="${ket}" placeholder="Keterangan (opsional)..."
                                 class="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none bg-gray-50"
@@ -4541,7 +4541,7 @@
         function setAllStatus(status) {
             const kelas = document.getElementById('absen-kelas').value;
             dataSiswa.filter(s => s.kelas === kelas).forEach(s => {
-                absensiData[`${kelas}-${s._id}`] = status;
+                absensiData[`${kelas}-${s.id}`] = status;
             });
             renderAbsensiTable(dataSiswa.filter(s => s.kelas === kelas), kelas);
             showToast(`Semua siswa ditandai ${status}`);
@@ -4568,8 +4568,8 @@
             // Bersihkan memory
             const kelas2 = document.getElementById('absen-kelas').value;
             dataSiswa.filter(s => s.kelas === kelas2).forEach(s => {
-                delete absensiData[`${kelas2}-${s._id}`];
-                delete absensiData[`${kelas2}-${s._id}-ket`];
+                delete absensiData[`${kelas2}-${s.id}`];
+                delete absensiData[`${kelas2}-${s.id}-ket`];
             });
             renderAbsensiTable(dataSiswa.filter(s => s.kelas === kelas2), kelas2);
             showToast('✅ Absensi berhasil direset');
@@ -4614,9 +4614,9 @@
             const siswaKelas = dataSiswa.filter(s => s.kelas === kelas);
             if (!siswaKelas.length) return showToast('Tidak ada siswa di kelas ini', 'error');
             const data = siswaKelas.map(s => ({
-                siswaId: s._id,
-                status: absensiData[`${kelas}-${s._id}`] || 'hadir',
-                keterangan: absensiData[`${kelas}-${s._id}-ket`] || ''
+                siswaId: s.id,
+                status: absensiData[`${kelas}-${s.id}`] || 'hadir',
+                keterangan: absensiData[`${kelas}-${s.id}-ket`] || ''
             }));
             try {
                 const res = await api.post('/api/absensi/bulk', {
@@ -4655,7 +4655,7 @@
                 if (res.success) {
                     sikapData = {};
                     res.data.forEach(item => {
-                        const id = item.siswa._id || item.siswa;
+                        const id = item.siswa.id || item.siswa;
                         ['berdoa','toleransi','bersyukur','jujur','disiplin','tanggungJawab','santun','peduli','percayaDiri'].forEach(k => {
                             if (item[k]) sikapData[`${id}-${k}`] = item[k];
                         });
@@ -4687,15 +4687,15 @@
             ];
             if (!siswaKelas.length) { container.innerHTML = '<p class="text-center text-gray-400 py-8">Belum ada siswa di kelas ini</p>'; return; }
             container.innerHTML = siswaKelas.map(s => {
-                const rata = hitungRataSikap(s._id);
+                const rata = hitungRataSikap(s.id);
                 const rataColor = rata==='SB'?'bg-green-100 text-green-700':rata==='B'?'bg-blue-100 text-blue-700':rata==='C'?'bg-yellow-100 text-yellow-700':rata?'bg-red-100 text-red-700':'bg-gray-100 text-gray-400';
                 const avatarColor = s.jenisKelamin==='L'?'bg-gradient-to-br from-blue-400 to-blue-600':'bg-gradient-to-br from-pink-400 to-pink-600';
                 const aspekRows = aspek.map(a => {
-                    const val = sikapData[`${s._id}-${a.kode}`] || null;
+                    const val = sikapData[`${s.id}-${a.kode}`] || null;
                     const btns = ['SB','B','C','K'].map(g => {
                         const isActive = val === g;
                         const ac = g==='SB'?'bg-green-500 text-white shadow-md scale-110':g==='B'?'bg-blue-500 text-white shadow-md scale-110':g==='C'?'bg-yellow-500 text-white shadow-md scale-110':'bg-red-500 text-white shadow-md scale-110';
-                        return '<button onclick="setSikap(\'' + s._id + '\',\'' + a.kode + '\',\'' + g + '\')" class="w-9 h-9 rounded-lg text-xs font-bold transition-all ' + (isActive ? ac : 'bg-gray-100 text-gray-500 hover:bg-gray-200') + '">' + g + '</button>';
+                        return '<button onclick="setSikap(\'' + s.id + '\',\'' + a.kode + '\',\'' + g + '\')" class="w-9 h-9 rounded-lg text-xs font-bold transition-all ' + (isActive ? ac : 'bg-gray-100 text-gray-500 hover:bg-gray-200') + '">' + g + '</button>';
                     }).join('');
                     return '<div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 px-2 rounded-lg">'
                         + '<div class="flex-1"><p class="text-sm text-gray-700 font-medium">' + a.nama + '</p><span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">' + a.kategori + '</span></div>'
@@ -4710,7 +4710,7 @@
                     + '</div>'
                     + '<div class="flex items-center gap-2">'
                     + '<span class="px-3 py-1 ' + rataColor + ' rounded-full text-xs font-bold">Rata-rata: ' + (rata||'-') + '</span>'
-                    + '<button onclick="resetSikap(\'' + s._id + '\')" class="px-2 py-1 bg-gray-100 hover:bg-red-50 hover:text-red-500 text-gray-400 rounded-lg text-xs transition-colors"><i class="fas fa-times mr-1"></i>Reset</button>'
+                    + '<button onclick="resetSikap(\'' + s.id + '\')" class="px-2 py-1 bg-gray-100 hover:bg-red-50 hover:text-red-500 text-gray-400 rounded-lg text-xs transition-colors"><i class="fas fa-times mr-1"></i>Reset</button>'
                     + '</div></div>'
                     + '<div class="space-y-2">' + aspekRows + '</div>'
                     + '</div>';
@@ -4724,7 +4724,7 @@
             if (!siswaKelas.length) return showToast('Tidak ada siswa di kelas ini', 'error');
             const aspekList = ['berdoa','toleransi','bersyukur','jujur','disiplin','tanggungJawab','santun','peduli','percayaDiri'];
             siswaKelas.forEach(s => {
-                aspekList.forEach(a => { sikapData[s._id + '-' + a] = nilai; });
+                aspekList.forEach(a => { sikapData[s.id + '-' + a] = nilai; });
             });
             renderSikapTable(kelas);
             showToast('Semua siswa diset ' + nilai);
@@ -4741,7 +4741,7 @@
             const siswaKelas = dataSiswa.filter(s => s.kelas === kelas);
             const aspekList = ['berdoa','toleransi','bersyukur','jujur','disiplin','tanggungJawab','santun','peduli','percayaDiri'];
             siswaKelas.forEach(s => {
-                aspekList.forEach(a => delete sikapData[`${s._id}-${a}`]);
+                aspekList.forEach(a => delete sikapData[`${s.id}-${a}`]);
             });
             renderSikapTable(kelas);
 
@@ -4789,8 +4789,8 @@
             if (!siswaKelas.length) return showToast('Tidak ada siswa di kelas ini', 'error');
             const aspekList = ['berdoa','toleransi','bersyukur','jujur','disiplin','tanggungJawab','santun','peduli','percayaDiri'];
             const data = siswaKelas.map(s => {
-                const obj = { siswa: s._id, kelas, semester, tahunAjaran };
-                aspekList.forEach(k => { obj[k] = sikapData[`${s._id}-${k}`] || 'B'; });
+                const obj = { siswa: s.id, kelas, semester, tahunAjaran };
+                aspekList.forEach(k => { obj[k] = sikapData[`${s.id}-${k}`] || 'B'; });
                 return obj;
             });
             try {
@@ -4813,8 +4813,8 @@
                 santun:'Santun', peduli:'Peduli', percayaDiri:'Percaya Diri'
             };
             const rows = siswaKelas.map((s, i) => {
-                const vals = aspekList.map(k => sikapData[`${s._id}-${k}`] || '-');
-                const rata = hitungRataSikap(s._id) || '-';
+                const vals = aspekList.map(k => sikapData[`${s.id}-${k}`] || '-');
+                const rata = hitungRataSikap(s.id) || '-';
                 return `<tr>
                     <td>${i+1}</td>
                     <td>${s.nama}</td>
@@ -4871,7 +4871,7 @@
                         const resGK = await api.get('/api/guru-kelas');
                         const gkData = resGK.data || [];
                         const kelasSet = new Set();
-                        gkData.forEach(gk => { if (gk.kelasId?.nama) kelasSet.add(gk.kelasId.nama); });
+                        gkData.forEach(gk => { if (gk.kelasRef?.nama) kelasSet.add(gk.kelasRef?.nama); });
                         kelasList = [...kelasSet].sort();
                         _kelasCacheGlobal = kelasList;
                         CONFIG.kelas = kelasList;
@@ -4944,8 +4944,8 @@
                 // Ambil nama kelas unik dari GuruKelas
                 const kelasSet = new Set();
                 guruKelasList.forEach(gk => {
-                    const nama = gk.kelasId?.nama || gk.mapelNama;
-                    if (gk.kelasId?.nama) kelasSet.add(gk.kelasId.nama);
+                    const nama = gk.kelasRef?.nama || gk.mapelNama;
+                    if (gk.kelasRef?.nama) kelasSet.add(gk.kelasRef?.nama);
                 });
 
                 // Fallback ke CONFIG.kelas jika GuruKelas kosong (sistem lama)
@@ -5026,7 +5026,7 @@
                         <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor}">${s.status||'Aktif'}</span>
                     </td>
                     <td class="px-4 py-4 text-center">
-                        <button onclick="editSiswaGuru('${s._id}')" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center justify-center mr-1" title="Edit">
+                        <button onclick="editSiswaGuru('${s.id}')" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center justify-center mr-1" title="Edit">
                             <i class="fas fa-pen text-xs"></i>
                         </button>
                     </td>
@@ -5142,12 +5142,12 @@
                 ]);
                 if (resNilai.success) {
                     nilaiData = {};
-                    resNilai.data.forEach(n => { nilaiData[n.siswa._id] = n; });
+                    resNilai.data.forEach(n => { nilaiData[n.siswa.id] = n; });
                 }
                 absensiRekap = {};
                 if (resAbsen.success && resAbsen.data) {
                     resAbsen.data.forEach(a => {
-                        const sid = (a.siswa?._id || a.siswa || '').toString();
+                        const sid = (a.siswa?.id || a.siswa || '').toString();
                         if (!absensiRekap[sid]) absensiRekap[sid] = { hadir:0, sakit:0, izin:0, alpha:0, dispensasi:0, pulang_cepat:0 };
                         absensiRekap[sid][a.status] = (absensiRekap[sid][a.status] || 0) + 1;
                     });
@@ -5156,7 +5156,7 @@
                 if (resSikap.success && resSikap.data) {
                     const aspekList = ['berdoa','toleransi','bersyukur','jujur','disiplin','tanggungJawab','santun','peduli','percayaDiri'];
                     resSikap.data.forEach(item => {
-                        const id = item.siswa._id || item.siswa;
+                        const id = item.siswa.id || item.siswa;
                         aspekList.forEach(k => { if (item[k]) sikapData[`${id}-${k}`] = item[k]; });
                     });
                 }
@@ -5198,14 +5198,14 @@
             const bh = (CONFIG.bobotNilai?.kehadiran ?? 0) / 100;
             const inp = (id, field, val) => `<input type="number" value="${val}" min="0" max="100" class="w-12 px-1 py-1.5 text-center border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none bg-gray-50 focus:bg-white" onchange="updateNilaiLocal('${id}','${field}',this.value)">`;
             tbody.innerHTML = siswaKelas.map((s, i) => {
-                const n = nilaiData[s._id] || {};
+                const n = nilaiData[s.id] || {};
                 const uh=n.uh||0, pts=n.pts||0, pas=n.pas||0, praktek=n.praktek||0, proyek=n.proyek||0, portofolio=n.portofolio||0;
                 const tampilkan = n.tampilkan || false;
                 const naPenget = Math.round(uh*0.2+pts*0.3+pas*0.5);
                 const naKeter = Math.round((praktek+proyek+portofolio)/3);
 
                 // Kehadiran
-                const absen = absensiRekap[s._id.toString()] || { hadir:0, sakit:0, izin:0, alpha:0, dispensasi:0, pulang_cepat:0 };
+                const absen = absensiRekap[s.id.toString()] || { hadir:0, sakit:0, izin:0, alpha:0, dispensasi:0, pulang_cepat:0 };
                 const totalAbsen = absen.hadir + absen.sakit + absen.izin + absen.alpha + (absen.dispensasi||0) + (absen.pulang_cepat||0);
                 const pctHadir = totalAbsen ? Math.round(((absen.hadir*100) + (absen.sakit*75) + (absen.izin*75) + ((absen.dispensasi||0)*75) + ((absen.pulang_cepat||0)*50)) / totalAbsen) : 0;
                 const nilaiKehadiran = totalAbsen
@@ -5219,7 +5219,7 @@
                 const hadirLabel = totalAbsen===0 ? '-' : `${pctHadir}%`;
 
                 // Sikap — ambil dari sikapData
-                const sikapNilai = hitungRataSikap(s._id);
+                const sikapNilai = hitungRataSikap(s.id);
                 const sikapColor = sikapNilai==='SB'?'text-green-600 bg-green-50':sikapNilai==='B'?'text-blue-600 bg-blue-50':sikapNilai==='C'?'text-yellow-600 bg-yellow-50':sikapNilai?'text-red-600 bg-red-50':'text-gray-400 bg-gray-50';
                 const sikapLabel = sikapNilai || '-';
 
@@ -5228,12 +5228,12 @@
                     <td class="px-3 py-2 font-medium text-gray-900 text-sm max-w-[140px]">
                         <div class="truncate" title="${s.nama}">${s.nama}</div>
                     </td>
-                    <td class="px-1 py-2 text-center">${inp(s._id,'uh',uh)}</td>
-                    <td class="px-1 py-2 text-center">${inp(s._id,'pts',pts)}</td>
-                    <td class="px-1 py-2 text-center">${inp(s._id,'pas',pas)}</td>
-                    <td class="px-1 py-2 text-center">${inp(s._id,'praktek',praktek)}</td>
-                    <td class="px-1 py-2 text-center">${inp(s._id,'proyek',proyek)}</td>
-                    <td class="px-1 py-2 text-center">${inp(s._id,'portofolio',portofolio)}</td>
+                    <td class="px-1 py-2 text-center">${inp(s.id,'uh',uh)}</td>
+                    <td class="px-1 py-2 text-center">${inp(s.id,'pts',pts)}</td>
+                    <td class="px-1 py-2 text-center">${inp(s.id,'pas',pas)}</td>
+                    <td class="px-1 py-2 text-center">${inp(s.id,'praktek',praktek)}</td>
+                    <td class="px-1 py-2 text-center">${inp(s.id,'proyek',proyek)}</td>
+                    <td class="px-1 py-2 text-center">${inp(s.id,'portofolio',portofolio)}</td>
                     <td class="px-2 py-2 text-center font-bold text-base ${naAkhir>=75?'text-green-600':'text-red-600'}">${naAkhir}</td>
                     <td class="px-2 py-2 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${predColor}">${predikat}</span></td>
                     <td class="px-2 py-2 text-center border-l border-gray-100">
@@ -5245,7 +5245,7 @@
                     </td>
                     <td class="px-2 py-2 text-center border-l border-gray-100">
                         <label class="relative inline-flex items-center cursor-pointer justify-center">
-                            <input type="checkbox" ${tampilkan ? 'checked' : ''} class="sr-only peer" onchange="toggleTampilkanNilai('${s._id}', this.checked)">
+                            <input type="checkbox" ${tampilkan ? 'checked' : ''} class="sr-only peer" onchange="toggleTampilkanNilai('${s.id}', this.checked)">
                             <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
                         </label>
                         <p class="text-xs leading-tight ${tampilkan ? 'text-green-600 font-semibold' : 'text-gray-400'}">${tampilkan ? '✓' : '–'}</p>
@@ -5277,8 +5277,8 @@
 
             // Update local state
             siswaKelas.forEach(s => {
-                if (!nilaiData[s._id]) nilaiData[s._id] = {};
-                nilaiData[s._id].tampilkan = status;
+                if (!nilaiData[s.id]) nilaiData[s.id] = {};
+                nilaiData[s.id].tampilkan = status;
             });
             renderNilaiTable(kelas);
 
@@ -5286,9 +5286,9 @@
             const mapelArr = Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel : [];
             const mapel = mapelArr.length ? mapelArr[0] : '';
             const data = siswaKelas.map(s => {
-                const n = nilaiData[s._id] || {};
+                const n = nilaiData[s.id] || {};
                 return {
-                    siswa: s._id, kelas,
+                    siswa: s.id, kelas,
                     semester: CONFIG.semester, tahunAjaran: CONFIG.tahunAjaran,
                     mataPelajaran: mapel, guru: CONFIG.guru.nama,
                     uh: n.uh||0, pts: n.pts||0, pas: n.pas||0,
@@ -5326,9 +5326,9 @@
             const mapelArr = Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel : [];
             const mapel = mapelArr.length ? mapelArr[0] : '';
             const data = siswaKelas.map(s => {
-                const n = nilaiData[s._id] || {};
+                const n = nilaiData[s.id] || {};
                 return { 
-                    siswa: s._id, 
+                    siswa: s.id, 
                     kelas, 
                     semester: CONFIG.semester, 
                     tahunAjaran: CONFIG.tahunAjaran, 
@@ -5365,17 +5365,17 @@
                 (Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel.join(', ') : CONFIG.guru.mapel) || '-';
 
             const rows = siswaKelas.map((s, i) => {
-                const n = nilaiData[s._id] || {};
+                const n = nilaiData[s.id] || {};
                 const uh=n.uh||0, pts=n.pts||0, pas=n.pas||0, praktek=n.praktek||0, proyek=n.proyek||0, portofolio=n.portofolio||0;
                 const naPenget = Math.round(uh*0.2+pts*0.3+pas*0.5);
                 const naKeter = Math.round((praktek+proyek+portofolio)/3);
-                const absen = absensiRekap[s._id.toString()] || {hadir:0,sakit:0,izin:0,alpha:0,dispensasi:0,pulang_cepat:0};
+                const absen = absensiRekap[s.id.toString()] || {hadir:0,sakit:0,izin:0,alpha:0,dispensasi:0,pulang_cepat:0};
                 const totalAbsen = absen.hadir+absen.sakit+absen.izin+absen.alpha+(absen.dispensasi||0)+(absen.pulang_cepat||0);
                 const nilaiHadir = totalAbsen ? Math.round(((absen.hadir*100)+(absen.sakit*75)+(absen.izin*75)+((absen.dispensasi||0)*75)+((absen.pulang_cepat||0)*50))/totalAbsen) : 0;
                 const naAkhir = Math.round(naPenget*bp + naKeter*bk + nilaiHadir*bh);
                 const predikat = naAkhir>=85?'A':naAkhir>=75?'B':naAkhir>=65?'C':'D';
                 const pctHadir = totalAbsen ? Math.round(((absen.hadir*100)+(absen.sakit*75)+(absen.izin*75)+((absen.dispensasi||0)*75)+((absen.pulang_cepat||0)*50))/totalAbsen)+'%' : '-';
-                const sikap = hitungRataSikap(s._id) || '-';
+                const sikap = hitungRataSikap(s.id) || '-';
                 const bg = i%2===0 ? '' : 'background:#f9fafb';
                 return `<tr style="${bg}">
                     <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${i+1}</td>
@@ -5577,10 +5577,10 @@
                                             ${j.semester && j.tahunAjaran ? `<p class="text-xs text-gray-400 mt-0.5">${j.semester} ${j.tahunAjaran}</p>` : ''}
                                         </div>
                                         <div class="flex gap-1">
-                                            <button onclick="editJadwal('${j._id}')" class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center justify-center">
+                                            <button onclick="editJadwal('${j.id}')" class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex items-center justify-center">
                                                 <i class="fas fa-edit text-xs"></i>
                                             </button>
-                                            <button onclick="deleteJadwal('${j._id}')" class="w-7 h-7 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center justify-center">
+                                            <button onclick="deleteJadwal('${j.id}')" class="w-7 h-7 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center justify-center">
                                                 <i class="fas fa-trash text-xs"></i>
                                             </button>
                                         </div>
@@ -5665,7 +5665,7 @@
                     const jadwal = res.data;
                     
                     document.getElementById('jadwal-modal-title').textContent = 'Edit Jadwal Mengajar';
-                    document.getElementById('jadwal-id').value = jadwal._id;
+                    document.getElementById('jadwal-id').value = jadwal.id;
                     
                     // Populate form
                     document.querySelector('[name="hari"]').value = jadwal.hari;
@@ -5887,10 +5887,10 @@
                     </td>
                     <td class="px-3 py-3 text-center">
                         <div class="flex items-center justify-center gap-1">
-                            <button onclick="editJurnal('${j._id}')" class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center" title="Edit">
+                            <button onclick="editJurnal('${j.id}')" class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center" title="Edit">
                                 <i class="fas fa-pen text-xs"></i>
                             </button>
-                            <button onclick="deleteJurnal('${j._id}')" class="w-7 h-7 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center" title="Hapus">
+                            <button onclick="deleteJurnal('${j.id}')" class="w-7 h-7 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center" title="Hapus">
                                 <i class="fas fa-trash text-xs"></i>
                             </button>
                         </div>
@@ -5901,7 +5901,7 @@
 
         async function bukaModalJurnal(data = null) {
             document.getElementById('modal-jurnal-title').textContent = data ? 'Edit Jurnal Mengajar' : 'Tambah Jurnal Mengajar';
-            document.getElementById('jurnal-edit-id').value = data?._id || '';
+            document.getElementById('jurnal-edit-id').value = data?.id || '';
 
             // Isi dropdown mapel dari MappingMapel API
             let mapelList = Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel : [];
@@ -6043,7 +6043,7 @@
         }
 
         async function editJurnal(id) {
-            const j = jurnalData.find(x => x._id === id);
+            const j = jurnalData.find(x => x.id === id);
             if (j) bukaModalJurnal(j);
         }
 
@@ -6146,7 +6146,7 @@
             mmCurrentNodes = data?.nodes || mmNewNode('Topik Utama', '#8b5cf6');
             mmSelectedNodeId = null;
             
-            document.getElementById('mm-edit-id').value = data?._id || '';
+            document.getElementById('mm-edit-id').value = data?.id || '';
             document.getElementById('mm-judul').value = data?.judul || '';
             
             // Isi dropdown mapel dari MappingMapel API + fallback CONFIG
@@ -7438,13 +7438,13 @@
                                 <i class="fas fa-project-diagram"></i>
                             </div>
                             <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onclick="editMindMap('${m._id}')" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center" title="Edit">
+                                <button onclick="editMindMap('${m.id}')" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center" title="Edit">
                                     <i class="fas fa-pen text-xs"></i>
                                 </button>
-                                <button onclick="previewMindMap('${m._id}')" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center justify-center" title="Preview">
+                                <button onclick="previewMindMap('${m.id}')" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center justify-center" title="Preview">
                                     <i class="fas fa-eye text-xs"></i>
                                 </button>
-                                <button onclick="deleteMindMap('${m._id}','${m.judul}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center" title="Hapus">
+                                <button onclick="deleteMindMap('${m.id}','${m.judul}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center" title="Hapus">
                                     <i class="fas fa-trash text-xs"></i>
                                 </button>
                             </div>
@@ -7467,7 +7467,7 @@
         function bukaModalMindMap(data = null) {
             mindMapCurrentNodes = data?.nodes || mmNewNode('Topik Utama', '#8b5cf6');
             mindMapZoom = 1;
-            document.getElementById('mindmap-edit-id').value = data?._id || '';
+            document.getElementById('mindmap-edit-id').value = data?.id || '';
             document.getElementById('modal-mindmap-title').textContent = data ? 'Edit Mind Map' : 'Buat Mind Map';
             document.getElementById('mindmap-judul').value = data?.judul || '';
             document.getElementById('mindmap-deskripsi').value = data?.deskripsi || '';
@@ -7896,7 +7896,7 @@
                     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 shadow-sm">
                         <i class="fas fa-book text-primary-400 text-xs"></i>
                         ${m.nama}${m.kode ? ` <span class="text-gray-400 text-xs">(${m.kode})</span>` : ''}
-                        <button onclick="hapusMapelDb('${m._id}', '${m.nama.replace(/'/g,"\\'")}')"
+                        <button onclick="hapusMapelDb('${m.id}', '${m.nama.replace(/'/g,"\\'")}')"
                             class="text-gray-400 hover:text-red-500 transition-colors ml-1" title="Hapus mapel">
                             <i class="fas fa-times text-xs"></i>
                         </button>
@@ -8048,8 +8048,8 @@
                     return;
                 }
                 tbody.innerHTML = list.map(gk => {
-                    const kelas = gk.kelasId || {};
-                    const mapel = gk.mappingMapelId || {};
+                    const kelas = gk.kelasRef || {};
+                    const mapel = gk.mappingMapel || {};
                     return `<tr class="border-b border-gray-50 hover:bg-gray-50">
                         <td class="px-4 py-3">
                             <div class="font-semibold text-gray-900 text-sm">${kelas.nama || gk.mapelNama || '-'}</div>
@@ -8063,7 +8063,7 @@
                         <td class="px-4 py-3 text-xs text-gray-500 hidden md:table-cell">${gk.tahunAjaran || '-'}</td>
                         <td class="px-4 py-3 text-center hidden md:table-cell"><span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">${kelas.jumlahSiswa || 0} siswa</span></td>
                         <td class="px-4 py-3 text-center">
-                            <button onclick="hapusGuruKelasInline('${gk._id}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors inline-flex items-center justify-center" title="Hapus">
+                            <button onclick="hapusGuruKelasInline('${gk.id}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors inline-flex items-center justify-center" title="Hapus">
                                 <i class="fas fa-trash text-xs"></i>
                             </button>
                         </td>
@@ -8118,7 +8118,7 @@
                 // Filter kelas yang belum ada di CONFIG.kelas
                 const sudahAda = CONFIG.kelas || [];
                 sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
-                    list.map(k => `<option value="${k.nama}" data-id="${k._id}" ${sudahAda.includes(k.nama) ? 'disabled style="color:#9ca3af"' : ''}>
+                    list.map(k => `<option value="${k.nama}" data-id="${k.id}" ${sudahAda.includes(k.nama) ? 'disabled style="color:#9ca3af"' : ''}>
                         ${k.nama} (${k.tahunAjaran})${sudahAda.includes(k.nama) ? ' ✓ sudah ditambahkan' : ''}
                     </option>`).join('');
             } catch(e) {
@@ -8517,7 +8517,7 @@ async function loadRekapWali() {
 
 // ── Edit siswa guru (field terbatas — tidak bisa ubah kelas) ─────────────────
 function editSiswaGuru(id) {
-  const s = dataSiswa.find(x => x._id === id);
+  const s = dataSiswa.find(x => x.id === id);
   if (!s) { showToast('Data siswa tidak ditemukan', 'error'); return; }
   document.getElementById('esg-id').value = id;
   document.getElementById('esg-nama').value = s.nama || '';
@@ -8565,7 +8565,7 @@ async function simpanEditSiswaGuru() {
       document.getElementById('modal-edit-siswa-guru').classList.add('hidden');
       showToast(`✅ Data siswa "${payload.nama}" berhasil diperbarui!`);
       // Update dataSiswa cache
-      const idx = dataSiswa.findIndex(x => x._id === id);
+      const idx = dataSiswa.findIndex(x => x.id === id);
       if (idx !== -1) Object.assign(dataSiswa[idx], res.data || payload);
       applyFilterSiswa();
     } else {
@@ -8644,9 +8644,9 @@ async function loadAbsensiHarian() {
       tr.querySelector('.ket-td').textContent = a.keterangan || '-';
       tr.querySelector('.input-td').textContent = a.diinputOleh || 'Wali Kelas';
       // Event listener aman — tidak ada inline onclick
-      var editData = { id: a._id, nama: a.siswa?.nama||'', tgl: tglStr, status: a.status, ket: a.keterangan||'' };
+      var editData = { id: a.id, nama: a.siswa?.nama||'', tgl: tglStr, status: a.status, ket: a.keterangan||'' };
       tr.querySelector('.btn-edit-absensi').addEventListener('click', (function(d){ return function(){ showEditAbsensiHarian(d.id, d.nama, d.tgl, d.status, d.ket); }; })(editData));
-      tr.querySelector('.btn-hapus-absensi').addEventListener('click', (function(id){ return function(){ hapusAbsensiHarian(id); }; })(a._id));
+      tr.querySelector('.btn-hapus-absensi').addEventListener('click', (function(id){ return function(){ hapusAbsensiHarian(id); }; })(a.id));
       tbody.appendChild(tr);
     });
   } catch(e) { if (e !== 'Unauthorized') showToast('Gagal memuat absensi.', 'error'); }
@@ -8715,9 +8715,9 @@ async function loadPengurusList() {
       var tdStatus = document.createElement('td'); tdStatus.className = 'px-4 py-3 text-center'; tdStatus.innerHTML = statusBadge;
       var tdAksi = document.createElement('td'); tdAksi.className = 'px-4 py-3';
       var btnEdit = document.createElement('button'); btnEdit.className = 'p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors mr-1'; btnEdit.title = 'Edit'; btnEdit.innerHTML = '<i class="fas fa-edit text-xs"></i>';
-      btnEdit.addEventListener('click', (function(id){ return function(){ showEditPengurus(id); }; })(p._id));
+      btnEdit.addEventListener('click', (function(id){ return function(){ showEditPengurus(id); }; })(p.id));
       var btnHapus = document.createElement('button'); btnHapus.className = 'p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors'; btnHapus.title = 'Hapus'; btnHapus.innerHTML = '<i class="fas fa-trash text-xs"></i>';
-      btnHapus.addEventListener('click', (function(id, nm){ return function(){ hapusPengurus(id, nm); }; })(p._id, p.nama));
+      btnHapus.addEventListener('click', (function(id, nm){ return function(){ hapusPengurus(id, nm); }; })(p.id, p.nama));
       var divAksi = document.createElement('div'); divAksi.className = 'flex items-center justify-center gap-1.5';
       divAksi.appendChild(btnEdit); divAksi.appendChild(btnHapus); tdAksi.appendChild(divAksi);
       tr.appendChild(tdNo); tr.appendChild(tdNama); tr.appendChild(tdUser); tr.appendChild(tdKelas); tr.appendChild(tdStatus); tr.appendChild(tdAksi);
@@ -8765,9 +8765,9 @@ async function showModalTambahPengurus() {
 }
 
 async function showEditPengurus(id) {
-  const p = wkPengurusList.find(x => x._id === id);
+  const p = wkPengurusList.find(x => x.id === id);
   if (!p) return;
-  document.getElementById('pengurus-edit-id').value = p._id;
+  document.getElementById('pengurus-edit-id').value = p.id;
   document.getElementById('pengurus-nama').value = p.nama;
   document.getElementById('pengurus-username').value = p.username;
   document.getElementById('pengurus-password').value = '';
@@ -8930,8 +8930,8 @@ async function loadGuruKelas() {
       return;
     }
     tbody.innerHTML = list.map(gk => {
-      const kelas = gk.kelasId || {};
-      const mapel = gk.mappingMapelId || {};
+      const kelas = gk.kelasRef || {};
+      const mapel = gk.mappingMapel || {};
       return `<tr class="border-b border-gray-50 hover:bg-gray-50">
         <td class="px-4 py-3">
           <div class="font-semibold text-gray-900">${kelas.nama||gk.mapelNama||'-'}</div>
@@ -8947,7 +8947,7 @@ async function loadGuruKelas() {
           <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">${kelas.jumlahSiswa||0} siswa</span>
         </td>
         <td class="px-4 py-3 text-center">
-          <button onclick="hapusGuruKelas('${gk._id}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors inline-flex items-center justify-center" title="Hapus">
+          <button onclick="hapusGuruKelas('${gk.id}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors inline-flex items-center justify-center" title="Hapus">
             <i class="fas fa-trash text-xs"></i>
           </button>
         </td>
@@ -8991,7 +8991,7 @@ async function showTambahGuruKelas() {
       kelasEl.innerHTML = '<option value="">Belum ada kelas master — hubungi admin</option>';
     } else {
       kelasEl.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
-        list.map(k => `<option value="${k._id}">${k.nama} (${k.tahunAjaran})</option>`).join('');
+        list.map(k => `<option value="${k.id}">${k.nama} (${k.tahunAjaran})</option>`).join('');
     }
   } catch(e) {
     kelasEl.innerHTML = '<option value="">Gagal memuat kelas</option>';
@@ -9016,7 +9016,7 @@ async function refreshMapelDropdown() {
       mapelEl.innerHTML = '<option value="">Belum ada mapel — klik + untuk tambah</option>';
     } else {
       mapelEl.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>' +
-        list.map(m => `<option value="${m._id}">${m.nama}${m.kode ? ' ('+m.kode+')' : ''}</option>`).join('');
+        list.map(m => `<option value="${m.id}">${m.nama}${m.kode ? ' ('+m.kode+')' : ''}</option>`).join('');
     }
   } catch(e) {
     mapelEl.innerHTML = '<option value="">Gagal memuat mapel</option>';
@@ -9095,7 +9095,7 @@ async function refreshSetelahKelasUpdate() {
 
     // 2. Rebuild kelas list & update semua cache
     const kelasSet = new Set();
-    gkData.forEach(gk => { if (gk.kelasId?.nama) kelasSet.add(gk.kelasId.nama); });
+    gkData.forEach(gk => { if (gk.kelasRef?.nama) kelasSet.add(gk.kelasRef?.nama); });
     const kelasDariGK = [...kelasSet].sort();
 
     // Update via window scope supaya closure DOMContentLoaded juga ikut update
@@ -9108,7 +9108,7 @@ async function refreshSetelahKelasUpdate() {
     // 3. Rebuild kelasMapelMapping
     if (!CONFIG.kelasMapelMapping) CONFIG.kelasMapelMapping = {};
     gkData.forEach(gk => {
-      const namaKelas = gk.kelasId?.nama;
+      const namaKelas = gk.kelasRef?.nama;
       const namaMapel = gk.mapelNama;
       if (namaKelas && namaMapel) {
         CONFIG.kelasMapelMapping[namaKelas] = namaMapel;
