@@ -1135,8 +1135,7 @@ function showDashboard() {
   const info = JSON.parse(localStorage.getItem('admin_info') || '{}');
   document.getElementById('admin-nama-display').textContent = info.nama || info.username || 'Admin';
   loadGuruList(); loadAktivitas(); loadStatsGlobal(); loadAppIdentityHeader();
-  // Bersihkan log dari guru yang sudah dihapus (jalankan sekali saat login)
-  api.del('/api/admin/aktivitas/orphan').catch(() => {});
+  // aktivitas/orphan tidak tersedia di API v2 — skip
 }
 
 // ── Global Stats ───────────────────────────────────────────────────────────
@@ -1660,16 +1659,19 @@ async function loadSiswaAdmin() {
     document.getElementById('stat-siswa-total2').textContent = res.total || siswaAdminAll.length;
     document.getElementById('stat-siswa-aktif2').textContent = aktif;
 
-    // Dropdown kelas dari endpoint distinct — ringan, tidak bergantung limit tabel
-    // Endpoint kelas-list mengembalikan array string, bukan array objek
+    // Dropdown kelas — kelas-list mengembalikan array objek Kelas, ambil .nama
     const kelasList = resKelas.data || [];
     document.getElementById('stat-siswa-kelas').textContent = kelasList.length;
     document.getElementById('stat-total-siswa').textContent = res.total || siswaAdminAll.length;
 
     const filterEl = document.getElementById('filter-kelas-admin');
     const cur = filterEl.value;
-    filterEl.innerHTML = '<option value="">Semua Kelas</option>' + kelasList.map(k=>`<option value="${k}">${k}</option>`).join('');
-    if (cur) filterEl.value = cur;
+    // Ambil nama kelas dari objek atau string
+    filterEl.innerHTML = '<option value="">Semua Kelas</option>' + kelasList.map(k => {
+      const nama = typeof k === 'string' ? k : (k.nama || k);
+      return `<option value="${nama}"${nama===cur?' selected':''}>${nama}</option>`;
+    }).join('');
+    if (cur && !filterEl.value) filterEl.value = '';
 
     filterSiswaAdmin();
   } catch(e) { showToast('Gagal terhubung ke server','error'); }
@@ -1712,7 +1714,7 @@ function renderSiswaAdminTable(list) {
     const statusColor = s.status==='Aktif'?'bg-green-100 text-green-700':s.status==='Lulus'?'bg-blue-100 text-blue-700':s.status==='Keluar'?'bg-red-100 text-red-700':'bg-gray-100 text-gray-600';
     return `<tr class="border-b border-gray-50 hover:bg-gray-50">
       <td class="px-4 py-3 text-center">
-        <input type="checkbox" class="siswa-admin-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer" value="${s._id}" onchange="updateSiswaBulkBar()">
+        <input type="checkbox" class="siswa-admin-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer" value="${s.id}" onchange="updateSiswaBulkBar()">
       </td>
       <td class="px-4 py-3 text-gray-500 text-sm text-center">${i+1}</td>
       <td class="px-4 py-3"><div class="flex items-center gap-3">
@@ -1724,8 +1726,8 @@ function renderSiswaAdminTable(list) {
       <td class="px-4 py-3 text-center hidden md:table-cell text-xs text-gray-600">${isL?'L':'P'}</td>
       <td class="px-4 py-3 text-center hidden md:table-cell"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor}">${s.status||'-'}</span></td>
       <td class="px-4 py-3"><div class="flex items-center justify-center gap-1">
-        <button onclick="editSiswaAdmin('${s._id}')" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center justify-center" title="Edit"><i class="fas fa-pen text-xs"></i></button>
-        <button onclick="hapusSiswaAdmin('${s._id}','${(s.nama||'').replace(/'/g,"\\'")}' )" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors inline-flex items-center justify-center" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
+        <button onclick="editSiswaAdmin('${s.id}')" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors inline-flex items-center justify-center" title="Edit"><i class="fas fa-pen text-xs"></i></button>
+        <button onclick="hapusSiswaAdmin('${s.id}','${(s.nama||'').replace(/'/g,"\\'")}' )" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors inline-flex items-center justify-center" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
       </div></td>
     </tr>`;
   }).join('');
@@ -1749,7 +1751,7 @@ async function showTambahSiswa() {
 }
 
 async function editSiswaAdmin(id) {
-  const s = siswaAdminAll.find(x => x._id === id);
+  const s = siswaAdminAll.find(x => x.id === id);
   if (!s) return;
   document.getElementById('modal-siswa-title').innerHTML = '<i class="fas fa-pen text-blue-500 mr-2"></i> Edit Siswa';
   document.getElementById('siswa-edit-id').value = id;
@@ -1767,7 +1769,7 @@ async function editSiswaAdmin(id) {
   document.getElementById('siswa-jk').value = s.jenisKelamin||'L';
   document.getElementById('siswa-status').value = s.status||'Aktif';
   document.getElementById('siswa-form-error').classList.add('hidden');
-  await loadKelasOptionsForSiswa(s.kelasId?._id || s.kelasId);
+  await loadKelasOptionsForSiswa(s.kelasId || null);
   bukaModal('modal-siswa');
 }
 
@@ -1778,8 +1780,8 @@ async function loadKelasOptionsForSiswa(selectedId) {
     const res = await api.get('/api/admin/kelas');
     (res.data||[]).forEach(k => {
       const opt = document.createElement('option');
-      opt.value = k._id; opt.textContent = `${k.nama} (${k.tahunAjaran})`;
-      if (selectedId && k._id === selectedId) opt.selected = true;
+      opt.value = k.id; opt.textContent = `${k.nama} (${k.tahunAjaran})`;
+      if (selectedId && k.id === selectedId) opt.selected = true;
       sel.appendChild(opt);
     });
   } catch(e) {}
@@ -2142,7 +2144,7 @@ async function loadKelasMaster() {
     tbody.innerHTML = kelasMasterList.map((k,i) => `
       <tr class="border-b border-gray-50 hover:bg-gray-50">
         <td class="px-4 py-3 text-center">
-          <input type="checkbox" value="${k._id}" class="kelas-admin-checkbox w-4 h-4 rounded border-gray-300 text-purple-600 cursor-pointer" onchange="updateKelasBulkBar()">
+          <input type="checkbox" value="${k.id}" class="kelas-admin-checkbox w-4 h-4 rounded border-gray-300 text-purple-600 cursor-pointer" onchange="updateKelasBulkBar()">
         </td>
         <td class="px-4 py-3 text-gray-500 text-center">${i+1}</td>
         <td class="px-4 py-3 font-semibold text-gray-900">${k.nama}</td>
@@ -2152,8 +2154,8 @@ async function loadKelasMaster() {
         <td class="px-4 py-3 text-center hidden md:table-cell"><span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">${k.jumlahSiswa||0} siswa</span></td>
         <td class="px-4 py-3 text-xs text-gray-500 hidden lg:table-cell">${k.waliKelas||'-'}</td>
         <td class="px-4 py-3"><div class="flex items-center justify-center gap-1">
-          <button onclick="editKelasAdmin('${k._id}')" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors inline-flex items-center justify-center" title="Edit"><i class="fas fa-pen text-xs"></i></button>
-          <button onclick="hapusKelasAdmin('${k._id}','${(k.nama||'').replace(/'/g,"\\'")}' )" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors inline-flex items-center justify-center" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
+          <button onclick="editKelasAdmin(`'${k.id}`')" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors inline-flex items-center justify-center" title="Edit"><i class="fas fa-pen text-xs"></i></button>
+          <button onclick="hapusKelasAdmin(`'${k.id}`','${(k.nama||'').replace(/'/g,"\\'")}' )" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors inline-flex items-center justify-center" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
         </div></td>
       </tr>`).join('');
     document.getElementById('kelas-admin-count').textContent = `${kelasMasterList.length} kelas ditemukan`;
@@ -2174,7 +2176,7 @@ function showTambahKelas() {
 }
 
 function editKelasAdmin(id) {
-  const k = kelasMasterList.find(x => x._id === id);
+  const k = kelasMasterList.find(x => x.id === id);
   if (!k) return;
   document.getElementById('modal-kelas-title').innerHTML = '<i class="fas fa-pen text-purple-500 mr-2"></i> Edit Kelas';
   document.getElementById('kelas-edit-id').value = id;

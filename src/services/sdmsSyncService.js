@@ -260,6 +260,21 @@ async function upsertGuru(guruList) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// UPDATE jumlahSiswa di setiap kelas
+// ══════════════════════════════════════════════════════════════════════════════
+async function updateJumlahSiswaKelas() {
+  try {
+    const kelasList = await Kelas.findAll({ where: { guruId: null }, attributes: ['id'] });
+    for (const k of kelasList) {
+      const count = await Siswa.count({ where: { kelasId: k.id, status: 'Aktif' } });
+      await k.update({ jumlahSiswa: count });
+    }
+  } catch (e) {
+    console.error('[SdmsSync] updateJumlahSiswaKelas error:', e.message);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // FULL SYNC
 // ══════════════════════════════════════════════════════════════════════════════
 async function fullSync() {
@@ -297,6 +312,9 @@ async function fullSync() {
     } else {
       result.siswa = { created: 0, updated: 0, failed: 0 };
     }
+
+    // 3b. Update jumlahSiswa di setiap kelas berdasarkan count aktual
+    await updateJumlahSiswaKelas();
 
     // 4. Update info Guru (wali kelas, dll)
     if (data.guru?.length) {
