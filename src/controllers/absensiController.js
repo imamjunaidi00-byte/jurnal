@@ -1,6 +1,6 @@
 'use strict';
 
-const { Absensi, Siswa, sequelize } = require('../models/index');
+const { Absensi, AbsensiHarian, Siswa, sequelize } = require('../models/index');
 const { ok, fail } = require('../utils/response');
 const { writeExcel } = require('../utils/excel');
 const { Op, fn, col, literal } = require('sequelize');
@@ -166,5 +166,91 @@ exports.destroy = async (req, res) => {
     return ok(res, null, 'Absensi berhasil dihapus.');
   } catch (err) {
     return fail(res, 'Gagal menghapus absensi.', 500);
+  }
+};
+
+// GET /api/absensi/rekap-gabungan
+// Menggabungkan AbsensiHarian (prioritas) + Absensi mapel
+// Response: array of { id, siswaId, siswa: {id,nama,nisn}, kelas, tanggal, status, ... }
+exports.rekapGabungan = async (req, res) => {
+  try {
+    const { kelas, tanggal, tanggalMulai, tanggalAkhir } = req.query;
+    if (!kelas) return fail(res, 'Parameter kelas wajib diisi.', 400);
+
+    const guruId = req.guru.id;
+
+    // Build filter tanggal
+    const buildWhereTanggal = (alias) => {
+      const w = { guruId, kelas };
+      if (tanggal) {
+        w.tanggal = tanggal;
+      } else if (tanggalMulai && tanggalAkhir) {
+        w.tanggal = { [Op.between]: [tanggalMulai, tanggalAkhir] };
+      }
+      return w;
+    };
+
+    // Ambil AbsensiHarian dan Absensi paralel
+    const [harian, mapel] = await Promise.all([
+      AbsensiHarian.findAll({
+        where: buildWhereTanggal(),
+        include: [{ model: Siswa, as: 'siswaRef', attributes: ['id','nama','nisn'], required: false }],
+        order: [['tanggal','ASC']],
+      }),
+      Absensi.findAll({
+        where: buildWhereTanggal(),
+        include: [{ model: Siswa, as: 'siswaRef', attributes: ['id','nama','nisn'], required: false }],
+        order: [['tanggal','ASC']],
+      }),
+    ]);
+
+    // Buat map dari AbsensiHarian: key = `${siswaId}-${tanggal}`
+    // AbsensiHarian punya prioritas lebih tinggi
+    const harianMap = new Map();
+    harian.forEach(h => {
+      const key = `${h.siswaId}-${h.tanggal}`;
+      harianMap.set(key, {
+        id:       h.id,
+        siswaId:  h.siswaId,
+        siswa:    h.siswaRef || { id: h.siswaId, nama: '-', nisn: '-' },
+        kelas:    h.kelas,
+        tanggal:  h.tanggal,
+        status:   h.status,
+        keterangan: h.keterangan || '',
+        sumber:   'harian',
+      });
+    });
+
+    // Gabungkan dengan absensi mapel — hanya tambahkan jika belum ada di harian
+    const result = [...harianMap.values()];
+
+    mapel.forEach(a => {
+      const key = `${a.siswaId}-${a.tanggal}`;
+      if (!harianMap.has(key)) {
+        result.push({
+          id:       a.id,
+          siswaId:  a.siswaId,
+          siswa:    a.siswaRef || { id: a.siswaId, nama: '-', nisn: '-' },
+          kelas:    a.kelas,
+          tanggal:  a.tanggal,
+          status:   a.status,
+          keterangan:   a.keterangan || '',
+          mataPelajaran: a.mataPelajaran,
+          sumber:   'mapel',
+        });
+      }
+    });
+
+    // Sort by tanggal, lalu nama siswa
+    result.sort((a, b) => {
+      const tDiff = String(a.tanggal).localeCompare(String(b.tanggal));
+      if (tDiff !== 0) return tDiff;
+      return (a.siswa?.nama || '').localeCompare(b.siswa?.nama || '');
+    });
+
+    return ok(res, result);
+  } catch (err) {
+    console.error('rekapGabungan error:', err.message);
+    return fail(res, 'Gagal mengambil rekap absensi gabungan.', 500);
   }
 };
