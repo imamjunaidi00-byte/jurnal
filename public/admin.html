@@ -1106,9 +1106,8 @@ async function doAdminLogin() {
       localStorage.setItem('admin_info', JSON.stringify(data.data));
       showDashboard();
     } else if (data.success && data.data?.role !== 'admin') {
-      document.getElementById('login-error-msg').textContent = 'Akun ini bukan admin.';
+      document.getElementById('login-error-msg').textContent = 'Akun ini bukan admin. Gunakan akun admin.';
       errEl.classList.remove('hidden');
-      showDashboard();
     } else {
       document.getElementById('login-error-msg').textContent = data.message || 'Login gagal.';
       errEl.classList.remove('hidden');
@@ -1191,8 +1190,11 @@ async function loadGuruList() {
   const tbody = document.getElementById('guru-table-body');
   tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-10 text-center text-gray-400 text-sm"><i class="fas fa-spinner fa-spin mr-2"></i>Memuat...</td></tr>';
   try {
-    const [rGuru, rStats] = await Promise.all([api.get('/api/admin/guru'), api.get('/api/admin/aktivitas/stats')]);
-    if (!rGuru.success) { showToast(rGuru.message||'Gagal memuat data.','error'); return; }
+    const [rGuru, rStats] = await Promise.all([
+      api.get('/api/admin/guru'),
+      api.get('/api/admin/aktivitas/stats').catch(() => ({ data: [] })),
+    ]);
+    if (!rGuru.success) { showToast(rGuru.message||'Gagal memuat data guru.','error'); return; }
     guruList = rGuru.data || [];
     const statsMap = {};
     (rStats.data||[]).forEach(s => {
@@ -1205,7 +1207,10 @@ async function loadGuruList() {
     });
     renderGuruTable(guruList, statsMap);
     document.getElementById('stat-total-guru').textContent = guruList.length;
-  } catch(e) { showToast('Gagal terhubung ke server.','error'); }
+  } catch(e) {
+    console.error('loadGuruList error:', e);
+    showToast('Gagal terhubung ke server.','error');
+  }
 }
 
 function timeAgo(date) {
@@ -2416,15 +2421,22 @@ async function doImportGuru() {
 // ── INIT ───────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   if (adminToken) {
-    // Verifikasi token masih valid
-    fetch('/api/admin/me', { headers:{'Authorization':`Bearer ${adminToken}`} })
+    // Verifikasi token masih valid — gunakan /api/auth/me
+    fetch('/api/auth/me', { headers:{'Authorization':`Bearer ${adminToken}`} })
       .then(r => r.json())
-      .then(d => { if (d.success) showDashboard(); else doLogout(); })
+      .then(d => {
+        if (d.success && d.data?.role === 'admin') {
+          showDashboard();
+        } else {
+          doLogout();
+        }
+      })
       .catch(() => doLogout());
   }
   // Enter key pada login
   document.getElementById('admin-username').addEventListener('keydown', e => { if(e.key==='Enter') doAdminLogin(); });
   document.getElementById('admin-password').addEventListener('keydown', e => { if(e.key==='Enter') doAdminLogin(); });
+});
 });
 </script>
 76
