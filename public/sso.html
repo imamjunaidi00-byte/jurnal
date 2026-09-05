@@ -129,16 +129,29 @@
 
       statusText.textContent = 'Menyimpan sesi…';
 
-      // Simpan token ke localStorage sesuai role
-      // - guru/admin: key 'token' (dipakai oleh frontend jurnal utama)
-      // - siswa: key 'siswaToken' (dipakai oleh siswaPortal)
+      // Decode data user jika ada
+      let userData = null;
+      const dataParam = params.get('data');
+      if (dataParam) {
+        try { userData = JSON.parse(atob(dataParam)); } catch {}
+      }
+
+      // Simpan token ke localStorage dengan key yang benar sesuai role
       if (role === 'siswa') {
-        localStorage.removeItem('token');
+        localStorage.removeItem('guru_token');
+        localStorage.removeItem('admin_token');
         localStorage.setItem('siswaToken', token);
-      } else {
+      } else if (role === 'admin') {
+        localStorage.removeItem('guru_token');
         localStorage.removeItem('siswaToken');
-        localStorage.setItem('token', token);
-        localStorage.setItem('role', role);
+        localStorage.setItem('admin_token', token);
+        if (userData) localStorage.setItem('admin_info', JSON.stringify(userData));
+      } else {
+        // guru (default)
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('siswaToken');
+        localStorage.setItem('guru_token', token);
+        if (userData) localStorage.setItem('guru_info', JSON.stringify(userData));
       }
 
       statusText.textContent = 'Mengarahkan ke dashboard…';
@@ -149,14 +162,11 @@
       // Redirect ke halaman sesuai role
       setTimeout(() => {
         if (role === 'admin') {
-          window.location.href = '/admin';        // halaman admin jurnal
+          window.location.href = '/admin';
         } else if (role === 'siswa') {
-          // Siswa pakai key berbeda di localStorage
-          localStorage.removeItem('token');
-          localStorage.setItem('siswaToken', token);
-          window.location.href = '/siswa';        // portal siswa
+          window.location.href = '/siswa';
         } else {
-          window.location.href = '/app';          // halaman guru
+          window.location.href = '/app';
         }
       }, 600);
     })();

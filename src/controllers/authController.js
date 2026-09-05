@@ -272,9 +272,12 @@ exports.ssoCallback = async (req, res) => {
     // Buat token jurnal lokal
     const localToken = generateToken({ id: guru.id, role: guru.role });
 
-    // Redirect ke sso.html dengan token & role di URL fragment
+    // Encode data guru untuk dikirim ke frontend via fragment
+    const userData = Buffer.from(JSON.stringify(guru.toJSON())).toString('base64');
+
+    // Redirect ke sso.html dengan token & role & data di URL fragment
     console.log(`[SSO] ✅ ${guru.role === 'admin' ? 'Admin' : 'Guru'} login via SSO: ${guru.nama}`);
-    return res.redirect(`/sso.html#token=${localToken}&role=${guru.role}`);
+    return res.redirect(`/sso.html#token=${localToken}&role=${guru.role}&data=${userData}`);
 
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
