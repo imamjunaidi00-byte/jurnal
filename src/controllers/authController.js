@@ -173,21 +173,18 @@ exports.deleteAccount = async (req, res) => {
 
 // ─── GET /api/auth/sso?token=<sso_token> ─────────────────────────────────────
 // Dipanggil dari browser setelah redirect dari SDMS App Hub.
-// Verifikasi JWT SSO → cari/buat akun guru → return token jurnal.
-// Frontend (sso.html) akan simpan token ke localStorage lalu redirect ke /app.
+// Verifikasi JWT SSO → cari/buat akun → return token jurnal.
+// Frontend (sso.html) akan simpan token ke localStorage lalu redirect ke halaman sesuai role.
 exports.ssoCallback = async (req, res) => {
-  const jwt = require('jsonwebtoken');
-  const bcrypt = require('bcryptjs');
+  const jwt    = require('jsonwebtoken');
   const crypto = require('crypto');
+  const { Siswa } = require('../models/index');
 
-  const SSO_SECRET = process.env.SSO_SECRET || 'sso_secret_jurnal_smkn1kras_2026';
-  const SSO_APP    = process.env.SSO_APP_NAME || 'jurnal';
+  const SSO_SECRET = process.env.SSO_SECRET    || 'sso_secret_jurnal_smkn1kras_2026';
+  const SSO_APP    = process.env.SSO_APP_NAME  || 'jurnal';
 
   const { token } = req.query;
-
-  if (!token) {
-    return res.redirect('/login?error=sso_no_token');
-  }
+  if (!token) return res.redirect('/login?error=sso_no_token');
 
   try {
     // 1. Verifikasi JWT dari SDMS
@@ -196,7 +193,39 @@ exports.ssoCallback = async (req, res) => {
       issuer:   'sdms-core',
     });
 
-    // 2. Petakan role SDMS → role jurnal
+    const sdmsRole = decoded.role;
+    console.log(`[SSO] Token valid: ${decoded.username} (role SDMS: ${sdmsRole})`);
+
+    // ── SISWA ──────────────────────────────────────────────────────────────────
+    if (sdmsRole === 'siswa') {
+      // Cari siswa berdasarkan username SDMS (username siswa = NISN di SDMS)
+      const nisn = decoded.username;
+      let siswa = await Siswa.findOne({ where: { nisn } });
+
+      if (!siswa) {
+        // Fallback: cari berdasarkan nama
+        siswa = await Siswa.findOne({ where: { nama: decoded.full_name || nisn } });
+      }
+
+      if (!siswa) {
+        console.warn(`[SSO] Siswa dengan NISN ${nisn} tidak ditemukan di jurnal`);
+        return res.redirect('/login?error=sso_siswa_not_found');
+      }
+
+      // Buat token siswa (type: 'siswa' sesuai format siswaPortalController)
+      const JWT_SECRET = process.env.JWT_SECRET || 'change_me';
+      const siswaToken = jwt.sign(
+        { id: siswa.id, nisn: siswa.nisn, type: 'siswa' },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      console.log(`[SSO] ✅ Siswa login via SSO: ${siswa.nama} (NISN: ${siswa.nisn})`);
+      return res.redirect(`/sso.html#token=${siswaToken}&role=siswa`);
+    }
+
+    // ── GURU / ADMIN ───────────────────────────────────────────────────────────
+    // Petakan role SDMS → role jurnal
     const roleMap = {
       super_admin:    'admin',
       admin:          'admin',
@@ -207,20 +236,20 @@ exports.ssoCallback = async (req, res) => {
       operator:       'guru',
       petugas_piket:  'guru',
     };
-    const localRole = roleMap[decoded.role] || 'guru';
+    const localRole = roleMap[sdmsRole] || 'guru';
 
-    // 3. Cari guru berdasarkan username dari SDMS
+    // Cari guru berdasarkan username dari SDMS
     let guru = await Guru.findOne({ where: { username: decoded.username } });
 
     if (!guru) {
-      // Belum ada → buat akun otomatis (password random, tidak bisa login manual)
+      // Belum ada → buat akun otomatis
       const dummyPass = crypto.randomBytes(16).toString('hex');
       guru = await Guru.create({
         username: decoded.username,
         password: dummyPass,
         nama:     decoded.full_name || decoded.username,
         role:     localRole,
-        nip:      decoded.username,  // asumsi username = NIP
+        nip:      decoded.username,
       });
       console.log(`[SSO] ✅ Akun guru baru dibuat: ${decoded.username} (${localRole})`);
     } else {
@@ -231,7 +260,7 @@ exports.ssoCallback = async (req, res) => {
       if (Object.keys(updates).length) await guru.update(updates);
     }
 
-    // 4. Catat login log
+    // Catat login log
     await LoginLog.create({
       guruId:    guru.id,
       username:  guru.username,
@@ -240,12 +269,11 @@ exports.ssoCallback = async (req, res) => {
       userAgent: req.headers['user-agent'] || '',
     }).catch(() => {});
 
-    // 5. Buat token jurnal lokal
+    // Buat token jurnal lokal
     const localToken = generateToken({ id: guru.id, role: guru.role });
-    const guruData   = guru.toJSON();
 
-    // 6. Redirect ke halaman SSO landing — token dikirim via URL fragment (#)
-    //    agar tidak muncul di server log / access log.
+    // Redirect ke sso.html dengan token & role di URL fragment
+    console.log(`[SSO] ✅ ${guru.role === 'admin' ? 'Admin' : 'Guru'} login via SSO: ${guru.nama}`);
     return res.redirect(`/sso.html#token=${localToken}&role=${guru.role}`);
 
   } catch (err) {

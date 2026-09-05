@@ -112,10 +112,11 @@
 
       if (qError) {
         const messages = {
-          sso_no_token: 'Token SSO tidak ditemukan. Coba buka lagi dari SDMS.',
-          sso_expired:  'Token SSO sudah kadaluarsa. Silakan buka ulang dari SDMS.',
-          sso_invalid:  'Token SSO tidak valid. Pastikan konfigurasi SSO_SECRET sudah benar.',
-          sso_error:    'Terjadi kesalahan saat memproses SSO. Hubungi administrator.',
+          sso_no_token:         'Token SSO tidak ditemukan. Coba buka lagi dari SDMS.',
+          sso_expired:          'Token SSO sudah kadaluarsa. Silakan buka ulang dari SDMS.',
+          sso_invalid:          'Token SSO tidak valid. Pastikan konfigurasi SSO_SECRET sudah benar.',
+          sso_siswa_not_found:  'Akun siswa tidak ditemukan di Jurnal Guru. Hubungi administrator untuk sinkronisasi data.',
+          sso_error:            'Terjadi kesalahan saat memproses SSO. Hubungi administrator.',
         };
         showError(messages[qError] || 'Terjadi kesalahan tidak dikenal.');
         return;
@@ -128,21 +129,34 @@
 
       statusText.textContent = 'Menyimpan sesi…';
 
-      // Simpan token ke localStorage (sama seperti login biasa)
-      localStorage.setItem('token', token);
-      if (role) localStorage.setItem('role', role);
+      // Simpan token ke localStorage sesuai role
+      // - guru/admin: key 'token' (dipakai oleh frontend jurnal utama)
+      // - siswa: key 'siswaToken' (dipakai oleh siswaPortal)
+      if (role === 'siswa') {
+        localStorage.removeItem('token');
+        localStorage.setItem('siswaToken', token);
+      } else {
+        localStorage.removeItem('siswaToken');
+        localStorage.setItem('token', token);
+        localStorage.setItem('role', role);
+      }
 
       statusText.textContent = 'Mengarahkan ke dashboard…';
 
       // Hapus token dari URL (keamanan)
       history.replaceState(null, '', '/sso.html');
 
-      // Redirect ke halaman utama
+      // Redirect ke halaman sesuai role
       setTimeout(() => {
         if (role === 'admin') {
-          window.location.href = '/admin';
+          window.location.href = '/admin';        // halaman admin jurnal
+        } else if (role === 'siswa') {
+          // Siswa pakai key berbeda di localStorage
+          localStorage.removeItem('token');
+          localStorage.setItem('siswaToken', token);
+          window.location.href = '/siswa';        // portal siswa
         } else {
-          window.location.href = '/app';
+          window.location.href = '/app';          // halaman guru
         }
       }, 600);
     })();
