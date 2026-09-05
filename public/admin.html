@@ -176,12 +176,12 @@
                 </th>
                 <th class="px-4 py-3 text-left font-semibold text-gray-600 w-10">No</th>
                 <th class="px-4 py-3 text-left font-semibold text-gray-600">Nama</th>
-                <th class="px-4 py-3 text-left font-semibold text-gray-600">Username</th>
-                <th class="px-4 py-3 text-left font-semibold text-gray-600 hidden sm:table-cell">Dibuat</th>
-                <th class="px-4 py-3 text-left font-semibold text-gray-600 hidden md:table-cell">Login Terakhir</th>
-                <th class="px-4 py-3 text-center font-semibold text-gray-600 hidden md:table-cell">Total Login</th>
-                <th class="px-4 py-3 text-center font-semibold text-gray-600 hidden lg:table-cell">Wali Kelas</th>
-                <th class="px-4 py-3 text-center font-semibold text-gray-600">Aksi</th>
+                <th class="px-3 py-2.5 text-left font-semibold text-gray-600 text-xs">Username</th>
+                <th class="px-3 py-2.5 text-left font-semibold text-gray-600 text-xs hidden sm:table-cell">Dibuat</th>
+                <th class="px-3 py-2.5 text-left font-semibold text-gray-600 text-xs hidden md:table-cell">Login Terakhir</th>
+                <th class="px-3 py-2.5 text-center font-semibold text-gray-600 text-xs hidden md:table-cell">Login</th>
+                <th class="px-3 py-2.5 text-center font-semibold text-gray-600 text-xs hidden lg:table-cell">Wali Kelas</th>
+                <th class="px-3 py-2.5 text-center font-semibold text-gray-600 text-xs">Aksi</th>
               </tr>
             </thead>
             <tbody id="guru-table-body">
@@ -1256,23 +1256,28 @@ function renderGuruPage(statsMap) {
       ? `<div class="flex flex-col items-center gap-0.5"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold"><i class="fas fa-user-check mr-1"></i>${g.kelasWali||'?'}</span></div>`
       : '<span class="text-gray-300 text-xs">—</span>';
     return `<tr class="border-b border-gray-50 hover:bg-gray-50">
-      <td class="px-4 py-3 text-center">
+      <td class="px-3 py-2 text-center">
         <input type="checkbox" value="${g.id}" class="guru-admin-checkbox w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer" onchange="updateGuruBulkBar()">
       </td>
-      <td class="px-4 py-3 text-gray-500 text-center">${globalNo}</td>
-      <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm">${inisial}</div><span class="font-medium text-gray-900">${g.nama||'-'}</span></div></td>
-      <td class="px-4 py-3 font-mono text-sm text-gray-600">@${g.username}</td>
-      <td class="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">${tgl}</td>
-      <td class="px-4 py-3 text-xs hidden md:table-cell">${lastLogin}</td>
-      <td class="px-4 py-3 text-center hidden md:table-cell">${loginBadge}</td>
-      <td class="px-4 py-3 text-center hidden lg:table-cell">${wkBadge}</td>
-      <td class="px-4 py-3"><div class="flex items-center justify-center gap-1 flex-wrap">
-        <button onclick="showEditGuru('${g.id}','${g.nama.replace(/'/g,"\\'")}','${g.username}')" title="Edit" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"><i class="fas fa-pen"></i><span class="hidden sm:inline">Edit</span></button>
-        <button onclick="showAturWaliKelas('${g.id}','${g.nama.replace(/'/g,"\\'")}','${g.username}',${!!g.isWaliKelas},'${(g.kelasWali||'').replace(/'/g,"\\'")}' )" title="Atur Wali Kelas" class="px-3 py-1.5 ${g.isWaliKelas ? 'bg-emerald-500 text-white' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'} rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"><i class="fas fa-user-check"></i><span class="hidden sm:inline">Wali</span></button>
-        <button onclick="showRiwayatLogin('${g.id}','${g.nama.replace(/'/g,"\\'")}','${g.username}')" title="Riwayat" class="px-2 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-xs font-semibold transition-colors"><i class="fas fa-history"></i></button>
-        <button onclick="showResetPassword('${g.id}','${g.nama.replace(/'/g,"\\'")}' )" title="Reset Password" class="px-3 py-1.5 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"><i class="fas fa-key"></i><span class="hidden sm:inline">Pwd</span></button>
-        <button onclick="showHapusGuru('${g.id}','${g.nama.replace(/'/g,"\\'")}','${g.username}')" title="Hapus" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"><i class="fas fa-trash"></i><span class="hidden sm:inline">Hapus</span></button>
+      <td class="px-3 py-2 text-gray-400 text-xs text-center">${globalNo}</td>
+      <td class="px-3 py-2"><div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs flex-shrink-0">${inisial}</div>
+        <span class="font-medium text-gray-900 text-sm">${g.nama||'-'}</span>
       </div></td>
+      <td class="px-3 py-2 font-mono text-xs text-gray-500">@${g.username}</td>
+      <td class="px-3 py-2 text-gray-400 text-xs hidden sm:table-cell">${tgl}</td>
+      <td class="px-3 py-2 text-xs hidden md:table-cell">${lastLogin}</td>
+      <td class="px-3 py-2 text-center hidden md:table-cell">${loginBadge}</td>
+      <td class="px-3 py-2 text-center hidden lg:table-cell">${wkBadge}</td>
+      <td class="px-3 py-2">
+        <div class="flex items-center gap-1 flex-nowrap">
+          <button onclick="showEditGuru('${g.id}','${g.nama.replace(/'/g,"\\'")}','${g.username}')" title="Edit" class="w-7 h-7 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs flex items-center justify-center transition-colors"><i class="fas fa-pen"></i></button>
+          <button onclick="showAturWaliKelas('${g.id}','${g.nama.replace(/'/g,"\\'")}','${g.username}',${!!g.isWaliKelas},'${(g.kelasWali||'').replace(/'/g,"\\'")}' )" title="Wali Kelas" class="w-7 h-7 ${g.isWaliKelas ? 'bg-emerald-500 text-white' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'} rounded-lg text-xs flex items-center justify-center transition-colors"><i class="fas fa-user-check"></i></button>
+          <button onclick="showRiwayatLogin('${g.id}','${g.nama.replace(/'/g,"\\'")}','${g.username}')" title="Riwayat Login" class="w-7 h-7 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-xs flex items-center justify-center transition-colors"><i class="fas fa-history"></i></button>
+          <button onclick="showResetPassword('${g.id}','${g.nama.replace(/'/g,"\\'")}' )" title="Reset Password" class="w-7 h-7 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-lg text-xs flex items-center justify-center transition-colors"><i class="fas fa-key"></i></button>
+          <button onclick="showHapusGuru('${g.id}','${g.nama.replace(/'/g,"\\'")}','${g.username}')" title="Hapus" class="w-7 h-7 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs flex items-center justify-center transition-colors"><i class="fas fa-trash"></i></button>
+        </div>
+      </td>
     </tr>`;
   }).join('');
 
@@ -1535,13 +1540,16 @@ async function loadAktivitas() {
     const tbody = document.getElementById('aktivitas-tbody');
     const list = res.data || [];
     tbody.innerHTML = list.length
-      ? list.map(l => `<tr class="border-b border-gray-50 hover:bg-gray-50">
-          <td class="px-4 py-3 font-medium text-gray-900 text-sm">${l.guruRef?.nama || l.nama||'-'}</td>
-          <td class="px-4 py-3 font-mono text-xs text-gray-500 hidden sm:table-cell">@${l.guruRef?.username || l.username||'-'}</td>
-          <td class="px-4 py-3 text-xs text-gray-600">${timeAgo(new Date(l.loginAt))}</td>
-          <td class="px-4 py-3 font-mono text-xs text-gray-400 hidden md:table-cell">${l.ip||'-'}</td>
-        </tr>`).join('')
-      : '<tr><td colspan="4" class="py-8 text-center text-gray-400 text-sm">Belum ada aktivitas login</td></tr>';
+      ? list.slice(0, 10).map(l => {
+          const ip = (l.ip || '-').replace(/^::ffff:/, ''); // hapus prefix IPv4-mapped
+          return `<tr class="border-b border-gray-50 hover:bg-gray-50">
+          <td class="px-4 py-2.5 font-medium text-gray-900 text-sm">${l.guruRef?.nama || l.nama||'-'}</td>
+          <td class="px-4 py-2.5 font-mono text-xs text-gray-500 hidden sm:table-cell">@${l.guruRef?.username || l.username||'-'}</td>
+          <td class="px-4 py-2.5 text-xs text-gray-600">${timeAgo(new Date(l.loginAt))}</td>
+          <td class="px-4 py-2.5 font-mono text-xs text-gray-400 hidden md:table-cell">${ip}</td>
+        </tr>`;
+        }).join('')
+      : '<tr><td colspan="4" class="py-6 text-center text-gray-400 text-sm">Belum ada aktivitas login</td></tr>';
   } catch(e) {}
 }
 

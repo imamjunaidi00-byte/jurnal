@@ -192,7 +192,7 @@ exports.getAktivitas = async (req, res) => {
     const logs = await LoginLog.findAll({
       include: [{ model: Guru, as: 'guruRef', attributes: ['nama', 'username', 'role'] }],
       order:   [['loginAt', 'DESC']],
-      limit:   30,
+      limit:   10,
     });
     return ok(res, logs);
   } catch (err) {
