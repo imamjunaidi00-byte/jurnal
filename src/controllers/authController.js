@@ -170,3 +170,94 @@ exports.deleteAccount = async (req, res) => {
     return fail(res, 'Gagal menghapus akun.', 500);
   }
 };
+
+// ─── GET /api/auth/sso?token=<sso_token> ─────────────────────────────────────
+// Dipanggil dari browser setelah redirect dari SDMS App Hub.
+// Verifikasi JWT SSO → cari/buat akun guru → return token jurnal.
+// Frontend (sso.html) akan simpan token ke localStorage lalu redirect ke /app.
+exports.ssoCallback = async (req, res) => {
+  const jwt = require('jsonwebtoken');
+  const bcrypt = require('bcryptjs');
+  const crypto = require('crypto');
+
+  const SSO_SECRET = process.env.SSO_SECRET || 'sso_secret_jurnal_smkn1kras_2026';
+  const SSO_APP    = process.env.SSO_APP_NAME || 'jurnal';
+
+  const { token } = req.query;
+
+  if (!token) {
+    return res.redirect('/login?error=sso_no_token');
+  }
+
+  try {
+    // 1. Verifikasi JWT dari SDMS
+    const decoded = jwt.verify(token, SSO_SECRET, {
+      audience: SSO_APP,
+      issuer:   'sdms-core',
+    });
+
+    // 2. Petakan role SDMS → role jurnal
+    const roleMap = {
+      super_admin:    'admin',
+      admin:          'admin',
+      kepala_sekolah: 'admin',
+      guru:           'guru',
+      wali_kelas:     'guru',
+      pegawai:        'guru',
+      operator:       'guru',
+      petugas_piket:  'guru',
+    };
+    const localRole = roleMap[decoded.role] || 'guru';
+
+    // 3. Cari guru berdasarkan username dari SDMS
+    let guru = await Guru.findOne({ where: { username: decoded.username } });
+
+    if (!guru) {
+      // Belum ada → buat akun otomatis (password random, tidak bisa login manual)
+      const dummyPass = crypto.randomBytes(16).toString('hex');
+      guru = await Guru.create({
+        username: decoded.username,
+        password: dummyPass,
+        nama:     decoded.full_name || decoded.username,
+        role:     localRole,
+        nip:      decoded.username,  // asumsi username = NIP
+      });
+      console.log(`[SSO] ✅ Akun guru baru dibuat: ${decoded.username} (${localRole})`);
+    } else {
+      // Sudah ada → update nama & role jika berubah di SDMS
+      const updates = {};
+      if (decoded.full_name && decoded.full_name !== guru.nama) updates.nama = decoded.full_name;
+      if (localRole !== guru.role) updates.role = localRole;
+      if (Object.keys(updates).length) await guru.update(updates);
+    }
+
+    // 4. Catat login log
+    await LoginLog.create({
+      guruId:    guru.id,
+      username:  guru.username,
+      nama:      guru.nama,
+      ip:        req.ip || '',
+      userAgent: req.headers['user-agent'] || '',
+    }).catch(() => {});
+
+    // 5. Buat token jurnal lokal
+    const localToken = generateToken({ id: guru.id, role: guru.role });
+    const guruData   = guru.toJSON();
+
+    // 6. Redirect ke halaman SSO landing — token dikirim via URL fragment (#)
+    //    agar tidak muncul di server log / access log.
+    return res.redirect(`/sso.html#token=${localToken}&role=${guru.role}`);
+
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      console.warn('[SSO] Token kadaluarsa');
+      return res.redirect('/login?error=sso_expired');
+    }
+    if (err.name === 'JsonWebTokenError') {
+      console.warn('[SSO] Token tidak valid:', err.message);
+      return res.redirect('/login?error=sso_invalid');
+    }
+    console.error('[SSO] Error:', err.message);
+    return res.redirect('/login?error=sso_error');
+  }
+};

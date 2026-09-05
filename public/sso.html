@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Masuk via SSO — E-Journal Guru</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 48px 40px;
+      text-align: center;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.15);
+      max-width: 380px;
+      width: 90%;
+    }
+    .icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 32px;
+    }
+    h1 { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+    p  { font-size: 14px; color: #64748b; margin-bottom: 24px; line-height: 1.5; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status { font-size: 13px; color: #94a3b8; }
+    .error-card { display: none; }
+    .error-card .icon { background: linear-gradient(135deg, #ef4444, #f97316); }
+    .btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 28px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading state -->
+  <div class="card" id="loadingCard">
+    <div class="icon">📚</div>
+    <h1>Masuk via SDMS</h1>
+    <p>Memverifikasi sesi Anda dari SDMS.<br>Mohon tunggu sebentar…</p>
+    <div class="spinner"></div>
+    <div class="status" id="statusText">Memeriksa token…</div>
+  </div>
+
+  <!-- Error state -->
+  <div class="card error-card" id="errorCard">
+    <div class="icon">⚠️</div>
+    <h1>Login SSO Gagal</h1>
+    <p id="errorMsg">Terjadi kesalahan saat memproses login dari SDMS.</p>
+    <a href="/login" class="btn">Login Manual</a>
+  </div>
+
+  <script>
+    (function () {
+      const loadingCard = document.getElementById('loadingCard');
+      const errorCard   = document.getElementById('errorCard');
+      const statusText  = document.getElementById('statusText');
+      const errorMsg    = document.getElementById('errorMsg');
+
+      function showError(msg) {
+        loadingCard.style.display = 'none';
+        errorCard.style.display   = 'block';
+        errorCard.classList.add('error-card');
+        errorCard.style.display = 'flex';
+        errorCard.style.flexDirection = 'column';
+        errorCard.style.alignItems = 'center';
+        errorMsg.textContent = msg;
+      }
+
+      // Ambil token dari URL fragment (#token=xxx&role=yyy)
+      // Menggunakan fragment (#) agar token tidak tercatat di server log
+      const hash   = window.location.hash.substring(1); // hapus '#'
+      const params = new URLSearchParams(hash);
+      const token  = params.get('token');
+      const role   = params.get('role');
+
+      // Juga cek error dari query string (redirect dari backend saat error)
+      const qParams = new URLSearchParams(window.location.search);
+      const qError  = qParams.get('error');
+
+      if (qError) {
+        const messages = {
+          sso_no_token: 'Token SSO tidak ditemukan. Coba buka lagi dari SDMS.',
+          sso_expired:  'Token SSO sudah kadaluarsa. Silakan buka ulang dari SDMS.',
+          sso_invalid:  'Token SSO tidak valid. Pastikan konfigurasi SSO_SECRET sudah benar.',
+          sso_error:    'Terjadi kesalahan saat memproses SSO. Hubungi administrator.',
+        };
+        showError(messages[qError] || 'Terjadi kesalahan tidak dikenal.');
+        return;
+      }
+
+      if (!token) {
+        showError('Token tidak ditemukan. Silakan buka kembali dari SDMS App Hub.');
+        return;
+      }
+
+      statusText.textContent = 'Menyimpan sesi…';
+
+      // Simpan token ke localStorage (sama seperti login biasa)
+      localStorage.setItem('token', token);
+      if (role) localStorage.setItem('role', role);
+
+      statusText.textContent = 'Mengarahkan ke dashboard…';
+
+      // Hapus token dari URL (keamanan)
+      history.replaceState(null, '', '/sso.html');
+
+      // Redirect ke halaman utama
+      setTimeout(() => {
+        if (role === 'admin') {
+          window.location.href = '/admin';
+        } else {
+          window.location.href = '/app';
+        }
+      }, 600);
+    })();
+  </script>
+
+</body>
+</html>

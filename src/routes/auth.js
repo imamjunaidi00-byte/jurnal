@@ -16,4 +16,7 @@ router.get   ('/accounts',     protect, ctrl.getAccounts);
 // Hapus akun sendiri
 router.delete('/accounts/:id', protect, ctrl.deleteAccount);
 
+// SSO Callback dari SDMS — GET /api/auth/sso?token=xxx
+router.get   ('/sso',          ctrl.ssoCallback);
+
 module.exports = router;
