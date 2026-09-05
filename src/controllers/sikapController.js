@@ -43,7 +43,12 @@ exports.bulkSave = async (req, res) => {
     const { items } = req.body;
     if (!Array.isArray(items) || !items.length) return fail(res, 'items wajib diisi.', 400);
 
-    const rows = items.map(item => ({ ...item, guruId: req.guru.id }));
+    const rows = items.map(item => {
+      const row = { ...item, guruId: req.guru.id };
+      // Normalisasi: frontend bisa kirim 'siswa' atau 'siswaId'
+      if (row.siswa && !row.siswaId) { row.siswaId = row.siswa; delete row.siswa; }
+      return row;
+    });
     const fields = ['berdoa','toleransi','bersyukur','jujur','disiplin',
                     'tanggungJawab','santun','peduli','percayaDiri',
                     'nilaiSpiritual','nilaiSosial','deskripsiSpiritual','deskripsiSosial',

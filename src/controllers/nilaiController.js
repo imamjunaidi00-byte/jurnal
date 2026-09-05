@@ -51,11 +51,12 @@ exports.bulkSave = async (req, res) => {
     const { items } = req.body;
     if (!Array.isArray(items) || !items.length) return fail(res, 'items wajib diisi.', 400);
 
-    const rows = items.map(item => ({
-      ...item,
-      guruId: req.guru.id,
-      guru:   item.guru || req.guru.nama,
-    }));
+    const rows = items.map(item => {
+      const row = { ...item, guruId: req.guru.id, guru: item.guru || req.guru.nama };
+      // Normalisasi: frontend bisa kirim 'siswa' atau 'siswaId'
+      if (row.siswa && !row.siswaId) { row.siswaId = row.siswa; delete row.siswa; }
+      return row;
+    });
 
     // upsert menggunakan updateOnDuplicate
     const fields = ['uh','pts','pas','praktek','proyek','portofolio',

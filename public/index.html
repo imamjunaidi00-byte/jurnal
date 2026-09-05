@@ -3955,7 +3955,8 @@
             const map = {};
             siswaKelas.forEach(s => { map[s.id.toString()] = { nama: s.nama }; });
             filtered.forEach(a => {
-                const sid = (a.siswa?.id || a.siswa || '').toString();
+                // a.siswa bisa object (include) atau ID langsung
+                const sid = (a.siswa?.id || a.siswaId || a.siswa || '').toString();
                 if (map[sid]) {
                     const d = new Date(a.tanggal);
                     const tgl = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -4111,13 +4112,12 @@
             // Hitung per siswa — gunakan string ID untuk matching
             const rekapMap = {};
             siswaKelas.forEach(s => {
-                const idStr = (s.id || s.id || '').toString();
+                const idStr = (s.id || '').toString();
                 rekapMap[idStr] = { nama: s.nama, hadir:0, sakit:0, izin:0, alpha:0, dispensasi:0, pulang_cepat:0 };
             });
 
             filtered.forEach(a => {
-                // a.siswa bisa object (populate) atau string/ObjectId langsung
-                const sid = (a.siswa?.id || a.siswa?.id || a.siswa || '').toString();
+                const sid = (a.siswa?.id || a.siswaId || a.siswa || '').toString();
                 if (rekapMap[sid]) {
                     const st = a.status || 'hadir';
                     rekapMap[sid][st] = (rekapMap[sid][st] || 0) + 1;
@@ -4623,7 +4623,7 @@
                     kelas, tanggal, semester: CONFIG.semester,
                     tahunAjaran: CONFIG.tahunAjaran,
                     guruPengampu: CONFIG.guru.nama,
-                    mataPelajaran: mapel, data
+                    mataPelajaran: mapel, items: data
                 });
                 if (res.success) {
                     showToast(`✅ Absensi ${kelas} berhasil disimpan!`);
@@ -4789,12 +4789,12 @@
             if (!siswaKelas.length) return showToast('Tidak ada siswa di kelas ini', 'error');
             const aspekList = ['berdoa','toleransi','bersyukur','jujur','disiplin','tanggungJawab','santun','peduli','percayaDiri'];
             const data = siswaKelas.map(s => {
-                const obj = { siswa: s.id, kelas, semester, tahunAjaran };
+                const obj = { siswaId: s.id, kelas, semester, tahunAjaran };
                 aspekList.forEach(k => { obj[k] = sikapData[`${s.id}-${k}`] || 'B'; });
                 return obj;
             });
             try {
-                const res = await api.post('/api/sikap/bulk', { data });
+                const res = await api.post('/api/sikap/bulk', { items: data });
                 if (res.success) showToast(`✅ Sikap ${kelas} ${semester} ${tahunAjaran} berhasil disimpan!`);
                 else showToast(res.message || 'Gagal menyimpan', 'error');
             } catch(e) { showToast('Gagal terhubung ke server', 'error'); }
@@ -5328,7 +5328,7 @@
             const data = siswaKelas.map(s => {
                 const n = nilaiData[s.id] || {};
                 return { 
-                    siswa: s.id, 
+                    siswaId: s.id, 
                     kelas, 
                     semester: CONFIG.semester, 
                     tahunAjaran: CONFIG.tahunAjaran, 
@@ -5344,7 +5344,7 @@
                 };
             });
             try {
-                const res = await api.post('/api/nilai/bulk', { data });
+                const res = await api.post('/api/nilai/bulk', { items: data });
                 if (res.success) showToast(`✅ Nilai ${kelas} berhasil disimpan!`);
                 else showToast(res.message || 'Gagal menyimpan', 'error');
             } catch(e) { showToast('Gagal terhubung ke server', 'error'); }

@@ -333,7 +333,7 @@ async function muatSiswa() {
     desc.textContent = 'Anda bisa mengubah absensi dengan menyimpan ulang.';
     // Preload data dari yang sudah ada
     cekRes.data.forEach(a => {
-      absensiMap[a.siswa?._id || a.siswa] = { status: a.status, keterangan: a.keterangan || '' };
+      absensiMap[a.siswa?.id || a.siswa] = { status: a.status, keterangan: a.keterangan || '' };
     });
   } else {
     banner.className = 'rounded-2xl p-4 flex items-center gap-3 bg-blue-50 border border-blue-200';
@@ -357,7 +357,7 @@ async function muatSiswa() {
 
   // Default semua hadir jika belum ada data
   if (!sudahAbsen) {
-    siswaData.forEach(s => { absensiMap[s._id] = { status:'hadir', keterangan:'' }; });
+    siswaData.forEach(s => { absensiMap[s.id] = { status:'hadir', keterangan:'' }; });
   }
 
   renderSiswaList();
@@ -368,27 +368,27 @@ async function muatSiswa() {
 function renderSiswaList() {
   const container = document.getElementById('siswa-list');
   container.innerHTML = siswaData.map((s, i) => {
-    const ab = absensiMap[s._id] || { status:'hadir', keterangan:'' };
+    const ab = absensiMap[s.id] || { status:'hadir', keterangan:'' };
     const ikons = { hadir:'fa-check', sakit:'fa-procedures', izin:'fa-file-alt', alpha:'fa-times', dispensasi:'fa-id-card', pulang_cepat:'fa-walking' };
     const colors = { hadir:'text-green-700 border-green-200', sakit:'text-yellow-700 border-yellow-200', izin:'text-blue-700 border-blue-200', alpha:'text-red-700 border-red-200', dispensasi:'text-purple-700 border-purple-200', pulang_cepat:'text-orange-700 border-orange-200' };
     const statuses = ['hadir','sakit','izin','alpha','dispensasi','pulang_cepat'];
     const label = { hadir:'H', sakit:'S', izin:'I', alpha:'A', dispensasi:'D', pulang_cepat:'P' };
     const labelFull = { hadir:'Hadir', sakit:'Sakit', izin:'Izin', alpha:'Alpha', dispensasi:'Dispensasi', pulang_cepat:'Pulang Cepat' };
-    return '<div class="px-4 py-3 hover:bg-gray-50 transition-colors" id="row-'+s._id+'">' +
+    return '<div class="px-4 py-3 hover:bg-gray-50 transition-colors" id="row-'+s.id+'">' +
       '<div class="flex items-start gap-3">' +
       '<div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm flex-shrink-0 mt-0.5">' + (i+1) + '</div>' +
       '<div class="flex-1 min-w-0">' +
       '<p class="font-semibold text-gray-900 text-sm">' + s.nama + '</p>' +
       '<p class="text-xs text-gray-500">' + (s.nisn||'') + ' · ' + (s.jenisKelamin==='L'?'Laki-laki':'Perempuan') + '</p>' +
       '<div class="flex gap-1.5 mt-2 flex-wrap">' +
-      statuses.map(st => '<button onclick="setStatus(\''+s._id+'\',\''+st+'\')" id="btn-'+s._id+'-'+st+'" ' +
+      statuses.map(st => '<button onclick="setStatus(\''+s.id+'\',\''+st+'\')" id="btn-'+s.id+'-'+st+'" ' +
         'title="'+labelFull[st]+'" ' +
         'class="status-btn px-2.5 py-1 border-2 rounded-lg text-xs font-semibold ' + colors[st] + (ab.status===st?' active-'+st:' bg-white') + '">' +
         '<i class="fas ' + ikons[st] + ' mr-1"></i>' + label[st] + '</button>'
       ).join('') +
       '</div>' +
       '<input type="text" placeholder="Keterangan (opsional)" value="' + (ab.keterangan||'') + '" ' +
-        'oninput="absensiMap[\''+s._id+'\'].keterangan=this.value" ' +
+        'oninput="absensiMap[\''+s.id+'\'].keterangan=this.value" ' +
         'class="mt-2 w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50">' +
       '</div></div></div>';
   }).join('');
@@ -409,7 +409,7 @@ function setStatus(siswaId, status) {
 }
 
 function setAllStatus(status) {
-  siswaData.forEach(s => setStatus(s._id, status));
+  siswaData.forEach(s => setStatus(s.id, status));
 }
 
 function updateCounter() {
@@ -431,9 +431,9 @@ async function simpanAbsensi() {
   if (!siswaData.length) { toast('Belum ada siswa dimuat.','error'); return; }
 
   const data = siswaData.map(s => ({
-    siswaId: s._id,
-    status: absensiMap[s._id]?.status || 'hadir',
-    keterangan: absensiMap[s._id]?.keterangan || ''
+    siswaId: s.id,
+    status: absensiMap[s.id]?.status || 'hadir',
+    keterangan: absensiMap[s.id]?.keterangan || ''
   }));
 
   const btn = document.getElementById('btn-simpan');
