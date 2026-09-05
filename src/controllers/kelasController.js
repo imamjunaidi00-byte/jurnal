@@ -2,23 +2,65 @@
 
 const { Kelas, Siswa, GuruKelas, sequelize } = require('../models/index');
 const { ok, fail } = require('../utils/response');
-const { Op } = require('sequelize');
+const { Op, fn, col, literal } = require('sequelize');
+
+// ─── Helper: update jumlahSiswa semua kelas ───────────────────────────────────
+async function syncJumlahSiswa() {
+  const list = await Kelas.findAll({ where: { guruId: null }, attributes: ['id'] });
+  for (const k of list) {
+    const count = await Siswa.count({ where: { kelasId: k.id, status: 'Aktif' } });
+    await k.update({ jumlahSiswa: count });
+  }
+}
 
 // GET /api/kelas  &  GET /api/admin/kelas
 exports.list = async (req, res) => {
   try {
     const where = req.guru.role === 'admin'
-      ? { guruId: null }                          // admin: hanya data global
-      : { [Op.or]: [{ guruId: null }, { guruId: req.guru.id }] }; // guru: global + miliknya
+      ? { guruId: null }
+      : { [Op.or]: [{ guruId: null }, { guruId: req.guru.id }] };
 
-    const { tahunAjaran, search } = req.query;
+    const { tahunAjaran, tingkat, search } = req.query;
     if (tahunAjaran) where.tahunAjaran = tahunAjaran;
-    if (search)      where.nama = { [Op.like]: `%${search}%` };
+    if (tingkat)     where.tingkat     = parseInt(tingkat, 10);
+    if (search)      where.nama        = { [Op.like]: `%${search}%` };
 
-    const list = await Kelas.findAll({ where, order: [['tingkat','ASC'],['nama','ASC']] });
-    return ok(res, list);
+    // Ambil kelas beserta count siswa aktif aktual (bukan dari kolom jumlahSiswa)
+    const list = await Kelas.findAll({
+      where,
+      attributes: {
+        include: [
+          [
+            literal(`(SELECT COUNT(*) FROM siswas WHERE siswas.kelasId = Kelas.id AND siswas.status = 'Aktif')`),
+            'jumlahSiswaAktual',
+          ],
+        ],
+      },
+      order: [['tingkat','ASC'],['nama','ASC']],
+    });
+
+    // Normalisasi — gunakan count aktual
+    const data = list.map(k => {
+      const plain = k.toJSON();
+      plain.jumlahSiswa = parseInt(plain.jumlahSiswaAktual || plain.jumlahSiswa || 0, 10);
+      delete plain.jumlahSiswaAktual;
+      return plain;
+    });
+
+    return ok(res, data);
   } catch (err) {
+    console.error('list kelas error:', err.message);
     return fail(res, 'Gagal mengambil data kelas.', 500);
+  }
+};
+
+// POST /api/admin/kelas/recalculate — update jumlahSiswa semua kelas
+exports.recalculate = async (req, res) => {
+  try {
+    await syncJumlahSiswa();
+    return ok(res, null, 'Jumlah siswa per kelas berhasil diperbarui.');
+  } catch (err) {
+    return fail(res, 'Gagal memperbarui jumlah siswa.', 500);
   }
 };
 

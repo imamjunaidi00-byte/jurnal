@@ -334,6 +334,10 @@
             <h2 class="font-bold text-lg text-gray-900 flex items-center gap-2"><i class="fas fa-chalkboard text-purple-500"></i> Master Data Kelas</h2>
             <p class="text-sm text-gray-500 mt-0.5">Admin buat kelas — guru pilih dari daftar ini untuk mengajar</p>
           </div>
+          <button onclick="recalculateJumlahSiswa()" title="Hitung ulang jumlah siswa per kelas"
+            class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors flex-shrink-0">
+            <i class="fas fa-calculator"></i> <span class="hidden sm:inline">Hitung Ulang</span>
+          </button>
           <button onclick="showTambahKelas()"
             class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 shadow-sm transition-colors flex-shrink-0">
             <i class="fas fa-plus"></i> Tambah Kelas
@@ -369,14 +373,13 @@
                 <th class="px-4 py-3 w-10 text-center">
                   <input type="checkbox" id="kelas-select-all" class="w-4 h-4 rounded border-gray-300 text-purple-600 cursor-pointer" onchange="toggleSelectAllKelas(this)">
                 </th>
-                <th class="px-4 py-3 text-left font-semibold text-gray-600 w-10">No</th>
-                <th class="px-4 py-3 text-left font-semibold text-gray-600">Nama Kelas</th>
-                <th class="px-4 py-3 text-left font-semibold text-gray-600 hidden sm:table-cell">Tingkat</th>
-                <th class="px-4 py-3 text-left font-semibold text-gray-600 hidden sm:table-cell">Jurusan</th>
-                <th class="px-4 py-3 text-left font-semibold text-gray-600 hidden md:table-cell">Tahun Ajaran</th>
-                <th class="px-4 py-3 text-center font-semibold text-gray-600 hidden md:table-cell">Jml Siswa</th>
-                <th class="px-4 py-3 text-left font-semibold text-gray-600 hidden lg:table-cell">Wali Kelas</th>
-                <th class="px-4 py-3 text-center font-semibold text-gray-600">Aksi</th>
+                <th class="px-3 py-2.5 text-left font-semibold text-gray-600 text-xs w-10">No</th>
+                <th class="px-3 py-2.5 text-left font-semibold text-gray-600 text-xs">Nama Kelas</th>
+                <th class="px-3 py-2.5 text-left font-semibold text-gray-600 text-xs hidden sm:table-cell">Tingkat</th>
+                <th class="px-3 py-2.5 text-left font-semibold text-gray-600 text-xs hidden sm:table-cell">Jurusan</th>
+                <th class="px-3 py-2.5 text-center font-semibold text-gray-600 text-xs">Jumlah Siswa</th>
+                <th class="px-3 py-2.5 text-left font-semibold text-gray-600 text-xs hidden lg:table-cell">Wali Kelas</th>
+                <th class="px-3 py-2.5 text-center font-semibold text-gray-600 text-xs">Aksi</th>
               </tr>
             </thead>
             <tbody id="kelas-admin-tbody">
@@ -2154,29 +2157,62 @@ async function loadKelasMaster() {
       document.getElementById('stat-total-kelas').textContent = 0;
       return;
     }
-    tbody.innerHTML = kelasMasterList.map((k,i) => `
-      <tr class="border-b border-gray-50 hover:bg-gray-50">
-        <td class="px-4 py-3 text-center">
+    tbody.innerHTML = kelasMasterList.map((k,i) => {
+      // Badge tingkat dengan warna berbeda per tingkat
+      const tingkatMap = { 10: ['X','bg-indigo-100 text-indigo-700'], 11: ['XI','bg-purple-100 text-purple-700'], 12: ['XII','bg-pink-100 text-pink-700'] };
+      const [tingkatLabel, tingkatColor] = tingkatMap[k.tingkat] || [`${k.tingkat}`,'bg-gray-100 text-gray-700'];
+
+      // Badge jumlah siswa — merah jika 0, hijau jika ada
+      const jml = parseInt(k.jumlahSiswa || 0, 10);
+      const jmlBadge = jml > 0
+        ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold"><i class="fas fa-user-graduate text-xs"></i>${jml}</span>`
+        : `<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-400 rounded-full text-xs font-medium"><i class="fas fa-user-slash text-xs"></i>0</span>`;
+
+      return `
+      <tr class="border-b border-gray-50 hover:bg-purple-50/30 transition-colors">
+        <td class="px-3 py-2.5 text-center">
           <input type="checkbox" value="${k.id}" class="kelas-admin-checkbox w-4 h-4 rounded border-gray-300 text-purple-600 cursor-pointer" onchange="updateKelasBulkBar()">
         </td>
-        <td class="px-4 py-3 text-gray-500 text-center">${i+1}</td>
-        <td class="px-4 py-3 font-semibold text-gray-900">${k.nama}</td>
-        <td class="px-4 py-3 hidden sm:table-cell"><span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">Kelas ${k.tingkat}</span></td>
-        <td class="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">${k.jurusan||'-'}</td>
-        <td class="px-4 py-3 text-xs text-gray-500 hidden md:table-cell">${k.tahunAjaran||'-'}</td>
-        <td class="px-4 py-3 text-center hidden md:table-cell"><span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold">${k.jumlahSiswa||0} siswa</span></td>
-        <td class="px-4 py-3 text-xs text-gray-500 hidden lg:table-cell">${k.waliKelas||'-'}</td>
-        <td class="px-4 py-3"><div class="flex items-center justify-center gap-1">
-          <button onclick="editKelasAdmin(${k.id})" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors inline-flex items-center justify-center" title="Edit"><i class="fas fa-pen text-xs"></i></button>
-          <button onclick="hapusKelasAdmin(${k.id},'${(k.nama||'').replace(/'/g,"\\'")}' )" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors inline-flex items-center justify-center" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
-        </div></td>
-      </tr>`).join('');
+        <td class="px-3 py-2.5 text-gray-400 text-xs text-center">${i+1}</td>
+        <td class="px-3 py-2.5">
+          <div class="font-semibold text-gray-900 text-sm">${k.nama}</div>
+          <div class="text-xs text-gray-400 mt-0.5">${k.tahunAjaran || '<span class="italic">—</span>'}</div>
+        </td>
+        <td class="px-3 py-2.5 hidden sm:table-cell">
+          <span class="px-2 py-0.5 ${tingkatColor} rounded-full text-xs font-bold">Kelas ${tingkatLabel}</span>
+        </td>
+        <td class="px-3 py-2.5 text-sm text-gray-600 hidden sm:table-cell">${k.jurusan||'-'}</td>
+        <td class="px-3 py-2.5 text-center">${jmlBadge}</td>
+        <td class="px-3 py-2.5 text-xs text-gray-500 hidden lg:table-cell">${k.waliKelas||'<span class="text-gray-300">—</span>'}</td>
+        <td class="px-3 py-2.5">
+          <div class="flex items-center justify-center gap-1">
+            <button onclick="editKelasAdmin(${k.id})" class="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors inline-flex items-center justify-center" title="Edit"><i class="fas fa-pen text-xs"></i></button>
+            <button onclick="hapusKelasAdmin(${k.id},'${(k.nama||'').replace(/'/g,"\\'")}' )" class="w-7 h-7 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors inline-flex items-center justify-center" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
     document.getElementById('kelas-admin-count').textContent = `${kelasMasterList.length} kelas ditemukan`;
     document.getElementById('stat-total-kelas').textContent = kelasMasterList.length;
   } catch(e) { showToast('Gagal terhubung ke server.','error'); }
 }
 
 // ── KELAS: Tambah / Edit ───────────────────────────────────────────────────
+async function recalculateJumlahSiswa() {
+  try {
+    showToast('Menghitung ulang jumlah siswa...', 'info');
+    const res = await api.post('/api/admin/kelas/recalculate', {});
+    if (res.success) {
+      showToast('✅ Jumlah siswa berhasil diperbarui!');
+      loadKelasMaster();
+    } else {
+      showToast(res.message || 'Gagal menghitung ulang.', 'error');
+    }
+  } catch(e) {
+    showToast('Gagal terhubung ke server.', 'error');
+  }
+}
+
 function showTambahKelas() {
   document.getElementById('modal-kelas-title').innerHTML = '<i class="fas fa-chalkboard text-purple-500 mr-2"></i> Tambah Kelas';
   document.getElementById('kelas-edit-id').value = '';
