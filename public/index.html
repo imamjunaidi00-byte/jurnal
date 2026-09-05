@@ -2446,8 +2446,13 @@
                 const json = await res.json();
                 if (json.success && json.data) {
                     const parsed = json.data;
-                    if (parsed.guru && typeof parsed.guru.mapel === 'string') {
-                        parsed.guru.mapel = parsed.guru.mapel ? [parsed.guru.mapel] : [];
+                    // API baru sudah mengembalikan { guru: {nama, mapel, foto}, kelas, ... }
+                    // Pastikan mapel selalu array
+                    if (parsed.guru) {
+                      if (typeof parsed.guru.mapel === 'string') {
+                        parsed.guru.mapel = parsed.guru.mapel ? parsed.guru.mapel.split(',').map(s=>s.trim()).filter(Boolean) : [];
+                      }
+                      if (!Array.isArray(parsed.guru.mapel)) parsed.guru.mapel = [];
                     }
                     // Selalu pakai data dari server (database) sebagai sumber utama
                     const merged = Object.assign({}, CONFIG_DEFAULT, parsed, {
@@ -8265,12 +8270,21 @@
             // ── Sinkronkan semester & tahun ajaran ke semua field di seluruh halaman ──
             syncSemesterTahunAjaran(semester, tahun);
 
-            // Sync semester aktif ke server agar portal siswa ikut
             try {
+                // Simpan ke database via API profil (agar persisten setelah refresh)
+                await api.put('/api/profil', {
+                    guru: { nama, mapel: CONFIG.guru.mapel || [], foto: CONFIG.guru.foto || '' },
+                    kelas: CONFIG.kelas || [],
+                    kelasMapelMapping: CONFIG.kelasMapelMapping || {},
+                    semester,
+                    tahunAjaran: tahun,
+                    bobotNilai: CONFIG.bobotNilai || { pengetahuan: 60, keterampilan: 40, kehadiran: 0 },
+                });
+                // Sync semester aktif ke server agar portal siswa ikut
                 await api.put('/api/config', { semester, tahunAjaran: tahun });
                 showToast('✅ Profil & semester aktif berhasil disimpan!');
             } catch(e) {
-                showToast('✅ Profil disimpan (gagal sync semester ke server)', 'error');
+                showToast('⚠️ Profil disimpan lokal, gagal sync ke server', 'error');
             }
         }
 
