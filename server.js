@@ -113,7 +113,12 @@ app.use('/api/config',        protect, require('./src/routes/config'));
 // ─── Frontend SPA routes ──────────────────────────────────────────────────────
 app.get('/login',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/sso.html',       (req, res) => res.sendFile(path.join(__dirname, 'public', 'sso.html')));
-app.get('/sso',            (req, res) => res.redirect(`/api/auth/sso${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}` ));
+// SSO callback — SDMS redirect ke /sso/callback?token=xxx
+// Forward ke handler di /api/auth/sso
+app.get('/sso/callback',   (req, res) => {
+  const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  res.redirect(307, `/api/auth/sso${qs}`);
+});
 app.get('/admin',          (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/app',            (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/absensi-kelas',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'absensi-kelas.html')));
