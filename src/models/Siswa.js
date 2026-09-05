@@ -133,6 +133,15 @@ Siswa.init(
     modelName:  'Siswa',
     tableName:  'siswas',
     timestamps: true,
+    defaultScope: {
+      // Jangan include password di query biasa
+      attributes: {
+        exclude: ['password'],
+      },
+    },
+    scopes: {
+      withPassword: { attributes: {} }, // include password jika perlu
+    },
     indexes: [
       { fields: ['kelasId', 'status'] },
       { fields: ['kelas', 'status'] },

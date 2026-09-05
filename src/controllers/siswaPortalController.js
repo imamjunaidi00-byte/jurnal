@@ -39,12 +39,14 @@ exports.login = async (req, res) => {
     const siswa = await Siswa.findOne({ where: { nisn: nisn.trim(), status: 'Aktif' } });
     if (!siswa) return fail(res, 'NISN tidak ditemukan atau akun tidak aktif.', 404);
 
+    // Ambil dengan password untuk verifikasi
+    const siswaWithPwd = await Siswa.scope('withPassword').findByPk(siswa.id);
+
     // Cek password: jika belum punya password hash → pakai default
     let valid = false;
-    if (siswa.password) {
-      valid = await bcrypt.compare(password, siswa.password);
+    if (siswaWithPwd.password) {
+      valid = await bcrypt.compare(password, siswaWithPwd.password);
     } else {
-      // Belum punya password → cocokkan dengan default
       valid = (password === DEFAULT_PWD);
     }
 
@@ -75,7 +77,7 @@ exports.gantiPassword = async (req, res) => {
       return fail(res, 'Password baru minimal 6 karakter.', 400);
 
     // Cek password lama
-    const s = await Siswa.findByPk(siswa.id);
+    const s = await Siswa.scope('withPassword').findByPk(siswa.id);
     let valid = false;
     if (s.password) {
       valid = await bcrypt.compare(passwordLama, s.password);
