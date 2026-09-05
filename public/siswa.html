@@ -78,17 +78,17 @@
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <!-- Login Form (shown initially) -->
+        <!-- Login Form -->
         <div id="login-section" class="max-w-md mx-auto">
             <div class="bg-white rounded-2xl shadow-xl p-8">
                 <div class="text-center mb-8">
                     <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                         <i class="fas fa-user-graduate text-3xl text-white"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Login Siswa</h2>
-                    <p class="text-gray-500 text-sm">Masukkan NISN dan tanggal lahir Anda</p>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Portal Siswa</h2>
+                    <p class="text-gray-500 text-sm">Masukkan NISN dan password Anda</p>
                 </div>
-                
+
                 <div id="login-error-msg-box" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-center gap-2">
                   <i class="fas fa-exclamation-circle flex-shrink-0"></i>
                   <span id="login-error-text"></span>
@@ -97,46 +97,37 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">NISN</label>
-                        <input type="text" id="input-nisn" placeholder="Masukkan NISN" 
+                        <input type="text" id="input-nisn" placeholder="Masukkan NISN"
                                class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                               onkeypress="if(event.key==='Enter') document.getElementById('login-tgl-dd').focus()">
+                               onkeypress="if(event.key==='Enter') document.getElementById('input-password').focus()">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Tanggal Lahir
-                            <span class="text-gray-400 font-normal text-xs ml-1">(sesuai data terdaftar)</span>
+                            Password
+                            <span class="text-gray-400 font-normal text-xs ml-1">(default: smkn1kras)</span>
                         </label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div>
-                                <input type="number" id="login-tgl-dd" placeholder="DD" min="1" max="31"
-                                    class="w-full px-3 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-sm text-center transition-all"
-                                    oninput="if(this.value.length===2) document.getElementById('login-tgl-mm').focus()">
-                                <p class="text-xs text-center text-gray-400 mt-0.5">Tanggal</p>
-                            </div>
-                            <div>
-                                <input type="number" id="login-tgl-mm" placeholder="MM" min="1" max="12"
-                                    class="w-full px-3 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-sm text-center transition-all"
-                                    oninput="if(this.value.length===2) document.getElementById('login-tgl-yyyy').focus()">
-                                <p class="text-xs text-center text-gray-400 mt-0.5">Bulan</p>
-                            </div>
-                            <div>
-                                <input type="number" id="login-tgl-yyyy" placeholder="YYYY" min="1900" max="2099"
-                                    class="w-full px-3 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-sm text-center transition-all"
-                                    onkeypress="if(event.key==='Enter') loginSiswa()">
-                                <p class="text-xs text-center text-gray-400 mt-0.5">Tahun</p>
-                            </div>
+                        <div class="relative">
+                            <input type="password" id="input-password" placeholder="Masukkan password"
+                                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all pr-12"
+                                   onkeypress="if(event.key==='Enter') loginSiswa()">
+                            <button type="button" onclick="togglePasswordVisibility('input-password', this)"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1.5"><i class="fas fa-info-circle mr-1"></i>Contoh: 15 / 08 / 2009</p>
                     </div>
-                    <button onclick="loginSiswa()" id="btn-login-siswa" class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2">
-                        <i class="fas fa-sign-in-alt"></i>Masuk
+                    <button onclick="loginSiswa()" id="btn-login-siswa"
+                        class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-semibold shadow-lg transition-all flex items-center justify-center gap-2">
+                        <i class="fas fa-sign-in-alt"></i> Masuk
                     </button>
+                </div>
+
+                <div class="mt-4 p-3 bg-blue-50 rounded-xl text-xs text-blue-700 text-center">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Username: <b>NISN</b> &nbsp;|&nbsp; Password default: <b>smkn1kras</b>
                 </div>
             </div>
         </div>
-
-        <!-- Dashboard (hidden initially) -->
-        <div id="dashboard-section" class="hidden">
             
             <!-- Student Info Card -->
             <div class="bg-white rounded-2xl shadow-lg p-6 mb-8">
@@ -445,6 +436,27 @@
                     class="w-full py-3 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-xl font-semibold shadow-md transition-all flex items-center justify-center gap-2">
                     <i class="fas fa-save"></i> Simpan Perubahan
                   </button>
+                  <button onclick="showGantiPassword()"
+                    class="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 mt-2">
+                    <i class="fas fa-key"></i> Ganti Password
+                  </button>
+
+                  <!-- Form ganti password (hidden by default) -->
+                  <div id="form-ganti-password" class="hidden mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl space-y-3">
+                    <p class="text-sm font-semibold text-yellow-800"><i class="fas fa-key mr-1"></i> Ganti Password</p>
+                    <input type="password" id="input-pwd-lama" placeholder="Password lama"
+                      class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-yellow-300">
+                    <input type="password" id="input-pwd-baru" placeholder="Password baru (min. 6 karakter)"
+                      class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-yellow-300">
+                    <input type="password" id="input-pwd-konfirm" placeholder="Konfirmasi password baru"
+                      class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-yellow-300">
+                    <div id="ganti-pwd-error" class="hidden text-xs text-red-600"></div>
+                    <div id="ganti-pwd-ok" class="hidden text-xs text-green-600 font-semibold">✅ Password berhasil diubah!</div>
+                    <div class="flex gap-2">
+                      <button onclick="doGantiPassword()" class="flex-1 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-semibold">Simpan Password</button>
+                      <button onclick="hideGantiPassword()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-sm">Batal</button>
+                    </div>
+                  </div>
                 </div>
 
               </div>
@@ -479,34 +491,37 @@
             return String(yyyy) + '-' + String(mm).padStart(2,'0') + '-' + String(dd).padStart(2,'0');
         }
 
-        // Login dengan NISN + tanggal lahir
+        // Login dengan NISN + password
+        let siswaToken = localStorage.getItem('siswa_token') || '';
+
         async function loginSiswa() {
-            const nisn = document.getElementById('input-nisn').value.trim();
-            const dd   = document.getElementById('login-tgl-dd').value;
-            const mm   = document.getElementById('login-tgl-mm').value;
-            const yyyy = document.getElementById('login-tgl-yyyy').value;
-            const tglLahir = buildTglSiswa(dd, mm, yyyy);
-            const errBox = document.getElementById('login-error-msg-box');
-            const errText = document.getElementById('login-error-text');
+            const nisn     = document.getElementById('input-nisn').value.trim();
+            const password = document.getElementById('input-password').value;
+            const errBox   = document.getElementById('login-error-msg-box');
+            const errText  = document.getElementById('login-error-text');
             errBox.classList.add('hidden');
 
-            if (!nisn) { errText.textContent = 'NISN wajib diisi.'; errBox.classList.remove('hidden'); return; }
-            if (!dd || !mm || !yyyy) { errText.textContent = 'Tanggal lahir wajib diisi lengkap (Tanggal, Bulan, Tahun).'; errBox.classList.remove('hidden'); return; }
-            if (String(yyyy).length !== 4) { errText.textContent = 'Tahun harus 4 digit. Contoh: 2009'; errBox.classList.remove('hidden'); return; }
+            if (!nisn)     { errText.textContent = 'NISN wajib diisi.';     errBox.classList.remove('hidden'); return; }
+            if (!password) { errText.textContent = 'Password wajib diisi.'; errBox.classList.remove('hidden'); return; }
 
             const btn = document.getElementById('btn-login-siswa');
             btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memverifikasi...';
 
             try {
-                const res = await api.get(`/api/siswa-portal/login?nisn=${encodeURIComponent(nisn)}&tanggalLahir=${encodeURIComponent(tglLahir)}`);
-                if (res.success) {
-                    currentSiswa = res.data;
-                    // Simpan ke localStorage agar tetap login setelah reload
-                    localStorage.setItem('siswa_data', JSON.stringify(res.data));
-                    localStorage.setItem('siswa_tgl', tglLahir); // simpan untuk verifikasi profil
+                const res = await fetch('/api/siswa-portal/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nisn, password }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentSiswa = data.data.siswa;
+                    siswaToken   = data.data.token;
+                    localStorage.setItem('siswa_data',  JSON.stringify(currentSiswa));
+                    localStorage.setItem('siswa_token', siswaToken);
                     showDashboard();
                 } else {
-                    errText.textContent = res.message || 'Login gagal.';
+                    errText.textContent = data.message || 'Login gagal.';
                     errBox.classList.remove('hidden');
                 }
             } catch(e) {
@@ -515,6 +530,13 @@
             } finally {
                 btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Masuk';
             }
+        }
+
+        function togglePasswordVisibility(inputId, btn) {
+            const el = document.getElementById(inputId);
+            const hidden = el.type === 'password';
+            el.type = hidden ? 'text' : 'password';
+            btn.innerHTML = hidden ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
         }
 
         function showDashboard() {
@@ -545,7 +567,7 @@
             currentSiswa = null;
             _fotoTempBase64 = null;
             localStorage.removeItem('siswa_data');
-            localStorage.removeItem('siswa_tgl');
+            localStorage.removeItem('siswa_token');
             document.getElementById('login-section').classList.remove('hidden');
             document.getElementById('dashboard-section').classList.add('hidden');
             document.getElementById('input-nisn').value = '';
@@ -864,37 +886,74 @@
             reader.readAsDataURL(file);
         }
 
+        function showGantiPassword() {
+            document.getElementById('form-ganti-password').classList.remove('hidden');
+            document.getElementById('input-pwd-lama').focus();
+        }
+        function hideGantiPassword() {
+            document.getElementById('form-ganti-password').classList.add('hidden');
+            ['input-pwd-lama','input-pwd-baru','input-pwd-konfirm'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('ganti-pwd-error').classList.add('hidden');
+            document.getElementById('ganti-pwd-ok').classList.add('hidden');
+        }
+        async function doGantiPassword() {
+            const lama    = document.getElementById('input-pwd-lama').value;
+            const baru    = document.getElementById('input-pwd-baru').value;
+            const konfirm = document.getElementById('input-pwd-konfirm').value;
+            const errEl   = document.getElementById('ganti-pwd-error');
+            const okEl    = document.getElementById('ganti-pwd-ok');
+            errEl.classList.add('hidden');
+            okEl.classList.add('hidden');
+
+            if (!lama || !baru || !konfirm) { errEl.textContent = 'Semua field wajib diisi.'; errEl.classList.remove('hidden'); return; }
+            if (baru.length < 6)            { errEl.textContent = 'Password baru minimal 6 karakter.'; errEl.classList.remove('hidden'); return; }
+            if (baru !== konfirm)           { errEl.textContent = 'Konfirmasi password tidak cocok.'; errEl.classList.remove('hidden'); return; }
+
+            try {
+                const res = await fetch('/api/siswa-portal/password', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${siswaToken}` },
+                    body: JSON.stringify({ passwordLama: lama, passwordBaru: baru }),
+                }).then(r => r.json());
+
+                if (res.success) {
+                    okEl.classList.remove('hidden');
+                    ['input-pwd-lama','input-pwd-baru','input-pwd-konfirm'].forEach(id => document.getElementById(id).value = '');
+                } else {
+                    errEl.textContent = res.message || 'Gagal mengubah password.';
+                    errEl.classList.remove('hidden');
+                }
+            } catch(e) {
+                errEl.textContent = 'Gagal terhubung ke server.';
+                errEl.classList.remove('hidden');
+            }
+        }
+
         async function simpanProfil() {
             const btn = document.getElementById('btn-simpan-profil');
             btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Menyimpan...';
             document.getElementById('profil-success').classList.add('hidden');
             document.getElementById('profil-error').classList.add('hidden');
             try {
-                const tglLahirVal = currentSiswa.tanggalLahir
-                    ? new Date(currentSiswa.tanggalLahir).toISOString().split('T')[0]
-                    : '';
-
                 const body = {
-                    nisn: currentSiswa.nisn,
-                    tanggalLahir: tglLahirVal,
-                    // Data pribadi
+                    // Data pribadi (yang boleh diedit)
                     tempatLahir: document.getElementById('input-tempat-lahir').value.trim(),
                     agama:       document.getElementById('input-agama').value,
-                    nis:         document.getElementById('input-nis').value.trim(),
-                    tahunMasuk:  document.getElementById('input-tahun-masuk').value || undefined,
                     // Kontak
                     noHp:        document.getElementById('input-nohp').value.trim(),
                     telpOrtu:    document.getElementById('input-telp-ortu').value.trim(),
                     alamat:      document.getElementById('input-alamat').value.trim(),
-                    // Orang tua
-                    namaAyah:    document.getElementById('input-nama-ayah').value.trim(),
-                    namaIbu:     document.getElementById('input-nama-ibu').value.trim(),
-                    // Bantuan
-                    penerimaBantuan: document.getElementById('input-penerima-bantuan').value || 'Tidak',
                 };
                 if (_fotoTempBase64 !== null) body.foto = _fotoTempBase64;
 
-                const res = await api.put('/api/siswa-portal/profil', body);
+                const res = await fetch('/api/siswa-portal/profil', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${siswaToken}`,
+                    },
+                    body: JSON.stringify(body),
+                }).then(r => r.json());
                 if (res.success) {
                     // Update currentSiswa dengan data terbaru
                     currentSiswa = { ...currentSiswa, ...res.data };
@@ -931,33 +990,38 @@
         // ── Auto-restore session setelah reload ────────────────────────
         (function restoreSession() {
             try {
+                const token = localStorage.getItem('siswa_token');
                 const saved = localStorage.getItem('siswa_data');
-                if (!saved) return;
+                if (!token || !saved) return;
+
                 const data = JSON.parse(saved);
                 if (!data || !data.nisn) return;
-                // Verifikasi ke server bahwa data masih valid (siswa masih aktif)
-                const tgl = localStorage.getItem('siswa_tgl') || '';
-                fetch(`/api/siswa-portal/login?nisn=${encodeURIComponent(data.nisn)}&tanggalLahir=${encodeURIComponent(tgl)}`)
-                    .then(r => r.json())
-                    .then(res => {
-                        if (res.success) {
-                            currentSiswa = res.data;
-                            localStorage.setItem('siswa_data', JSON.stringify(res.data)); // refresh data terbaru
-                            showDashboard();
-                        } else {
-                            // Session tidak valid lagi — hapus
-                            localStorage.removeItem('siswa_data');
-                            localStorage.removeItem('siswa_tgl');
-                        }
-                    })
-                    .catch(() => {
-                        // Offline/error — gunakan data cache tanpa verifikasi
-                        currentSiswa = data;
+
+                // Verifikasi token ke server
+                fetch('/api/siswa-portal/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        currentSiswa = res.data;
+                        siswaToken   = token;
+                        localStorage.setItem('siswa_data', JSON.stringify(res.data));
                         showDashboard();
-                    });
+                    } else {
+                        localStorage.removeItem('siswa_data');
+                        localStorage.removeItem('siswa_token');
+                    }
+                })
+                .catch(() => {
+                    // Offline — pakai cache
+                    currentSiswa = data;
+                    siswaToken   = token;
+                    showDashboard();
+                });
             } catch(e) {
                 localStorage.removeItem('siswa_data');
-                localStorage.removeItem('siswa_tgl');
+                localStorage.removeItem('siswa_token');
             }
         })();
     </script>

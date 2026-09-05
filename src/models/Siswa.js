@@ -121,6 +121,12 @@ Siswa.init(
       defaultValue: null,
       comment:      'Base64 atau path file foto',
     },
+    password: {
+      type:         DataTypes.STRING(255),
+      allowNull:    true,
+      defaultValue: null,
+      comment:      'Hash bcrypt. NULL = pakai password default (smkn1kras)',
+    },
   },
   {
     sequelize,
