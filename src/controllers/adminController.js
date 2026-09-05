@@ -192,7 +192,7 @@ exports.getAktivitas = async (req, res) => {
     const logs = await LoginLog.findAll({
       include: [{ model: Guru, as: 'guruRef', attributes: ['nama', 'username', 'role'] }],
       order:   [['loginAt', 'DESC']],
-      limit:   20,
+      limit:   30,
     });
     return ok(res, logs);
   } catch (err) {
@@ -200,21 +200,40 @@ exports.getAktivitas = async (req, res) => {
   }
 };
 
+// ─── GET /api/admin/aktivitas/guru/:id ────────────────────────────────────────
+exports.getAktivitasGuru = async (req, res) => {
+  try {
+    const logs = await LoginLog.findAll({
+      where: { guruId: req.params.id },
+      order: [['loginAt', 'DESC']],
+      limit: 30,
+      attributes: ['id', 'loginAt', 'ip', 'userAgent'],
+    });
+    return ok(res, logs);
+  } catch (err) {
+    return fail(res, 'Gagal mengambil riwayat login.', 500);
+  }
+};
+
 // ─── GET /api/admin/aktivitas/stats ──────────────────────────────────────────
 exports.getAktivitasStats = async (req, res) => {
   try {
-    const stats = await LoginLog.findAll({
-      attributes: [
-        'guruId',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'totalLogin'],
-        [sequelize.fn('MAX',   sequelize.col('loginAt')), 'lastLogin'],
-      ],
-      include: [{ model: Guru, as: 'guruRef', attributes: ['nama', 'username'] }],
-      group:   ['guruId', 'guru.id'],
-      order:   [[sequelize.fn('MAX', sequelize.col('loginAt')), 'DESC']],
-    });
-    return ok(res, stats);
+    // Pakai raw query untuk hindari masalah GROUP BY di MariaDB strict mode
+    const [results] = await sequelize.query(`
+      SELECT
+        ll.guruId,
+        COUNT(ll.id)     AS totalLogin,
+        MAX(ll.loginAt)  AS lastLogin,
+        g.nama,
+        g.username
+      FROM login_logs ll
+      LEFT JOIN gurus g ON g.id = ll.guruId
+      GROUP BY ll.guruId, g.id, g.nama, g.username
+      ORDER BY MAX(ll.loginAt) DESC
+    `);
+    return ok(res, results);
   } catch (err) {
+    console.error('getAktivitasStats error:', err.message);
     return fail(res, 'Gagal mengambil statistik aktivitas.', 500);
   }
 };

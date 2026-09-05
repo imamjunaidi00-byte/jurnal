@@ -34,7 +34,8 @@ router.get('/app-identity', ctrl.getAppIdentity);
 router.put('/app-identity', ctrl.updateAppIdentity);
 
 // ── Aktivitas Login ────────────────────────────────────────────────────────
-router.get('/aktivitas',        ctrl.getAktivitas);
-router.get('/aktivitas/stats',  ctrl.getAktivitasStats);
+router.get('/aktivitas',             ctrl.getAktivitas);
+router.get('/aktivitas/stats',       ctrl.getAktivitasStats);
+router.get('/aktivitas/guru/:id',    ctrl.getAktivitasGuru);
 
 module.exports = router;
