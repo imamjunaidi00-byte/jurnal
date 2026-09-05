@@ -136,6 +136,9 @@
         try { userData = JSON.parse(atob(dataParam)); } catch {}
       }
 
+      // Tentukan halaman tujuan
+      const dest = params.get('dest'); // dikirim dari backend
+
       // Simpan token ke localStorage dengan key yang benar sesuai role
       if (role === 'siswa') {
         localStorage.removeItem('guru_token');
@@ -147,28 +150,20 @@
         localStorage.setItem('admin_token', token);
         if (userData) localStorage.setItem('admin_info', JSON.stringify(userData));
       } else {
-        // guru (default)
         localStorage.removeItem('admin_token');
         localStorage.removeItem('siswaToken');
         localStorage.setItem('guru_token', token);
         if (userData) localStorage.setItem('guru_info', JSON.stringify(userData));
       }
 
-      statusText.textContent = 'Mengarahkan ke dashboard…';
-
-      // Hapus token dari URL (keamanan)
-      history.replaceState(null, '', '/sso.html');
-
-      // Redirect ke halaman sesuai role
-      setTimeout(() => {
-        if (role === 'admin') {
-          window.location.href = '/admin';
-        } else if (role === 'siswa') {
-          window.location.href = '/siswa';
-        } else {
-          window.location.href = '/app';
-        }
-      }, 600);
+      // Langsung redirect tanpa delay
+      if (role === 'siswa') {
+        window.location.replace('/siswa');
+      } else if (role === 'admin') {
+        window.location.replace('/admin');
+      } else {
+        window.location.replace('/app');
+      }
     })();
   </script>
 

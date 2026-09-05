@@ -275,9 +275,10 @@ exports.ssoCallback = async (req, res) => {
     // Encode data guru untuk dikirim ke frontend via fragment
     const userData = Buffer.from(JSON.stringify(guru.toJSON())).toString('base64');
 
-    // Redirect ke sso.html dengan token & role & data di URL fragment
+    // Redirect langsung ke halaman tujuan via sso.html (simpan token dulu)
     console.log(`[SSO] ✅ ${guru.role === 'admin' ? 'Admin' : 'Guru'} login via SSO: ${guru.nama}`);
-    return res.redirect(`/sso.html#token=${localToken}&role=${guru.role}&data=${userData}`);
+    const dest = guru.role === 'admin' ? 'admin' : 'app';
+    return res.redirect(`/sso.html#token=${localToken}&role=${guru.role}&dest=${dest}&data=${userData}`);
 
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
