@@ -14,6 +14,7 @@ router.get('/stats', ctrl.getStats);
 // ── Manajemen Guru ─────────────────────────────────────────────────────────
 router.get   ('/guru',                    ctrl.listGuru);
 router.post  ('/guru',                    ctrl.createGuru);
+router.post  ('/guru/sync-reset',         ctrl.resetSyncGuru);   // reset akun guru sebelum sync ulang
 router.put   ('/guru/:id/edit',           ctrl.editGuru);
 router.put   ('/guru/:id/reset-password', ctrl.resetPassword);
 router.delete('/guru/:id',                ctrl.deleteGuru);

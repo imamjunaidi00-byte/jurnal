@@ -220,25 +220,33 @@ async function upsertSiswa(siswaList) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// HELPER: Generate username dari nama
-// Contoh: "Ahmad Suryanto" → "ahmadsuryanto"
-// Jika duplikat → "ahmadsuryanto2", "ahmadsuryanto3", dst.
+// HELPER: Bersihkan NIP menjadi username yang valid
+// Contoh: "196501011990031002" → "196501011990031002"
+// Jika NIP kosong → fallback ke nama
 // ══════════════════════════════════════════════════════════════════════════════
-async function generateUsername(nama) {
-  // Bersihkan nama: lowercase, hapus karakter non-alfanumerik, batasi 20 karakter
+async function generateUsername(nama, nip) {
+  // Prioritas 1: NIP (angka saja, sudah unik)
+  if (nip) {
+    const nipClean = String(nip).replace(/[^0-9]/g, '').trim();
+    if (nipClean.length >= 6) {
+      // Cek duplikat NIP
+      const exists = await Guru.findOne({ where: { username: nipClean } });
+      if (!exists) return nipClean;
+    }
+  }
+
+  // Fallback: dari nama
   const base = nama
     .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // hapus aksen
-    .replace(/[^a-z0-9]/g, '')  // hanya huruf & angka
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '')
     .slice(0, 20);
 
   if (!base) return `guru${Date.now()}`;
 
-  // Cek apakah username base sudah ada
   const exists = await Guru.findOne({ where: { username: base } });
   if (!exists) return base;
 
-  // Cari suffix angka yang belum dipakai
   for (let i = 2; i <= 999; i++) {
     const candidate = `${base}${i}`;
     const dup = await Guru.findOne({ where: { username: candidate } });
@@ -249,17 +257,18 @@ async function generateUsername(nama) {
 
 // ══════════════════════════════════════════════════════════════════════════════
 // UPSERT: Guru — buat akun baru jika belum ada, update jika sudah ada
-// Cocokkan berdasarkan nama (exact, case-insensitive)
-// Password default: Guru@1234 (harus diganti setelah login pertama)
+// Username = NIP (jika ada), fallback ke nama
+// Password = NIP (jika ada), fallback ke 'Guru@1234'
 // ══════════════════════════════════════════════════════════════════════════════
 async function upsertGuru(guruList) {
   let created = 0, updated = 0, skipped = 0, errors = [];
-  const DEFAULT_PASSWORD = 'Guru@1234';
 
   for (const g of guruList) {
     try {
       const nama = (g.nama || g.namaLengkap || '').trim();
       if (!nama) { skipped++; continue; }
+
+      const nip = (g.nip || '').toString().replace(/[^0-9]/g, '').trim();
 
       // Cari berdasarkan nama (case-insensitive)
       const existing = await Guru.findOne({
@@ -270,21 +279,35 @@ async function upsertGuru(guruList) {
       });
 
       if (existing) {
-        // Update info wali kelas jika SDMS menyebutkan jabatan wali
-        const jabatan = (g.jabatan || '').toLowerCase();
         const updateData = {};
+        // Update wali kelas jika SDMS menyebutkan jabatan wali
+        const jabatan = (g.jabatan || '').toLowerCase();
         if (jabatan.includes('wali') && g.kelasNama) {
           updateData.isWaliKelas = true;
           updateData.kelasWali   = g.kelasNama;
         }
+
+        // Jika username saat ini bukan NIP (misalnya dari nama), update ke NIP
+        if (nip.length >= 6 && existing.username !== nip) {
+          // Pastikan NIP belum dipakai oleh akun lain
+          const nipUsed = await Guru.findOne({ where: { username: nip, id: { [Op.ne]: existing.id } } });
+          if (!nipUsed) {
+            updateData.username = nip;
+            updateData.password = nip; // reset password ke NIP juga
+          }
+        }
+
         if (Object.keys(updateData).length) await existing.update(updateData);
         updated++;
       } else {
-        // Buat akun baru dengan username dari nama
-        const username = await generateUsername(nama);
+        // Username = NIP (jika ada & cukup panjang), else dari nama
+        const username = await generateUsername(nama, nip);
+        // Password = NIP (jika ada), else 'Guru@1234'
+        const password = nip.length >= 6 ? nip : 'Guru@1234';
+
         await Guru.create({
           username,
-          password:    DEFAULT_PASSWORD,
+          password,
           nama,
           role:        'guru',
           isWaliKelas: false,

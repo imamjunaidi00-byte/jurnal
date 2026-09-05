@@ -383,3 +383,28 @@ exports.getStats = async (req, res) => {
     return fail(res, 'Gagal mengambil statistik.', 500);
   }
 };
+
+// ─── DELETE /api/admin/guru/sync-reset ────────────────────────────────────────
+// Hapus semua akun guru yang bukan admin dan bukan diri sendiri
+// Dipakai untuk reset sebelum sync ulang dengan username NIP
+exports.resetSyncGuru = async (req, res) => {
+  try {
+    const { confirm } = req.body;
+    if (confirm !== 'RESET_GURU') {
+      return fail(res, 'Kirim { confirm: "RESET_GURU" } untuk konfirmasi.', 400);
+    }
+
+    // Hapus semua guru (bukan admin, bukan diri sendiri)
+    const deleted = await Guru.destroy({
+      where: {
+        role: 'guru',
+        id:   { [Op.ne]: req.guru.id },
+      },
+    });
+
+    return ok(res, { deleted }, `${deleted} akun guru berhasil dihapus. Silakan sync ulang.`);
+  } catch (err) {
+    console.error(err);
+    return fail(res, 'Gagal mereset akun guru.', 500);
+  }
+};
