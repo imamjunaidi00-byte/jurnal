@@ -1180,6 +1180,9 @@ async function loadSyncStatus() {
     }
   } catch {}
 }
+
+// ── App Identity ───────────────────────────────────────────────────────────
+async function loadAppIdentityHeader() {
   try {
     const res = await fetch('/api/app-identity');
     const data = await res.json();
