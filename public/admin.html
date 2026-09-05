@@ -2592,7 +2592,7 @@ async function syncSdms(type) {
       if (d.guru) {
         html += `<div class="bg-white rounded-lg p-3 border border-green-100">
           <div class="font-semibold text-gray-700 text-xs mb-1.5"><i class="fas fa-chalkboard-teacher text-purple-400 mr-1"></i> Guru</div>
-          <div class="text-xs text-gray-600">🔄 Update: <b>${d.guru.updated}</b> &nbsp; ⏭ Lewati: <b>${d.guru.skipped}</b></div>
+          <div class="text-xs text-gray-600">✅ Baru: <b>${d.guru.created||0}</b> &nbsp; 🔄 Update: <b>${d.guru.updated||0}</b> &nbsp; ⏭ Lewati: <b>${d.guru.skipped||0}</b></div>
         </div>`;
       }
       html += '</div>';

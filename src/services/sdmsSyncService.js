@@ -220,43 +220,84 @@ async function upsertSiswa(siswaList) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// UPSERT: Guru (hanya update data profil — BUKAN buat akun login baru)
+// HELPER: Generate username dari nama
+// Contoh: "Ahmad Suryanto" → "ahmadsuryanto"
+// Jika duplikat → "ahmadsuryanto2", "ahmadsuryanto3", dst.
+// ══════════════════════════════════════════════════════════════════════════════
+async function generateUsername(nama) {
+  // Bersihkan nama: lowercase, hapus karakter non-alfanumerik, batasi 20 karakter
+  const base = nama
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // hapus aksen
+    .replace(/[^a-z0-9]/g, '')  // hanya huruf & angka
+    .slice(0, 20);
+
+  if (!base) return `guru${Date.now()}`;
+
+  // Cek apakah username base sudah ada
+  const exists = await Guru.findOne({ where: { username: base } });
+  if (!exists) return base;
+
+  // Cari suffix angka yang belum dipakai
+  for (let i = 2; i <= 999; i++) {
+    const candidate = `${base}${i}`;
+    const dup = await Guru.findOne({ where: { username: candidate } });
+    if (!dup) return candidate;
+  }
+  return `${base}${Date.now()}`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// UPSERT: Guru — buat akun baru jika belum ada, update jika sudah ada
+// Cocokkan berdasarkan nama (exact, case-insensitive)
+// Password default: Guru@1234 (harus diganti setelah login pertama)
 // ══════════════════════════════════════════════════════════════════════════════
 async function upsertGuru(guruList) {
-  let updated = 0, skipped = 0, errors = [];
+  let created = 0, updated = 0, skipped = 0, errors = [];
+  const DEFAULT_PASSWORD = 'Guru@1234';
 
   for (const g of guruList) {
     try {
       const nama = (g.nama || g.namaLengkap || '').trim();
       if (!nama) { skipped++; continue; }
 
-      // Cari akun guru berdasarkan nama (case-insensitive)
-      // SDMS tidak punya username jurnal — hanya update data yang sudah ada
+      // Cari berdasarkan nama (case-insensitive)
       const existing = await Guru.findOne({
         where: sequelize.where(
           sequelize.fn('LOWER', sequelize.col('nama')),
-          sequelize.fn('LOWER', nama)
+          nama.toLowerCase()
         ),
       });
 
       if (existing) {
-        // Update info wali kelas jika data SDMS menyebutkan jabatan
+        // Update info wali kelas jika SDMS menyebutkan jabatan wali
         const jabatan = (g.jabatan || '').toLowerCase();
+        const updateData = {};
         if (jabatan.includes('wali') && g.kelasNama) {
-          await existing.update({ isWaliKelas: true, kelasWali: g.kelasNama });
+          updateData.isWaliKelas = true;
+          updateData.kelasWali   = g.kelasNama;
         }
+        if (Object.keys(updateData).length) await existing.update(updateData);
         updated++;
       } else {
-        // Guru belum punya akun di jurnal — skip, bukan otomatis dibuat
-        // Admin harus buat akun guru secara manual atau via import
-        skipped++;
+        // Buat akun baru dengan username dari nama
+        const username = await generateUsername(nama);
+        await Guru.create({
+          username,
+          password:    DEFAULT_PASSWORD,
+          nama,
+          role:        'guru',
+          isWaliKelas: false,
+          kelasWali:   '',
+        });
+        created++;
       }
     } catch (e) {
       errors.push({ item: g.nama, error: e.message });
     }
   }
 
-  return { updated, skipped, errors };
+  return { created, updated, skipped, errors };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
