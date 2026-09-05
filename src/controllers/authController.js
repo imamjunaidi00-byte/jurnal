@@ -113,7 +113,8 @@ exports.changePassword = async (req, res) => {
 // PUT /api/auth/username
 exports.changeUsername = async (req, res) => {
   try {
-    const { username } = req.body;
+    // Terima 'username' atau 'usernameBaru' (dari frontend lama)
+    const username = req.body.username || req.body.usernameBaru;
     if (!username) return fail(res, 'Username baru wajib diisi.', 400);
 
     const uname = username.toLowerCase().trim();
@@ -134,4 +135,38 @@ exports.changeUsername = async (req, res) => {
 exports.checkSetup = async (req, res) => {
   const adminExists = await Guru.findOne({ where: { role: 'admin' } });
   return ok(res, { setupRequired: !adminExists });
+};
+
+// GET /api/auth/accounts — info akun sendiri (untuk tab Keamanan)
+exports.getAccounts = async (req, res) => {
+  try {
+    const guru = await Guru.findByPk(req.guru.id, {
+      attributes: { exclude: ['password'] },
+    });
+    if (!guru) return fail(res, 'Akun tidak ditemukan.', 404);
+    // Kembalikan sebagai array untuk kompatibilitas dengan frontend
+    return ok(res, [guru.toJSON()]);
+  } catch (err) {
+    return fail(res, 'Gagal mengambil info akun.', 500);
+  }
+};
+
+// DELETE /api/auth/accounts/:id — hapus akun sendiri
+exports.deleteAccount = async (req, res) => {
+  try {
+    // Hanya boleh hapus akun diri sendiri
+    if (String(req.params.id) !== String(req.guru.id)) {
+      return fail(res, 'Tidak bisa menghapus akun orang lain.', 403);
+    }
+    const guru = await Guru.findByPk(req.guru.id);
+    if (!guru) return fail(res, 'Akun tidak ditemukan.', 404);
+
+    const { invalidateToken } = require('../middleware/auth');
+    if (req.token) invalidateToken(req.token);
+    await guru.destroy();
+
+    return ok(res, null, 'Akun berhasil dihapus.');
+  } catch (err) {
+    return fail(res, 'Gagal menghapus akun.', 500);
+  }
 };
