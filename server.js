@@ -76,6 +76,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Alias /health untuk SDMS health check
+app.get('/health', (req, res) => res.json({ status: 'OK', app: 'ejournal-smk', uptime: Math.floor(process.uptime()) }));
+
 // ─── API Routes ───────────────────────────────────────────────────────────────
 const { protect, adminOnly } = require('./src/middleware/auth');
 
