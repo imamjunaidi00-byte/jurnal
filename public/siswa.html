@@ -988,6 +988,8 @@
         }
 
         // ── Auto-restore session setelah reload ────────────────────────
+        // Restore session saat DOM siap
+        document.addEventListener('DOMContentLoaded', function() {
         (function restoreSession() {
             try {
                 const token = localStorage.getItem('siswa_token');
@@ -1030,6 +1032,7 @@
                 localStorage.removeItem('siswa_token');
             }
         })();
+        }); // end DOMContentLoaded
     </script>
 </body>
 </html>
