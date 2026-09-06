@@ -143,16 +143,52 @@ async function upsertKelas(kelasList) {
 async function upsertSiswa(siswaList) {
   let created = 0, updated = 0, failed = 0, errors = [];
 
+  // ── Logging diagnostik: cetak sample field dari record pertama SDMS ─────────
+  if (siswaList && siswaList.length > 0) {
+    const sample = siswaList[0];
+    console.log('[SDMS Sync] Sample field keys dari data siswa SDMS:', Object.keys(sample));
+    console.log('[SDMS Sync] Sample data siswa pertama:', JSON.stringify(sample, null, 2).slice(0, 800));
+  }
+
   for (const s of siswaList) {
     try {
       const nisn = (s.nisn || '').trim();
-      const nama = (s.nama || s.namaLengkap || '').trim();
-      const jk   = (s.jenisKelamin || s.jenis_kelamin || 'L').toUpperCase().trim();
+      // Coba berbagai variasi nama field dari SDMS
+      const nama = (
+        s.nama            ||
+        s.namaLengkap     ||
+        s.nama_lengkap    ||
+        s.full_name       ||
+        s.fullName        ||
+        ''
+      ).trim();
+      const rawJk = (
+        s.jenisKelamin    ||
+        s.jenis_kelamin   ||
+        s.gender          ||
+        s.sex             ||
+        'L'
+      ).toString().toUpperCase().trim();
+      // Normalisasi: 'LAKI-LAKI'/'MALE' → 'L', 'PEREMPUAN'/'FEMALE' → 'P'
+      const jk = rawJk === 'L' || rawJk === 'LAKI-LAKI' || rawJk === 'MALE'
+        ? 'L'
+        : rawJk === 'P' || rawJk === 'PEREMPUAN' || rawJk === 'FEMALE'
+          ? 'P'
+          : 'L';
 
       if (!nama || !nisn) { failed++; continue; }
 
-      // Cari kelasId dari nama kelas
-      const kelasNama = (s.kelasNama || s.kelas?.nama || '').trim();
+      // Cari kelasId dari nama kelas — coba berbagai variasi field
+      const kelasNama = (
+        s.kelasNama       ||
+        s.kelas_nama      ||
+        s.kelas?.nama     ||
+        s.namakelas       ||
+        s.rombel          ||
+        s.kelas           || // kadang SDMS langsung kirim string nama kelas
+        ''
+      ).trim();
+
       let kelasId = null;
       if (kelasNama) {
         const kelasRow = await Kelas.findOne({
@@ -162,23 +198,42 @@ async function upsertSiswa(siswaList) {
         kelasId = kelasRow?.id || null;
       }
 
+      // ── Normalisasi agama ─────────────────────────────────────────────────
+      const agamaValid = ['Islam','Kristen','Katolik','Hindu','Buddha','Konghucu','Lainnya'];
+      const rawAgama = (s.agama || s.religion || '').trim();
+      const agama = agamaValid.find(a => a.toLowerCase() === rawAgama.toLowerCase()) || rawAgama || null;
+
+      // ── Normalisasi tanggal lahir ─────────────────────────────────────────
+      // SDMS mungkin kirim format DD-MM-YYYY, DD/MM/YYYY, atau YYYY-MM-DD
+      let tanggalLahir = s.tanggalLahir || s.tanggal_lahir || s.tgl_lahir
+                      || s.birthDate    || s.birth_date    || null;
+      if (tanggalLahir && typeof tanggalLahir === 'string') {
+        // Cek format DD-MM-YYYY atau DD/MM/YYYY → ubah ke YYYY-MM-DD
+        const matchDMY = tanggalLahir.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (matchDMY) {
+          tanggalLahir = `${matchDMY[3]}-${matchDMY[2].padStart(2,'0')}-${matchDMY[1].padStart(2,'0')}`;
+        }
+        // Jika tidak valid setelah normalisasi, buang
+        if (isNaN(Date.parse(tanggalLahir))) tanggalLahir = null;
+      }
+
       const payload = {
         nama,
         nisn,
-        nis:             (s.nis || '').trim() || null,
-        jenisKelamin:    ['L','P'].includes(jk) ? jk : 'L',
+        nis:             (s.nis || s.nomor_induk || '').trim() || null,
+        jenisKelamin:    jk,
         kelas:           kelasNama || null,
         kelasId,
-        tempatLahir:     s.tempatLahir    || s.tempat_lahir    || null,
-        tanggalLahir:    s.tanggalLahir   || s.tanggal_lahir   || null,
-        agama:           s.agama          || null,
-        alamat:          s.alamat         || null,
-        namaAyah:        s.namaAyah       || s.nama_ayah       || null,
-        namaIbu:         s.namaIbu        || s.nama_ibu        || null,
-        telpOrtu:        s.telpOrtu       || s.hp_ortu         || null,
-        noHp:            s.noTelp         || s.no_hp           || null,
-        tahunMasuk:      s.tahunMasuk     || s.tahun_masuk     || null,
-        penerimaBantuan: normBantuan(s.penerimaBantuan || s.pernah_dapat_bantuan),
+        tempatLahir:     s.tempatLahir    || s.tempat_lahir    || s.birthPlace   || s.birth_place  || null,
+        tanggalLahir,
+        agama:           agama            || null,
+        alamat:          s.alamat         || s.address         || s.alamat_rumah || null,
+        namaAyah:        s.namaAyah       || s.nama_ayah       || s.ayah         || s.father_name  || null,
+        namaIbu:         s.namaIbu        || s.nama_ibu        || s.ibu          || s.mother_name  || null,
+        telpOrtu:        s.telpOrtu       || s.telp_ortu       || s.hp_ortu      || s.phone_parent || null,
+        noHp:            s.noHp           || s.no_hp           || s.noTelp       || s.no_telp      || s.phone || null,
+        tahunMasuk:      s.tahunMasuk     || s.tahun_masuk     || s.year_entry   || null,
+        penerimaBantuan: normBantuan(s.penerimaBantuan || s.pernah_dapat_bantuan || s.bantuan),
         status:          s.status === 'Aktif' ? 'Aktif' : (s.status || 'Aktif'),
         guruId:          null,
       };
@@ -186,7 +241,7 @@ async function upsertSiswa(siswaList) {
       const existing = await Siswa.findOne({ where: { nisn } });
 
       if (existing) {
-        // Jangan timpa data yang sudah ada jika lebih lengkap
+        // Jangan timpa data yang sudah ada jika payload kosong/null
         await existing.update({
           nama:            payload.nama,
           kelas:           payload.kelas           || existing.kelas,

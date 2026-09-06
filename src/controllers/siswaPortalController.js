@@ -105,7 +105,7 @@ exports.updateProfil = async (req, res) => {
     const siswa = await Siswa.findByPk(siswaAuth.id);
     if (!siswa) return fail(res, 'Siswa tidak ditemukan.', 404);
 
-    const allowed = ['alamat', 'noHp', 'telpOrtu', 'tempatLahir'];
+    const allowed = ['alamat', 'noHp', 'telpOrtu', 'tempatLahir', 'agama', 'foto'];
     const updateData = {};
     for (const k of allowed) {
       if (req.body[k] !== undefined) updateData[k] = req.body[k];
