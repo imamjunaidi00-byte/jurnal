@@ -121,9 +121,13 @@ exports.updateProfil = async (req, res) => {
 
 // ── GET /api/siswa-portal/me ──────────────────────────────────────────────────
 exports.getMe = async (req, res) => {
+exports.getMe = async (req, res) => {
   try {
     const siswa = await verifySiswaToken(req, res);
-    if (!siswa) return fail(res, 'Sesi tidak valid.', 401);
+    if (!siswa) {
+      console.log('[siswaPortal] /me gagal - token tidak valid:', req.headers.authorization?.substring(0,30));
+      return fail(res, 'Sesi tidak valid.', 401);
+    }
     const s = siswa.toJSON();
     s.umur = siswa.umur;
     return ok(res, s);

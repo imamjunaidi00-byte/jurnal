@@ -113,13 +113,16 @@
       // Bersihkan hash & redirect langsung
       history.replaceState(null, '', '/sso.html');
 
-      if (role === 'siswa') {
-        window.location.replace('/siswa');
-      } else if (role === 'admin') {
-        window.location.replace('/admin');
-      } else {
-        window.location.replace('/app');
-      }
+      // Delay singkat agar localStorage tersimpan sebelum redirect
+      setTimeout(() => {
+        if (role === 'siswa') {
+          window.location.replace('/siswa');
+        } else if (role === 'admin') {
+          window.location.replace('/admin');
+        } else {
+          window.location.replace('/app');
+        }
+      }, 300);
     })();
   </script>
 </body>
