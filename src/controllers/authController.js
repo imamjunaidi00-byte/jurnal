@@ -194,7 +194,7 @@ exports.ssoCallback = async (req, res) => {
     });
 
     const sdmsRole = decoded.role;
-    console.log(`[SSO] Token valid: ${decoded.username} (role SDMS: ${sdmsRole})`);
+    console.log(`[SSO] Token valid: ${decoded.username} (role SDMS: ${sdmsRole}) nisn=${decoded.nisn || '-'} nama=${decoded.full_name || '-'}`);
 
     // ── SISWA ──────────────────────────────────────────────────────────────────
     if (sdmsRole === 'siswa') {
