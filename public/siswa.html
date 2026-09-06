@@ -833,8 +833,9 @@
             } else {
                 document.getElementById('profil-tgl-lahir').textContent = '-';
             }
-            const ortu = [s.namaAyah && 'Ayah: ' + s.namaAyah, s.namaIbu && 'Ibu: ' + s.namaIbu].filter(Boolean).join(' | ');
-            document.getElementById('profil-ortu').textContent = ortu || '-';
+            const ortu = [s.namaAyah && 'Ayah: ' + s.namaAyah, s.namaIbu && 'Ibu: ' + s.namaIbu].filter(Boolean).join(' | ')
+                      || s.namaOrangTua || '-';
+            document.getElementById('profil-ortu').textContent = ortu;
 
             // Bantuan
             const bantuanLabel = {
@@ -963,8 +964,9 @@
                     isiTabProfil();
                     // Update display di header & kartu
                     const ortu = [currentSiswa.namaAyah && 'Ayah: ' + currentSiswa.namaAyah,
-                                  currentSiswa.namaIbu && 'Ibu: ' + currentSiswa.namaIbu].filter(Boolean).join(' | ');
-                    document.getElementById('profil-ortu').textContent = ortu || '-';
+                                  currentSiswa.namaIbu && 'Ibu: ' + currentSiswa.namaIbu].filter(Boolean).join(' | ')
+                                  || currentSiswa.namaOrangTua || '-';
+                    document.getElementById('profil-ortu').textContent = ortu;
                     document.getElementById('profil-tempat-lahir').textContent = currentSiswa.tempatLahir || '-';
                     document.getElementById('profil-agama').textContent = currentSiswa.agama || '-';
                     document.getElementById('profil-tahun-masuk').textContent = currentSiswa.tahunMasuk || '-';

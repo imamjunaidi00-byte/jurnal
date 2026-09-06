@@ -228,7 +228,10 @@ async function upsertSiswa(siswaList) {
         tanggalLahir,
         agama:           agama            || null,
         alamat:          s.alamat         || s.address         || s.alamat_rumah || null,
-        namaAyah:        s.namaAyah       || s.nama_ayah       || s.ayah         || s.father_name  || null,
+        namaAyah:        s.namaAyah       || s.nama_ayah       || s.ayah         || s.father_name
+                      // SDMS kirim namaOrangTua (gabungan) → pakai sebagai namaAyah jika tidak ada field terpisah
+                      || (s.namaOrangTua ? s.namaOrangTua.trim() : null)
+                      || null,
         namaIbu:         s.namaIbu        || s.nama_ibu        || s.ibu          || s.mother_name  || null,
         telpOrtu:        s.telpOrtu       || s.telp_ortu       || s.hp_ortu      || s.phone_parent || null,
         noHp:            s.noHp           || s.no_hp           || s.noTelp       || s.no_telp      || s.phone || null,
