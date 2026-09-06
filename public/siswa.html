@@ -991,13 +991,9 @@
         (function restoreSession() {
             try {
                 const token = localStorage.getItem('siswa_token');
-                const saved = localStorage.getItem('siswa_data');
-                if (!token || !saved) return;
+                if (!token) return;
 
-                const data = JSON.parse(saved);
-                if (!data || !data.nisn) return;
-
-                // Verifikasi token ke server
+                // Verifikasi token ke server — tidak perlu cek siswa_data dulu
                 fetch('/api/siswa-portal/me', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
@@ -1014,10 +1010,15 @@
                     }
                 })
                 .catch(() => {
-                    // Offline — pakai cache
-                    currentSiswa = data;
-                    siswaToken   = token;
-                    showDashboard();
+                    // Offline — pakai cache jika ada
+                    const saved = localStorage.getItem('siswa_data');
+                    if (saved) {
+                        try {
+                            currentSiswa = JSON.parse(saved);
+                            siswaToken   = token;
+                            showDashboard();
+                        } catch {}
+                    }
                 });
             } catch(e) {
                 localStorage.removeItem('siswa_data');
