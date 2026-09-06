@@ -994,8 +994,13 @@
                 if (!token) return;
 
                 // Verifikasi token ke server — tidak perlu cek siswa_data dulu
+                // no-cache agar tidak pakai cached 304 yang tidak diproses browser
                 fetch('/api/siswa-portal/me', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
                 })
                 .then(r => r.json())
                 .then(res => {
