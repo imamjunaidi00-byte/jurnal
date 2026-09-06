@@ -198,13 +198,30 @@ exports.ssoCallback = async (req, res) => {
 
     // ── SISWA ──────────────────────────────────────────────────────────────────
     if (sdmsRole === 'siswa') {
-      // Cari siswa berdasarkan username SDMS (username siswa = NISN di SDMS)
-      const nisn = decoded.username;
-      let siswa = await Siswa.findOne({ where: { nisn } });
+      const username    = decoded.username;
+      const namaLengkap = decoded.full_name;
+      const nisnFromSSO = decoded.nisn; // dikirim SDMS jika ada
 
-      if (!siswa) {
-        // Fallback: cari berdasarkan nama
-        siswa = await Siswa.findOne({ where: { nama: decoded.full_name || nisn } });
+      let siswa = null;
+
+      // 1. Prioritas: cari by NISN yang dikirim langsung dari SSO token
+      if (nisnFromSSO) {
+        siswa = await Siswa.findOne({ where: { nisn: nisnFromSSO } });
+      }
+
+      // 2. Fallback: username berupa angka → coba sebagai NISN
+      if (!siswa && /^\d{8,12}$/.test(username.trim())) {
+        siswa = await Siswa.findOne({ where: { nisn: username.trim() } });
+      }
+
+      // 3. Fallback: cari by nama lengkap
+      if (!siswa && namaLengkap) {
+        siswa = await Siswa.findOne({ where: { nama: namaLengkap } });
+      }
+
+      // 4. Fallback: username → NIS
+      if (!siswa && /^\d+$/.test(username.trim())) {
+        siswa = await Siswa.findOne({ where: { nis: username.trim() } });
       }
 
       if (!siswa) {
