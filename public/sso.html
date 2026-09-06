@@ -7,76 +7,42 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
       background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
       font-family: 'Segoe UI', system-ui, sans-serif;
     }
     .card {
-      background: white;
-      border-radius: 20px;
-      padding: 48px 40px;
-      text-align: center;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.15);
-      max-width: 380px;
-      width: 90%;
-    }
-    .icon {
-      width: 72px;
-      height: 72px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 20px;
-      font-size: 32px;
+      background: white; border-radius: 20px; padding: 48px 40px;
+      text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.15);
+      max-width: 380px; width: 90%;
     }
     h1 { font-size: 22px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
     p  { font-size: 14px; color: #64748b; margin-bottom: 24px; line-height: 1.5; }
     .spinner {
-      width: 40px; height: 40px;
-      border: 4px solid #e2e8f0;
-      border-top-color: #3b82f6;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 16px;
+      width: 40px; height: 40px; border: 4px solid #e2e8f0;
+      border-top-color: #3b82f6; border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 16px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .status { font-size: 13px; color: #94a3b8; }
-    .error-card { display: none; }
-    .error-card .icon { background: linear-gradient(135deg, #ef4444, #f97316); }
     .btn {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 12px 28px;
+      display: inline-block; margin-top: 20px; padding: 12px 28px;
       background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: none;
+      color: white; border: none; border-radius: 12px;
+      font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none;
     }
   </style>
 </head>
 <body>
-
-  <!-- Loading state -->
   <div class="card" id="loadingCard">
-    <div class="icon">📚</div>
+    <div style="font-size:48px;margin-bottom:16px">📚</div>
     <h1>Masuk via SDMS</h1>
     <p>Memverifikasi sesi Anda dari SDMS.<br>Mohon tunggu sebentar…</p>
     <div class="spinner"></div>
-    <div class="status" id="statusText">Memeriksa token…</div>
+    <p id="statusText" style="font-size:13px;color:#94a3b8;margin:0">Memeriksa token…</p>
   </div>
 
-  <!-- Error state -->
-  <div class="card error-card" id="errorCard">
-    <div class="icon">⚠️</div>
+  <div class="card" id="errorCard" style="display:none">
+    <div style="font-size:48px;margin-bottom:16px">⚠️</div>
     <h1>Login SSO Gagal</h1>
     <p id="errorMsg">Terjadi kesalahan saat memproses login dari SDMS.</p>
     <a href="/login" class="btn">Login Manual</a>
@@ -84,43 +50,33 @@
 
   <script>
     (function () {
-      const loadingCard = document.getElementById('loadingCard');
-      const errorCard   = document.getElementById('errorCard');
-      const statusText  = document.getElementById('statusText');
-      const errorMsg    = document.getElementById('errorMsg');
+      const statusText = document.getElementById('statusText');
 
       function showError(msg) {
-        loadingCard.style.display = 'none';
-        errorCard.style.display   = 'block';
-        errorCard.classList.add('error-card');
-        errorCard.style.display = 'flex';
-        errorCard.style.flexDirection = 'column';
-        errorCard.style.alignItems = 'center';
-        errorMsg.textContent = msg;
+        document.getElementById('loadingCard').style.display = 'none';
+        document.getElementById('errorCard').style.display = 'block';
+        document.getElementById('errorMsg').textContent = msg;
       }
 
-      // Ambil token dari URL fragment (#token=xxx&role=yyy)
-      // Menggunakan fragment (#) agar token tidak tercatat di server log
-      const hash   = window.location.hash.substring(1); // hapus '#'
-      const params = new URLSearchParams(hash);
-      const token  = params.get('token');
-      const role   = params.get('role');
-
-      // Juga cek error dari query string (redirect dari backend saat error)
-      const qParams = new URLSearchParams(window.location.search);
-      const qError  = qParams.get('error');
-
+      // Cek error dari query string
+      const qError = new URLSearchParams(window.location.search).get('error');
       if (qError) {
         const messages = {
-          sso_no_token:         'Token SSO tidak ditemukan. Coba buka lagi dari SDMS.',
-          sso_expired:          'Token SSO sudah kadaluarsa. Silakan buka ulang dari SDMS.',
-          sso_invalid:          'Token SSO tidak valid. Pastikan konfigurasi SSO_SECRET sudah benar.',
-          sso_siswa_not_found:  'Akun siswa tidak ditemukan di Jurnal Guru. Hubungi administrator untuk sinkronisasi data.',
-          sso_error:            'Terjadi kesalahan saat memproses SSO. Hubungi administrator.',
+          sso_no_token:        'Token SSO tidak ditemukan. Coba buka lagi dari SDMS.',
+          sso_expired:         'Token SSO sudah kadaluarsa. Silakan buka ulang dari SDMS.',
+          sso_invalid:         'Token SSO tidak valid.',
+          sso_siswa_not_found: 'Akun siswa tidak ditemukan. Hubungi administrator.',
+          sso_error:           'Terjadi kesalahan SSO. Hubungi administrator.',
         };
         showError(messages[qError] || 'Terjadi kesalahan tidak dikenal.');
         return;
       }
+
+      // Ambil dari URL fragment
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      const token  = params.get('token');
+      const role   = params.get('role');
+      const data   = params.get('data');
 
       if (!token) {
         showError('Token tidak ditemukan. Silakan buka kembali dari SDMS App Hub.');
@@ -131,32 +87,32 @@
 
       // Decode data user jika ada
       let userData = null;
-      const dataParam = params.get('data');
-      if (dataParam) {
-        try { userData = JSON.parse(atob(dataParam)); } catch {}
-      }
+      if (data) { try { userData = JSON.parse(atob(data)); } catch {} }
 
-      // Tentukan halaman tujuan
-      const dest = params.get('dest'); // dikirim dari backend
-
-      // Simpan token ke localStorage dengan key yang benar sesuai role
+      // Simpan ke localStorage sesuai key yang dipakai masing-masing halaman
       if (role === 'siswa') {
+        // Portal siswa jurnal pakai key: siswa_token + siswa_data
         localStorage.removeItem('guru_token');
         localStorage.removeItem('admin_token');
-        localStorage.setItem('siswaToken', token);
+        localStorage.setItem('siswa_token', token);
+        if (userData) localStorage.setItem('siswa_data', JSON.stringify(userData));
       } else if (role === 'admin') {
+        // Panel admin jurnal pakai key: admin_token + admin_info
         localStorage.removeItem('guru_token');
-        localStorage.removeItem('siswaToken');
+        localStorage.removeItem('siswa_token');
         localStorage.setItem('admin_token', token);
         if (userData) localStorage.setItem('admin_info', JSON.stringify(userData));
       } else {
+        // Halaman guru jurnal pakai key: guru_token + guru_info
         localStorage.removeItem('admin_token');
-        localStorage.removeItem('siswaToken');
+        localStorage.removeItem('siswa_token');
         localStorage.setItem('guru_token', token);
         if (userData) localStorage.setItem('guru_info', JSON.stringify(userData));
       }
 
-      // Langsung redirect tanpa delay
+      // Bersihkan hash & redirect langsung
+      history.replaceState(null, '', '/sso.html');
+
       if (role === 'siswa') {
         window.location.replace('/siswa');
       } else if (role === 'admin') {
@@ -166,6 +122,5 @@
       }
     })();
   </script>
-
 </body>
 </html>

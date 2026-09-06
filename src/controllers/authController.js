@@ -220,8 +220,14 @@ exports.ssoCallback = async (req, res) => {
         { expiresIn: '7d' }
       );
 
+      // Encode data siswa untuk disimpan di localStorage
+      const siswaData = Buffer.from(JSON.stringify({
+        id: siswa.id, nisn: siswa.nisn, nis: siswa.nis,
+        nama: siswa.nama, kelasId: siswa.kelasId,
+      })).toString('base64');
+
       console.log(`[SSO] ✅ Siswa login via SSO: ${siswa.nama} (NISN: ${siswa.nisn})`);
-      return res.redirect(`/sso.html#token=${siswaToken}&role=siswa`);
+      return res.redirect(`/sso.html#token=${siswaToken}&role=siswa&data=${siswaData}`);
     }
 
     // ── GURU / ADMIN ───────────────────────────────────────────────────────────
