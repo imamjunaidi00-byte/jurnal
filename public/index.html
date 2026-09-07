@@ -4458,7 +4458,7 @@
             let html = '';
             let counts = {hadir: 0, sakit: 0, izin: 0, alpha: 0, dispensasi: 0, pulang_cepat: 0};
             siswaKelas.forEach((s, i) => {
-                const key = `${kelas}-${s.id}`;
+                const key = `${kelas}-${s.id.toString()}`;
                 const status = absensiData[key] || null;
                 if (status) counts[status] = (counts[status] || 0) + 1;
                 const ket = absensiData[`${key}-ket`] || '';
