@@ -295,7 +295,13 @@ async function showDashboard() {
   try {
     const res = await api.get('/api/wali-kelas/info-pengabsen');
     if (res.success && res.data) {
-      info = res.data;
+      const resp = res.data;
+      // Flatten: { pengabsen: {...}, semester, tahunAjaran } → flat info object
+      info = {
+        ...(resp.pengabsen || resp),
+        semester:    resp.semester    || resp.pengabsen?.semester    || 'Ganjil',
+        tahunAjaran: resp.tahunAjaran || resp.pengabsen?.tahunAjaran || '',
+      };
       localStorage.setItem('pengabsen_info', JSON.stringify(info));
       applyInfoToDashboard();
     }
@@ -439,7 +445,7 @@ async function simpanAbsensi() {
   const btn = document.getElementById('btn-simpan');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
   try {
-    const res = await api.post('/api/wali-kelas/input-absensi', { tanggal, semester, tahunAjaran, data });
+    const res = await api.post('/api/wali-kelas/input-absensi', { tanggal, semester, tahunAjaran, items: data });
     if (res.success) {
       toast('✅ Absensi ' + res.count + ' siswa berhasil disimpan!');
       // Reload banner
@@ -455,8 +461,14 @@ if (token) {
   fetch('/api/wali-kelas/info-pengabsen', { headers:{'Authorization':'Bearer '+token} })
     .then(r=>r.json())
     .then(d=>{
-      if (d.success) {
-        info = d.data;
+    if (d.success) {
+        const resp = d.data;
+        // Flatten: { pengabsen: {...}, semester, tahunAjaran } → flat info object
+        info = {
+          ...(resp.pengabsen || resp),
+          semester:    resp.semester    || resp.pengabsen?.semester    || 'Ganjil',
+          tahunAjaran: resp.tahunAjaran || resp.pengabsen?.tahunAjaran || '',
+        };
         localStorage.setItem('pengabsen_info', JSON.stringify(info));
         showDashboard();
       } else {

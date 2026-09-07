@@ -206,11 +206,14 @@ exports.siswaPengabsen = async (req, res) => {
 
 exports.absensiHariIni = async (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    // Gunakan query param ?tanggal jika ada, fallback ke hari ini
+    const tanggal = req.query.tanggal || new Date().toISOString().split('T')[0];
     const list  = await AbsensiHarian.findAll({
-      where: { guruId: req.pengabsen.guruId, kelas: req.pengabsen.kelas, tanggal: today },
+      where: { guruId: req.pengabsen.guruId, kelas: req.pengabsen.kelas, tanggal },
+      include: [{ model: Siswa, as: 'siswaRef', attributes: ['id','nama','nisn'] }],
     });
-    return ok(res, list);
+    // Sertakan flag sudahAbsen agar frontend bisa langsung cek
+    return ok(res, { sudahAbsen: list.length > 0, data: list });
   } catch (err) {
     return fail(res, 'Gagal mengambil absensi hari ini.', 500);
   }
