@@ -3876,12 +3876,11 @@
                 // Set default bulan dari semester & tahun ajaran di CONFIG
                 const now = new Date();
                 const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-                // Hitung bulan awal sesuai semester: Ganjil→Juli, Genap→Januari
+                // Default bulan = bulan saat ini (lebih intuitif)
+                // Fallback ke bulan awal semester jika bulan ini di luar tahun ajaran
                 const tahunAwal = (CONFIG.tahunAjaran || '').split('/')[0] || String(now.getFullYear());
-                const bulanAwal = CONFIG.semester === 'Genap'
-                    ? `${tahunAwal}-01`
-                    : `${tahunAwal}-07`;
-                document.getElementById('rekap-bulan').value = bulanAwal;
+                const nowMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+                document.getElementById('rekap-bulan').value = nowMonth;
                 document.getElementById('rekap-tanggal').value = todayStr;
                 // Pastikan dataSiswa sudah terisi sebelum merender rekap
                 if (!dataSiswa.length) {
@@ -8319,17 +8318,12 @@
             if (elGkSmt) elGkSmt.value = semester;
             if (elGkThn) elGkThn.value = tahun;
 
-            // Rekap kehadiran — set bulan awal tahun ajaran (mis. 2026/2027 → Juli 2026)
+            // Rekap kehadiran — set bulan saat ini sebagai default
             const elRekapBulan = document.getElementById('rekap-bulan');
             if (elRekapBulan) {
-                // Tahun ajaran "YYYY/YYYY+1": semester Ganjil mulai Juli (tahun ke-1), Genap mulai Januari (tahun ke-2)
-                const parts = (tahun || '').split('/');
-                const tahunGanjil = parts[0] || String(new Date().getFullYear());
-                const tahunGenap  = parts[1] || String(parseInt(tahunGanjil) + 1);
-                const bulanAwal = semester === 'Genap'
-                    ? `${tahunGenap}-01`   // Januari tahun kedua
-                    : `${tahunGanjil}-07`; // Juli tahun pertama
-                elRekapBulan.value = bulanAwal;
+                const now = new Date();
+                const nowMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+                elRekapBulan.value = nowMonth;
             }
 
             // Rekap absensi — filter semester (jika ada)
