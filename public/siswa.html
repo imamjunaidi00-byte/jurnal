@@ -128,6 +128,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- ═══ DASHBOARD SECTION ═══ -->
+        <div id="dashboard-section" class="hidden">
             
             <!-- Student Info Card -->
             <div class="bg-white rounded-2xl shadow-lg p-6 mb-8">
@@ -463,6 +466,8 @@
             </div>
 
         </div>
+        <!-- ═══ END DASHBOARD SECTION ═══ -->
+        </div>
     </main>
 
     <script>
@@ -472,13 +477,18 @@
         // API Helper — portal siswa pakai endpoint khusus
         const api = {
             get: async (url) => {
-                const res = await fetch(url);
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${siswaToken}` }
+                });
                 return await res.json();
             },
             put: async (url, data) => {
                 const res = await fetch(url, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${siswaToken}`
+                    },
                     body: JSON.stringify(data)
                 });
                 return await res.json();
@@ -568,13 +578,15 @@
             _fotoTempBase64 = null;
             localStorage.removeItem('siswa_data');
             localStorage.removeItem('siswa_token');
+            siswaToken = '';
             document.getElementById('login-section').classList.remove('hidden');
             document.getElementById('dashboard-section').classList.add('hidden');
-            document.getElementById('input-nisn').value = '';
-            document.getElementById('login-tgl-dd').value = '';
-            document.getElementById('login-tgl-mm').value = '';
-            document.getElementById('login-tgl-yyyy').value = '';
-            document.getElementById('login-error-msg-box').classList.add('hidden');
+            const nisnEl = document.getElementById('input-nisn');
+            const pwdEl  = document.getElementById('input-password');
+            if (nisnEl) nisnEl.value = '';
+            if (pwdEl)  pwdEl.value = '';
+            const errBox = document.getElementById('login-error-msg-box');
+            if (errBox) errBox.classList.add('hidden');
         }
 
         // Tab Switching
@@ -597,7 +609,7 @@
                 console.log('Jadwal response:', res.data?.length, 'items, kelas filter:', currentSiswa.kelas);
                 const container = document.getElementById('jadwal-list');
                 
-                if (!res.success || !res.data.length) {
+                if (!res.success || !res.data || !res.data.length) {
                     container.innerHTML = '<p class="text-center text-gray-400 py-8">Belum ada jadwal</p>';
                     return;
                 }
@@ -690,8 +702,12 @@
             try {
                 const res = await api.get(`/api/siswa-portal/absensi?nisn=${currentSiswa.nisn}`);
                 
-                if (!res.success || !res.data.length) {
+                if (!res.success || !res.data || !res.data.length) {
                     document.getElementById('absensi-detail').innerHTML = '<p class="text-center text-gray-400 py-8">Belum ada data absensi</p>';
+                    // Reset counter ke 0
+                    ['absen-hadir','absen-sakit','absen-izin','absen-alpha','absen-dispensasi','absen-pulang'].forEach(id => {
+                        const el = document.getElementById(id); if (el) el.textContent = '0';
+                    });
                     return;
                 }
 
