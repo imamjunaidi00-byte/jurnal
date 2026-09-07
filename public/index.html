@@ -4437,7 +4437,8 @@
                 // Isi absensiData dari hasil fetch absensi
                 if (resAbsen.success && resAbsen.data?.length) {
                     resAbsen.data.forEach(a => {
-                        const sid = (a.siswa?.id || a.siswa || '').toString();
+                        // API mengembalikan relasi sebagai 'siswaRef', fallback ke siswaId langsung
+                        const sid = (a.siswaRef?.id || a.siswa?.id || a.siswaId || '').toString();
                         absensiData[`${kelas}-${sid}`] = a.status;
                         if (a.keterangan) absensiData[`${kelas}-${sid}-ket`] = a.keterangan;
                         if (a.id) absensiData[`${kelas}-${sid}-id`] = a.id;
