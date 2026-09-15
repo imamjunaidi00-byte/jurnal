@@ -67,29 +67,46 @@ exports.bulkSave = async (req, res) => {
 // GET /api/absensi/rekap
 exports.rekap = async (req, res) => {
   try {
-    const { kelas, semester, tahunAjaran } = req.query;
+    const { kelas, semester, tahunAjaran, bulan, tahun, tanggal } = req.query;
     if (!kelas || !semester || !tahunAjaran)
       return fail(res, 'kelas, semester, dan tahunAjaran wajib diisi.', 400);
 
+    const where = { guruId: req.guru.id, kelas, semester, tahunAjaran };
+
+    // Filter opsional berdasarkan tanggal, bulan, atau tahun
+    if (tanggal) {
+      where.tanggal = tanggal;
+    } else if (bulan && tahun) {
+      const y = parseInt(tahun, 10);
+      const m = parseInt(bulan, 10);
+      const firstDay = `${y}-${String(m).padStart(2,'0')}-01`;
+      const lastDay  = new Date(y, m, 0);
+      const lastDayStr = `${y}-${String(m).padStart(2,'0')}-${String(lastDay.getDate()).padStart(2,'0')}`;
+      where.tanggal = { [Op.between]: [firstDay, lastDayStr] };
+    } else if (tahun) {
+      const y = parseInt(tahun, 10);
+      where.tanggal = { [Op.between]: [`${y}-01-01`, `${y}-12-31`] };
+    }
+
     const results = await Absensi.findAll({
-      where: { guruId: req.guru.id, kelas, semester, tahunAjaran },
+      where,
       attributes: [
         'siswaId',
-        [fn('SUM', literal("status = 'hadir'")),      'hadir'],
-        [fn('SUM', literal("status = 'sakit'")),      'sakit'],
-        [fn('SUM', literal("status = 'izin'")),       'izin'],
-        [fn('SUM', literal("status = 'alpha'")),      'alpha'],
-        [fn('SUM', literal("status = 'dispensasi'")), 'dispensasi'],
-        [fn('SUM', literal("status = 'pulang_cepat'")),'pulang_cepat'],
-        [fn('COUNT', col('id')),                      'total'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'hadir' THEN 1 ELSE 0 END")),       'hadir'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'sakit' THEN 1 ELSE 0 END")),       'sakit'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'izin' THEN 1 ELSE 0 END")),        'izin'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'alpha' THEN 1 ELSE 0 END")),       'alpha'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'dispensasi' THEN 1 ELSE 0 END")),  'dispensasi'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'pulang_cepat' THEN 1 ELSE 0 END")),'pulang_cepat'],
+        [fn('COUNT', col('`Absensi`.`id`')),                                                    'total'],
       ],
       include: [{ model: Siswa, as: 'siswaRef', attributes: ['id','nama','nisn'] }],
-      group:   ['siswaId'],
+      group:   [literal('`Absensi`.`siswaId`'), literal('`siswaRef`.`id`')],
       order:   [[{ model: Siswa, as: 'siswaRef' }, 'nama', 'ASC']],
     });
     return ok(res, results);
   } catch (err) {
-    console.error(err);
+    console.error('[rekap] Error:', err.message);
     return fail(res, 'Gagal mengambil rekap absensi.', 500);
   }
 };
@@ -114,35 +131,88 @@ exports.summary = async (req, res) => {
 // GET /api/absensi/rekap/download
 exports.downloadRekap = async (req, res) => {
   try {
-    const { kelas, semester, tahunAjaran } = req.query;
+    const { kelas, semester, tahunAjaran, bulan, tahun, tanggal } = req.query;
+
+    if (!kelas) return fail(res, 'Parameter kelas wajib diisi.', 400);
+
+    // Build where clause
+    const where = { guruId: req.guru.id };
+    if (kelas)       where.kelas       = kelas;
+    if (semester)    where.semester    = semester;
+    if (tahunAjaran) where.tahunAjaran = tahunAjaran;
+
+    // Filter berdasarkan tanggal spesifik, bulan, atau tahun
+    if (tanggal) {
+      where.tanggal = tanggal;
+    } else if (bulan && tahun) {
+      const y = parseInt(tahun, 10);
+      const m = parseInt(bulan, 10);
+      const firstDay = `${y}-${String(m).padStart(2,'0')}-01`;
+      const lastDay  = new Date(y, m, 0); // hari terakhir bulan
+      const lastDayStr = `${y}-${String(m).padStart(2,'0')}-${String(lastDay.getDate()).padStart(2,'0')}`;
+      where.tanggal = { [Op.between]: [firstDay, lastDayStr] };
+    } else if (tahun) {
+      const y = parseInt(tahun, 10);
+      where.tanggal = { [Op.between]: [`${y}-01-01`, `${y}-12-31`] };
+    }
+
     const results = await Absensi.findAll({
-      where: { guruId: req.guru.id, kelas, semester, tahunAjaran },
+      where,
       attributes: [
         'siswaId',
-        [fn('SUM', literal("status = 'hadir'")),      'Hadir'],
-        [fn('SUM', literal("status = 'sakit'")),      'Sakit'],
-        [fn('SUM', literal("status = 'izin'")),       'Izin'],
-        [fn('SUM', literal("status = 'alpha'")),      'Alpha'],
-        [fn('SUM', literal("status = 'dispensasi'")), 'Dispensasi'],
-        [fn('COUNT', col('id')),                      'Total'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'hadir' THEN 1 ELSE 0 END")),      'Hadir'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'sakit' THEN 1 ELSE 0 END")),      'Sakit'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'izin' THEN 1 ELSE 0 END")),       'Izin'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'alpha' THEN 1 ELSE 0 END")),      'Alpha'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'dispensasi' THEN 1 ELSE 0 END")), 'Dispensasi'],
+        [fn('SUM', literal("CASE WHEN `Absensi`.`status` = 'pulang_cepat' THEN 1 ELSE 0 END")), 'PulangCepat'],
+        [fn('COUNT', col('`Absensi`.`id`')),                                                   'Total'],
       ],
       include: [{ model: Siswa, as: 'siswaRef', attributes: ['nama','nisn'] }],
-      group:   ['siswaId'],
+      group:   [literal('`Absensi`.`siswaId`'), literal('`siswaRef`.`id`')],
       order:   [[{ model: Siswa, as: 'siswaRef' }, 'nama', 'ASC']],
       raw:     true,
       nest:    true,
     });
 
-    const data = results.map(r => ({
-      Nama:       r.siswaRef.nama, NISN: r.siswaRef.nisn,
-      Hadir: r.Hadir, Sakit: r.Sakit, Izin: r.Izin,
-      Alpha: r.Alpha, Dispensasi: r.Dispensasi, Total: r.Total,
+    // Buat label periode untuk nama file dan header
+    let periodeLabel = tahunAjaran || 'semua';
+    if (tanggal) {
+      periodeLabel = tanggal;
+    } else if (bulan && tahun) {
+      const bulanNames = ['','Januari','Februari','Maret','April','Mei','Juni',
+                          'Juli','Agustus','September','Oktober','November','Desember'];
+      periodeLabel = `${bulanNames[parseInt(bulan,10)] || bulan}_${tahun}`;
+    } else if (tahun) {
+      periodeLabel = tahun;
+    }
+
+    const data = results.map((r, i) => ({
+      No:          i + 1,
+      Nama:        r.siswaRef?.nama || '-',
+      NISN:        r.siswaRef?.nisn || '-',
+      Hadir:       Number(r.Hadir)       || 0,
+      Sakit:       Number(r.Sakit)       || 0,
+      Izin:        Number(r.Izin)        || 0,
+      Alpha:       Number(r.Alpha)       || 0,
+      Dispensasi:  Number(r.Dispensasi)  || 0,
+      'Pulang Cepat': Number(r.PulangCepat) || 0,
+      Total:       Number(r.Total)       || 0,
     }));
+
+    if (!data.length) {
+      return fail(res, 'Tidak ada data absensi untuk filter yang dipilih.', 404);
+    }
+
+    const safeKelas = (kelas || 'kelas').replace(/[\s\/\\]/g, '_');
     const buffer = writeExcel(data, 'Rekap Absensi');
-    res.setHeader('Content-Disposition', `attachment; filename="rekap-absensi-${kelas}-${semester}.xlsx"`);
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition',
+      `attachment; filename="rekap-absensi-${safeKelas}-${periodeLabel}.xlsx"`);
+    res.setHeader('Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     return res.send(buffer);
   } catch (err) {
+    console.error('[downloadRekap] Error:', err.message, err.stack);
     return fail(res, 'Gagal mengunduh rekap absensi.', 500);
   }
 };
