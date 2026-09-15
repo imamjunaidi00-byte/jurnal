@@ -4221,9 +4221,92 @@
         async function downloadRekap() {
             const kelas = document.getElementById('rekap-kelas').value;
             if (!kelas) return showToast('Pilih kelas terlebih dahulu', 'error');
-            const bulanVal = document.getElementById('rekap-bulan').value;
+            const bulanVal   = document.getElementById('rekap-bulan').value;
             const tanggalVal = document.getElementById('rekap-tanggal').value;
-            const periode = document.getElementById('rekap-periode').value;
+            const periode    = document.getElementById('rekap-periode').value;
+            const isDetail   = !document.getElementById('rekap-mode-detail').classList.contains('hidden');
+
+            // ── MODE PER TANGGAL: generate Excel dari rekapRawData di client ──
+            if (isDetail) {
+                if (!rekapRawData.length) return showToast('Belum ada data absensi', 'error');
+                showToast('⏳ Menyiapkan file Excel per tanggal...');
+
+                const filtered = filterByPeriode(rekapRawData, periode, bulanVal, tanggalVal);
+                if (!filtered.length) return showToast('Tidak ada data untuk periode ini', 'error');
+
+                // Kumpulkan tanggal unik
+                const tanggalSet = new Set();
+                filtered.forEach(a => {
+                    const d = new Date(a.tanggal);
+                    const tgl = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                    tanggalSet.add(tgl);
+                });
+                const tanggalList = [...tanggalSet].sort();
+
+                // Build map siswaId → { tanggal → status }
+                const siswaKelas = dataSiswa.filter(s => s.kelas === kelas);
+                const map = {};
+                siswaKelas.forEach(s => { map[s.id.toString()] = { nama: s.nama }; });
+                filtered.forEach(a => {
+                    const sid = (a.siswa?.id || a.siswaRef?.id || a.siswaId || a.siswa || '').toString();
+                    if (map[sid]) {
+                        const d = new Date(a.tanggal);
+                        const tgl = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                        map[sid][tgl] = a.status;
+                    }
+                });
+
+                const statusLabel = { hadir:'H', sakit:'S', izin:'I', alpha:'A', dispensasi:'D', pulang_cepat:'P' };
+
+                // Buat baris Excel
+                const rows = siswaKelas.map((s, i) => {
+                    const data = map[s.id.toString()] || {};
+                    const row = { 'No': i+1, 'Nama Siswa': s.nama };
+                    let totalHadir = 0;
+                    tanggalList.forEach(t => {
+                        const d = new Date(t);
+                        const label = String(d.getDate()).padStart(2,'0');
+                        const st = data[t] || '';
+                        row[label] = st ? (statusLabel[st] || st) : '-';
+                        if (st === 'hadir') totalHadir++;
+                    });
+                    row['Total Hadir'] = totalHadir;
+                    row['% Hadir']     = tanggalList.length ? Math.round(totalHadir/tanggalList.length*100)+'%' : '-';
+                    return row;
+                });
+
+                // Download via XLSX (sudah ter-load di browser dari CDN — gunakan fetch + Blob)
+                // Kita buat Excel manual via CSV-like approach dengan XLSX yang ada di backend,
+                // atau lebih mudah: kirim data ke endpoint khusus via POST
+                // Solusi: gunakan endpoint download yang ada tapi dengan data yang sudah diproses
+                // → Lebih simpel: buat CSV dan download langsung dari frontend
+
+                // Buat TSV/CSV dari data
+                const allKeys = Object.keys(rows[0] || {});
+                const csvRows = [
+                    allKeys.join('\t'),
+                    ...rows.map(r => allKeys.map(k => r[k] ?? '').join('\t'))
+                ];
+
+                // Kirim ke server untuk dikonversi ke XLSX via endpoint khusus
+                // Atau download sebagai CSV saja (lebih reliable tanpa library frontend)
+                const csvContent = csvRows.join('\n');
+                const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                const safeKelas = kelas.replace(/[\s\/\\]/g, '_');
+                const periodeLabel = bulanVal ? new Date(bulanVal+'-01').toLocaleDateString('id-ID',{month:'long',year:'numeric'}).replace(' ','_') : tanggalVal || 'semua';
+                a.href     = url;
+                a.download = `rekap_pertanggal_${safeKelas}_${periodeLabel}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('✅ File CSV per tanggal berhasil diunduh (buka dengan Excel)');
+                return;
+            }
+
+            // ── MODE RINGKASAN: download dari backend ──
             let q = `kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`;
             if (periode === 'harian' && tanggalVal) {
                 const [y, m] = tanggalVal.split('-');
@@ -4244,31 +4327,25 @@
         function printRekap() {
             const kelas = document.getElementById('rekap-kelas').value;
             if (!kelas) return showToast('Pilih kelas terlebih dahulu', 'error');
-            const periode = document.getElementById('rekap-periode').value;
-            const bulanVal = document.getElementById('rekap-bulan').value;
-
-            // Ambil data dari tabel rekap yang sudah tampil
-            const tbody = document.getElementById('rekap-tbody');
-            if (!tbody || !tbody.querySelector('tr td')) return showToast('Tidak ada data untuk diprint', 'error');
-
-            // Ambil label periode
-            const bulanLabel = bulanVal
-                ? new Date(bulanVal+'-01').toLocaleDateString('id-ID',{month:'long',year:'numeric'})
-                : CONFIG.tahunAjaran;
-
-            // Ambil summary cards
-            const cards = document.getElementById('rekap-summary-cards');
-            const summaryText = cards ? cards.innerText.replace(/\n+/g,' | ') : '';
-
-            // Clone tabel untuk print
-            const tableClone = document.querySelector('#rekap-table').cloneNode(true);
-            // Hapus style inline yang tidak perlu
-            tableClone.style = '';
+            const periode    = document.getElementById('rekap-periode').value;
+            const bulanVal   = document.getElementById('rekap-bulan').value;
+            const tanggalVal = document.getElementById('rekap-tanggal').value;
+            const isDetail   = !document.getElementById('rekap-mode-detail').classList.contains('hidden');
 
             const mapel = CONFIG.kelasMapelMapping?.[kelas] ||
                 (Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel.join(', ') : '') || '-';
 
-            const printContent = `
+            // Label periode
+            let bulanLabel = '';
+            if (tanggalVal) {
+                bulanLabel = new Date(tanggalVal).toLocaleDateString('id-ID',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+            } else if (bulanVal) {
+                bulanLabel = new Date(bulanVal+'-01').toLocaleDateString('id-ID',{month:'long',year:'numeric'});
+            } else {
+                bulanLabel = CONFIG.tahunAjaran;
+            }
+
+            const headerInfo = `
                 <div style="font-family:Arial,sans-serif;font-size:10px;padding:0;margin:0">
                     <div style="text-align:center;margin-bottom:10px;border-bottom:2px solid #1d4ed8;padding-bottom:8px">
                         <h2 style="margin:0;font-size:14px;font-weight:bold;text-transform:uppercase">REKAP ABSENSI SISWA</h2>
@@ -4291,7 +4368,88 @@
                             <td style="padding:2px 0">Guru</td>
                             <td colspan="3" style="padding:2px 0">: <strong>${CONFIG.guru.nama||'-'}</strong></td>
                         </tr>
+                    </table>`;
+
+            let tableHTML = '';
+
+            // ── PRINT PER TANGGAL ──
+            if (isDetail) {
+                if (!rekapRawData.length) return showToast('Belum ada data absensi', 'error');
+
+                const filtered = filterByPeriode(rekapRawData, periode, bulanVal, tanggalVal);
+                if (!filtered.length) return showToast('Tidak ada data untuk periode ini', 'error');
+
+                const tanggalSet = new Set();
+                filtered.forEach(a => {
+                    const d = new Date(a.tanggal);
+                    tanggalSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+                });
+                const tanggalList = [...tanggalSet].sort();
+
+                const siswaKelas = dataSiswa.filter(s => s.kelas === kelas);
+                const map = {};
+                siswaKelas.forEach(s => { map[s.id.toString()] = { nama: s.nama }; });
+                filtered.forEach(a => {
+                    const sid = (a.siswa?.id || a.siswaRef?.id || a.siswaId || a.siswa || '').toString();
+                    if (map[sid]) {
+                        const d = new Date(a.tanggal);
+                        const tgl = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                        map[sid][tgl] = a.status;
+                    }
+                });
+
+                const statusLabel = { hadir:'H', sakit:'S', izin:'I', alpha:'A', dispensasi:'D', pulang_cepat:'P' };
+                const statusColor = { hadir:'#16a34a', sakit:'#d97706', izin:'#2563eb', alpha:'#dc2626', dispensasi:'#7c3aed', pulang_cepat:'#ea580c' };
+
+                const thDates = tanggalList.map(t => {
+                    const d = new Date(t);
+                    return `<th style="padding:4px 3px;border:1px solid #ddd;text-align:center;min-width:22px;font-size:9px">${String(d.getDate()).padStart(2,'0')}</th>`;
+                }).join('');
+
+                const bodyRows = siswaKelas.map((s, i) => {
+                    const data = map[s.id.toString()] || {};
+                    const cells = tanggalList.map(t => {
+                        const st = data[t];
+                        if (!st) return `<td style="padding:3px 2px;border:1px solid #ddd;text-align:center;color:#ccc;font-size:8px">-</td>`;
+                        return `<td style="padding:3px 2px;border:1px solid #ddd;text-align:center;color:${statusColor[st]||'#333'};font-weight:bold;font-size:9px">${statusLabel[st]||st}</td>`;
+                    }).join('');
+                    const totalH = tanggalList.filter(t => data[t] === 'hadir').length;
+                    const bg = i%2===0 ? '' : 'background:#f9fafb';
+                    return `<tr style="${bg}">
+                        <td style="padding:4px 5px;border:1px solid #ddd;text-align:center;font-size:9px">${i+1}</td>
+                        <td style="padding:4px 5px;border:1px solid #ddd;font-weight:600;font-size:9px;white-space:nowrap">${s.nama}</td>
+                        ${cells}
+                        <td style="padding:4px 5px;border:1px solid #ddd;text-align:center;font-weight:bold;font-size:9px;color:#16a34a">${totalH}</td>
+                    </tr>`;
+                }).join('');
+
+                tableHTML = `
+                    <p style="margin:0 0 6px;font-size:10px;color:#555">${bulanLabel} — ${tanggalList.length} hari absensi tercatat</p>
+                    <table style="width:100%;border-collapse:collapse;font-size:9px;margin-bottom:12px">
+                        <thead>
+                            <tr style="background:#1d4ed8;color:white">
+                                <th style="padding:5px 5px;border:1px solid #93c5fd;text-align:center;width:24px">No</th>
+                                <th style="padding:5px 5px;border:1px solid #93c5fd;text-align:left;white-space:nowrap">Nama Siswa</th>
+                                ${thDates}
+                                <th style="padding:5px 4px;border:1px solid #93c5fd;text-align:center;font-size:8px">∑H</th>
+                            </tr>
+                        </thead>
+                        <tbody>${bodyRows}</tbody>
                     </table>
+                    <div style="display:flex;gap:12px;font-size:9px;color:#555;margin-top:4px">
+                        <span><strong style="color:#16a34a">H</strong>=Hadir</span>
+                        <span><strong style="color:#d97706">S</strong>=Sakit</span>
+                        <span><strong style="color:#2563eb">I</strong>=Izin</span>
+                        <span><strong style="color:#dc2626">A</strong>=Alpha</span>
+                        <span><strong style="color:#7c3aed">D</strong>=Dispensasi</span>
+                        <span><strong style="color:#ea580c">P</strong>=Pulang Cepat</span>
+                    </div>`;
+            } else {
+                // ── PRINT RINGKASAN ──
+                const tbody = document.getElementById('rekap-tbody');
+                if (!tbody || !tbody.querySelector('tr td')) return showToast('Tidak ada data untuk diprint', 'error');
+
+                tableHTML = `
                     <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:12px">
                         <thead>
                             <tr style="background:#1d4ed8;color:white">
@@ -4315,19 +4473,25 @@
                                 </tr>`;
                             }).join('')}
                         </tbody>
-                    </table>
-                    <div style="margin-top:20px;display:flex;justify-content:flex-end">
-                        <div style="text-align:center;font-size:10px;min-width:180px">
-                            <p style="margin:0">............., ............. ${new Date().getFullYear()}</p>
-                            <p style="margin:3px 0">Guru Mata Pelajaran</p>
-                            <br/><br/><br/><br/><br/><br/><br/>
-                            <p style="margin:0 0 3px 0;font-weight:bold">${CONFIG.guru.nama||'_________________'}</p>
-                            <div style="border-top:2px solid #222;width:100%"></div>
-                        </div>
+                    </table>`;
+            }
+
+            // Tanda tangan
+            const ttd = `
+                <div style="margin-top:20px;display:flex;justify-content:flex-end">
+                    <div style="text-align:center;font-size:10px;min-width:180px">
+                        <p style="margin:0">............., ............. ${new Date().getFullYear()}</p>
+                        <p style="margin:3px 0">Guru Mata Pelajaran</p>
+                        <br/><br/><br/><br/><br/>
+                        <p style="margin:0 0 3px 0;font-weight:bold">${CONFIG.guru.nama||'_________________'}</p>
+                        <div style="border-top:2px solid #222;width:100%"></div>
                     </div>
                 </div>`;
 
-            const printWin = window.open('', '_blank', 'width=1000,height=700');
+            const printContent = headerInfo + tableHTML + ttd + '</div>';
+
+            const isLandscape = isDetail && (rekapRawData.length > 0);
+            const printWin = window.open('', '_blank', 'width=1100,height=700');
             printWin.document.write(`<!DOCTYPE html>
 <html><head>
 <meta charset="UTF-8">
@@ -4335,20 +4499,14 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:Arial,sans-serif; }
-  @page { size: A4 portrait; margin: 10mm; }
+  @page { size: A4 ${isLandscape ? 'landscape' : 'portrait'}; margin: 8mm; }
   @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
 </style>
 </head><body>${printContent}
-
-
-
 </body></html>`);
             printWin.document.close();
             printWin.focus();
-            setTimeout(() => {
-                printWin.print();
-                setTimeout(() => printWin.close(), 1000);
-            }, 500);
+            setTimeout(() => { printWin.print(); setTimeout(() => printWin.close(), 1000); }, 500);
         }
 
         // ── Helper: ambil mapel aktif berdasarkan kelas yang dipilih ────────────
