@@ -3164,7 +3164,7 @@
                 if (res.success) {
                     detailNilaiData = {};
                     res.data.forEach(n => {
-                        const sid = n.siswa.id;
+                        const sid = n.siswaRef?.id || n.siswaId;
                         detailNilaiData[sid] = detailNilaiData[sid] || {};
                         // Load detail dari uhDetail JSON
                         if (n.uhDetail) {
@@ -4663,7 +4663,7 @@
                 if (res.success) {
                     sikapData = {};
                     res.data.forEach(item => {
-                        const id = item.siswa.id || item.siswa;
+                        const id = item.siswaRef?.id || item.siswaId || item.siswa;
                         ['berdoa','toleransi','bersyukur','jujur','disiplin','tanggungJawab','santun','peduli','percayaDiri'].forEach(k => {
                             if (item[k]) sikapData[`${id}-${k}`] = item[k];
                         });
@@ -5150,7 +5150,10 @@
                 ]);
                 if (resNilai.success) {
                     nilaiData = {};
-                    resNilai.data.forEach(n => { nilaiData[n.siswa.id] = n; });
+                    resNilai.data.forEach(n => {
+                        const sid = n.siswaRef?.id || n.siswaId;
+                        if (sid) nilaiData[sid] = n;
+                    });
                 }
                 absensiRekap = {};
                 if (resAbsen.success && resAbsen.data) {
@@ -5164,7 +5167,7 @@
                 if (resSikap.success && resSikap.data) {
                     const aspekList = ['berdoa','toleransi','bersyukur','jujur','disiplin','tanggungJawab','santun','peduli','percayaDiri'];
                     resSikap.data.forEach(item => {
-                        const id = item.siswa.id || item.siswa;
+                        const id = item.siswaRef?.id || item.siswaId || item.siswa;
                         aspekList.forEach(k => { if (item[k]) sikapData[`${id}-${k}`] = item[k]; });
                     });
                 }

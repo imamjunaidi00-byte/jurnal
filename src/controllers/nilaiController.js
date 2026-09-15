@@ -79,9 +79,11 @@ exports.bulkSave = async (req, res) => {
     if (!Array.isArray(items) || !items.length) return fail(res, 'items wajib diisi.', 400);
 
     const rows = items.map(item => {
-      const row = { ...item, guruId: req.guru.id, guru: item.guru || req.guru.nama };
+      let row = { ...item, guruId: req.guru.id, guru: item.guru || req.guru.nama };
       // Normalisasi: frontend bisa kirim 'siswa' atau 'siswaId'
       if (row.siswa && !row.siswaId) { row.siswaId = row.siswa; delete row.siswa; }
+      // Hitung nilai akhir (bulkCreate tidak trigger Sequelize hook)
+      row = hitungNilaiRow(row);
       return row;
     });
 
@@ -94,7 +96,7 @@ exports.bulkSave = async (req, res) => {
 
     return ok(res, null, `${rows.length} nilai berhasil disimpan.`);
   } catch (err) {
-    console.error(err);
+    console.error('[bulkSave]', err);
     return fail(res, 'Gagal menyimpan nilai bulk.', 500);
   }
 };
