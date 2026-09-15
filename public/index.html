@@ -5487,16 +5487,26 @@
             }, 500);
         }
 
-        function downloadNilai() {
-            const kelas = document.getElementById('nilai-kelas').value;
-            triggerDownload(`/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`);
-        }
-
-        function exportNilaiExcel() {
+        async function downloadNilai() {
             const kelas = document.getElementById('nilai-kelas').value;
             if (!kelas) return showToast('Pilih kelas terlebih dahulu', 'error');
-            window.open(`/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`, '_blank');
-            showToast('✅ Download Excel nilai dimulai...');
+            const safeKelas = kelas.replace(/[\s\/\\]/g, '_');
+            showToast('⏳ Menyiapkan file Excel nilai...');
+            await downloadWithAuth(
+                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`,
+                `nilai_${safeKelas}_${CONFIG.semester}.xlsx`
+            );
+        }
+
+        async function exportNilaiExcel() {
+            const kelas = document.getElementById('nilai-kelas').value;
+            if (!kelas) return showToast('Pilih kelas terlebih dahulu', 'error');
+            const safeKelas = kelas.replace(/[\s\/\\]/g, '_');
+            showToast('⏳ Menyiapkan file Excel nilai...');
+            await downloadWithAuth(
+                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`,
+                `nilai_${safeKelas}_${CONFIG.semester}.xlsx`
+            );
         }
 
         // ── JADWAL ───────────────────────────────────
