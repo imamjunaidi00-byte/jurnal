@@ -218,27 +218,50 @@ exports.downloadRekap = async (req, res) => {
 };
 
 // POST /api/absensi/rekap/download-pertanggal
-// Body: { kelas, periode, bulanLabel, rows: [{No, 'Nama Siswa', '01':..., 'Total Hadir':..., '% Hadir':...}] }
+// Body: { kelas, bulanLabel, tanggalList: ['2026-09-01',...], rows: [{siswaId, nama, tgl1:status,...}] }
 exports.downloadPerTanggal = async (req, res) => {
   try {
-    const { kelas, bulanLabel, rows } = req.body;
+    const { kelas, bulanLabel, tanggalList, rows } = req.body;
     if (!Array.isArray(rows) || !rows.length)
       return fail(res, 'Tidak ada data untuk diexport.', 400);
+    if (!Array.isArray(tanggalList) || !tanggalList.length)
+      return fail(res, 'tanggalList wajib diisi.', 400);
 
     const XLSX = require('xlsx');
-    const wb   = XLSX.utils.book_new();
-    const ws   = XLSX.utils.json_to_sheet(rows);
 
-    // Beri lebar kolom: No kecil, Nama lebar, kolom tanggal sempit
-    const keys = Object.keys(rows[0] || {});
-    ws['!cols'] = keys.map(k => {
-      if (k === 'No')          return { wch: 4 };
-      if (k === 'Nama Siswa')  return { wch: 30 };
-      if (k === 'Total Hadir') return { wch: 10 };
-      if (k === '% Hadir')     return { wch: 8 };
-      return { wch: 5 }; // kolom tanggal
+    // Label tanggal: tampilkan DD/MM saja di header
+    const tglHeaders = tanggalList.map(t => {
+      const d = new Date(t);
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
     });
 
+    // Baris header
+    const header = ['No', 'Nama Siswa', ...tglHeaders, 'Total Hadir', '% Hadir'];
+
+    // Baris data — urutan dijamin pakai array
+    const dataRows = rows.map((r, i) => {
+      const tglCells = tanggalList.map(t => r[t] || '-');
+      return [i + 1, r.nama, ...tglCells, r.totalHadir, r.pctHadir];
+    });
+
+    // Gabungkan header + data sebagai AOA (array of arrays)
+    const aoa = [header, ...dataRows];
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Lebar kolom
+    ws['!cols'] = [
+      { wch: 4 },  // No
+      { wch: 30 }, // Nama Siswa
+      ...tanggalList.map(() => ({ wch: 6 })), // kolom tanggal
+      { wch: 11 }, // Total Hadir
+      { wch: 8 },  // % Hadir
+    ];
+
+    // Freeze baris pertama + 2 kolom pertama
+    ws['!freeze'] = { xSplit: 2, ySplit: 1 };
+
+    const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Per Tanggal');
 
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
