@@ -4281,28 +4281,39 @@
                 // Solusi: gunakan endpoint download yang ada tapi dengan data yang sudah diproses
                 // → Lebih simpel: buat CSV dan download langsung dari frontend
 
-                // Buat TSV/CSV dari data
-                const allKeys = Object.keys(rows[0] || {});
-                const csvRows = [
-                    allKeys.join('\t'),
-                    ...rows.map(r => allKeys.map(k => r[k] ?? '').join('\t'))
-                ];
-
-                // Kirim ke server untuk dikonversi ke XLSX via endpoint khusus
-                // Atau download sebagai CSV saja (lebih reliable tanpa library frontend)
-                const csvContent = csvRows.join('\n');
-                const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
-                const url  = URL.createObjectURL(blob);
-                const a    = document.createElement('a');
+                // Kirim data ke backend untuk dikonversi ke XLSX
+                const bulanLabelStr = bulanVal
+                    ? new Date(bulanVal+'-01').toLocaleDateString('id-ID',{month:'long',year:'numeric'})
+                    : tanggalVal || 'semua';
                 const safeKelas = kelas.replace(/[\s\/\\]/g, '_');
-                const periodeLabel = bulanVal ? new Date(bulanVal+'-01').toLocaleDateString('id-ID',{month:'long',year:'numeric'}).replace(' ','_') : tanggalVal || 'semua';
-                a.href     = url;
-                a.download = `rekap_pertanggal_${safeKelas}_${periodeLabel}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showToast('✅ File CSV per tanggal berhasil diunduh (buka dengan Excel)');
+
+                showToast('⏳ Menyiapkan file Excel per tanggal...');
+                try {
+                    const resp = await fetch('/api/absensi/rekap/download-pertanggal', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + getToken()
+                        },
+                        body: JSON.stringify({ kelas, bulanLabel: bulanLabelStr, rows })
+                    });
+                    if (!resp.ok) {
+                        const err = await resp.json().catch(() => ({}));
+                        return showToast(err.message || `Gagal download (${resp.status})`, 'error');
+                    }
+                    const blob     = await resp.blob();
+                    const blobUrl  = URL.createObjectURL(blob);
+                    const a        = document.createElement('a');
+                    a.href         = blobUrl;
+                    a.download     = `rekap_pertanggal_${safeKelas}_${bulanLabelStr.replace(/[\s\/\\:]/g,'_')}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(blobUrl);
+                    showToast('✅ File Excel per tanggal berhasil diunduh');
+                } catch(e) {
+                    showToast('Gagal terhubung ke server', 'error');
+                }
                 return;
             }
 

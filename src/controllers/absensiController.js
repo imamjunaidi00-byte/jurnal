@@ -217,6 +217,45 @@ exports.downloadRekap = async (req, res) => {
   }
 };
 
+// POST /api/absensi/rekap/download-pertanggal
+// Body: { kelas, periode, bulanLabel, rows: [{No, 'Nama Siswa', '01':..., 'Total Hadir':..., '% Hadir':...}] }
+exports.downloadPerTanggal = async (req, res) => {
+  try {
+    const { kelas, bulanLabel, rows } = req.body;
+    if (!Array.isArray(rows) || !rows.length)
+      return fail(res, 'Tidak ada data untuk diexport.', 400);
+
+    const XLSX = require('xlsx');
+    const wb   = XLSX.utils.book_new();
+    const ws   = XLSX.utils.json_to_sheet(rows);
+
+    // Beri lebar kolom: No kecil, Nama lebar, kolom tanggal sempit
+    const keys = Object.keys(rows[0] || {});
+    ws['!cols'] = keys.map(k => {
+      if (k === 'No')          return { wch: 4 };
+      if (k === 'Nama Siswa')  return { wch: 30 };
+      if (k === 'Total Hadir') return { wch: 10 };
+      if (k === '% Hadir')     return { wch: 8 };
+      return { wch: 5 }; // kolom tanggal
+    });
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Per Tanggal');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const safeKelas = (kelas || 'kelas').replace(/[\s\/\\]/g, '_');
+    const safeLabel = (bulanLabel || 'rekap').replace(/[\s\/\\:]/g, '_');
+
+    res.setHeader('Content-Disposition',
+      `attachment; filename="rekap_pertanggal_${safeKelas}_${safeLabel}.xlsx"`);
+    res.setHeader('Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    return res.send(buffer);
+  } catch (err) {
+    console.error('[downloadPerTanggal]', err.message);
+    return fail(res, 'Gagal membuat file Excel per tanggal.', 500);
+  }
+};
+
 exports.update = async (req, res) => {
   try {
     const abs = await Absensi.findOne({ where: { id: req.params.id, guruId: req.guru.id } });
