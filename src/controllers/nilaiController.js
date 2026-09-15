@@ -163,7 +163,7 @@ exports.downloadTemplate = async (req, res) => {
 
     // Ambil daftar siswa kelas ini
     const siswaList = await Siswa.findAll({
-      where: { kelas, aktif: true },
+      where: { kelas, status: 'Aktif' },
       order: [['nama', 'ASC']],
       attributes: ['id', 'nama', 'nisn'],
     });
