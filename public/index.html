@@ -6286,8 +6286,16 @@
             const hariIndo = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
             const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-            document.getElementById('jurnal-tanggal').value = data ? new Date(data.tanggal).toISOString().split('T')[0] : todayStr;
-            document.getElementById('jurnal-hari').value = data ? data.hari : hariIndo[today.getDay()];
+            // Guard: pastikan tanggal valid sebelum set ke input
+            let tanggalVal = todayStr;
+            if (data?.tanggal) {
+                const tgl = new Date(data.tanggal);
+                if (!isNaN(tgl.getTime())) {
+                    tanggalVal = tgl.toISOString().split('T')[0];
+                }
+            }
+            document.getElementById('jurnal-tanggal').value = tanggalVal;
+            document.getElementById('jurnal-hari').value = data?.hari || hariIndo[new Date(tanggalVal).getDay()];
             document.getElementById('jurnal-jam-mulai').value = data?.jamMulai || '';
             document.getElementById('jurnal-jam-selesai').value = data?.jamSelesai || '';
             document.getElementById('jurnal-mapel').value = data?.mataPelajaran || mapelList[0] || '';
@@ -6332,21 +6340,26 @@
             const infoEl  = document.getElementById('jurnal-absensi-info');
             const infoText = document.getElementById('jurnal-absensi-info-text');
             if (!tanggal || !kelas) return;
+
+            // Validasi format tanggal sebelum request
+            const tglObj = new Date(tanggal);
+            if (isNaN(tglObj.getTime())) return;
+
             try {
                 const res = await api.get(`/api/absensi/summary?kelas=${encodeURIComponent(kelas)}&tanggal=${tanggal}`);
                 if (res.success && res.data) {
                     const d = res.data;
-                    document.getElementById('jurnal-total-siswa').value = d.totalSiswa;
-                    document.getElementById('jurnal-hadir').value  = d.hadir;
-                    document.getElementById('jurnal-sakit').value  = d.sakit;
-                    document.getElementById('jurnal-izin').value   = d.izin;
-                    document.getElementById('jurnal-alpha').value  = d.alpha;
-                    document.getElementById('jurnal-dispensasi').value    = d.dispensasi || 0;
-                    document.getElementById('jurnal-pulang-cepat').value  = d.pulang_cepat || 0;
+                    document.getElementById('jurnal-total-siswa').value  = d.totalSiswa  || 0;
+                    document.getElementById('jurnal-hadir').value        = d.hadir        || 0;
+                    document.getElementById('jurnal-sakit').value        = d.sakit        || 0;
+                    document.getElementById('jurnal-izin').value         = d.izin         || 0;
+                    document.getElementById('jurnal-alpha').value        = d.alpha        || 0;
+                    document.getElementById('jurnal-dispensasi').value   = d.dispensasi   || 0;
+                    document.getElementById('jurnal-pulang-cepat').value = d.pulang_cepat || 0;
                     infoEl.classList.remove('hidden');
                     if (d.adaData) {
                         infoEl.className = 'text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2 mb-3 flex items-center gap-1';
-                        infoText.textContent = `Data absensi ditemukan: ${d.hadir} hadir, ${d.sakit} sakit, ${d.izin} izin, ${d.alpha} alpha${(d.dispensasi||0)>0 ? ', '+(d.dispensasi)+' dispensasi' : ''}${(d.pulang_cepat||0)>0 ? ', '+(d.pulang_cepat)+' pulang cepat' : ''} dari ${d.totalSiswa} siswa.`;
+                        infoText.textContent = `Data absensi ditemukan: ${d.hadir} hadir, ${d.sakit} sakit, ${d.izin} izin, ${d.alpha} alpha${(d.dispensasi||0)>0?', '+d.dispensasi+' dispensasi':''}${(d.pulang_cepat||0)>0?', '+d.pulang_cepat+' pulang cepat':''} dari ${d.totalSiswa} siswa.`;
                     } else {
                         infoEl.className = 'text-xs text-yellow-700 bg-yellow-50 rounded-lg px-3 py-2 mb-3 flex items-center gap-1';
                         infoText.textContent = `Belum ada data absensi untuk ${kelas} pada tanggal ini. Total siswa: ${d.totalSiswa}. Isi manual jika perlu.`;

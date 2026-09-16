@@ -121,9 +121,41 @@ exports.summary = async (req, res) => {
       where: { guruId: req.guru.id, kelas, tanggal },
       attributes: ['status', [fn('COUNT', col('id')), 'jumlah']],
       group: ['status'],
+      raw: true,
     });
-    return ok(res, counts);
+
+    // Flatten ke object { hadir, sakit, izin, alpha, dispensasi, pulang_cepat, totalSiswa, adaData }
+    const result = { hadir:0, sakit:0, izin:0, alpha:0, dispensasi:0, pulang_cepat:0 };
+    counts.forEach(c => { result[c.status] = parseInt(c.jumlah) || 0; });
+    result.totalSiswa = Object.values(result).reduce((a, b) => a + b, 0);
+    result.adaData    = result.totalSiswa > 0;
+
+    // Jika tidak ada data absensi di tabel Absensi, coba dari AbsensiHarian
+    if (!result.adaData) {
+      const { AbsensiHarian } = require('../models/index');
+      const harian = await AbsensiHarian.findAll({
+        where: { guruId: req.guru.id, kelas, tanggal },
+        attributes: ['status', [fn('COUNT', col('id')), 'jumlah']],
+        group: ['status'],
+        raw: true,
+      });
+      if (harian.length) {
+        harian.forEach(c => { result[c.status] = parseInt(c.jumlah) || 0; });
+        result.totalSiswa = Object.values({ hadir:result.hadir, sakit:result.sakit, izin:result.izin, alpha:result.alpha, dispensasi:result.dispensasi, pulang_cepat:result.pulang_cepat }).reduce((a,b) => a+b, 0);
+        result.adaData = result.totalSiswa > 0;
+      }
+    }
+
+    // Ambil total siswa aktif di kelas ini sebagai fallback jika belum ada absensi
+    if (!result.adaData) {
+      const { Siswa } = require('../models/index');
+      const totalSiswa = await Siswa.count({ where: { kelas, status: 'Aktif' } });
+      result.totalSiswa = totalSiswa;
+    }
+
+    return ok(res, result);
   } catch (err) {
+    console.error('[summary]', err.message);
     return fail(res, 'Gagal mengambil summary absensi.', 500);
   }
 };
