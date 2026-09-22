@@ -24,10 +24,10 @@
 | 👥 Manajemen Guru | Akun guru dari SDMS (username = NIP, password = NIP) |
 | 🎓 Master Siswa | 1205+ siswa dari sinkronisasi SDMS |
 | 🏫 Master Kelas | Kelola kelas global oleh admin |
-| 📋 Absensi | Per mata pelajaran & absensi harian kelas |
-| 📊 Nilai | Input nilai dengan hitung otomatis (NA, Predikat) |
+| 📋 Absensi | Per mata pelajaran & absensi harian kelas, rekap per tanggal, export Excel & print |
+| 📊 Nilai | Input nilai dengan hitung otomatis (NA, Predikat), import Excel, export Excel |
 | 😊 Sikap | Penilaian sikap spiritual & sosial |
-| 📓 Jurnal Mengajar | Log harian kegiatan pembelajaran |
+| 📓 Jurnal Mengajar | Log harian kegiatan pembelajaran + ambil data absensi otomatis |
 | 🗓️ Jadwal | Jadwal pelajaran per guru |
 | 🗺️ Mind Map | Materi pembelajaran visual |
 | 🔄 Sinkronisasi SDMS | Tarik data guru/siswa/kelas dari SDMS otomatis |
@@ -401,7 +401,12 @@ Login dengan akun pengabsen yang dibuat oleh wali kelas.
 |--------|------------|
 | `/api/absensi` | Absensi per mata pelajaran |
 | `/api/absensi/rekap-gabungan` | Rekap gabungan AbsensiHarian + Absensi mapel |
+| `/api/absensi/rekap/download` | Download rekap absensi ringkasan (.xlsx) — filter bulan/tahun |
+| `/api/absensi/rekap/download-pertanggal` | Download rekap per tanggal (.xlsx) — POST dengan data baris |
 | `/api/nilai` | Input & rekap nilai |
+| `/api/nilai/template` | Download template Excel untuk import nilai |
+| `/api/nilai/import` | Import nilai dari file Excel (multipart) |
+| `/api/nilai/download` | Export nilai ke Excel |
 | `/api/sikap` | Penilaian sikap |
 | `/api/jurnal` | Jurnal mengajar |
 | `/api/jadwal` | Jadwal pelajaran |
@@ -450,11 +455,30 @@ bash update.sh
 ### Backup database
 
 ```bash
-# Backup
-mysqldump -u ejournal_user -p ejournal_smk > backup_$(date +%Y%m%d_%H%M%S).sql
+# Backup manual (sudah fix constraint duplikat)
+mariadb-dump --no-tablespaces --single-transaction \
+  -u ejournal_user -p'PASSWORD' ejournal_smk \
+  | sed 's/CONSTRAINT `[0-9]*` FOREIGN KEY/FOREIGN KEY/g' \
+  | gzip > /var/backups/ejournal/backup_$(date +%Y%m%d_%H%M%S).sql.gz
 
 # Restore
-mysql -u ejournal_user -p ejournal_smk < backup_20260901_120000.sql
+gunzip < backup_file.sql.gz | mariadb -u ejournal_user -p'PASSWORD' ejournal_smk
+```
+
+### Backup otomatis ke Google Drive
+
+Script backup otomatis tersedia di `/usr/local/bin/backup-ejournal.sh`.
+Berjalan setiap hari jam **01.00 WIB** via cron, upload ke Google Drive (1 file — selalu ditimpa).
+
+```bash
+# Jalankan backup manual
+/usr/local/bin/backup-ejournal.sh
+
+# Cek log backup
+cat /var/log/backup-ejournal.log
+
+# Cek file di Google Drive
+rclone ls gdrive:backup-ejournal-smk
 ```
 
 ### Reset database (hati-hati — hapus semua data!)
@@ -559,6 +583,13 @@ node src/database/migrate.js
 - ✅ Portal siswa: login NISN + password, ganti password
 - ✅ Profil guru tersimpan ke database (persisten)
 - ✅ Rekap absensi gabungan (AbsensiHarian + Absensi mapel)
+- ✅ Rekap absensi per tanggal — export Excel (.xlsx) & print landscape A4
+- ✅ Import nilai dari Excel — template download, parsing, bulk upsert
+- ✅ Export nilai Excel dengan token auth (fix: tidak lagi 401)
+- ✅ Download rekap absensi fix — filter bulan/tahun, CASE WHEN, GROUP BY benar
+- ✅ Simpan nilai fix — nilaiData key pakai siswaRef.id, bulkSave hitung NA otomatis
+- ✅ Jurnal mengajar — ambil presensi otomatis dari absensi (fix format response summary)
+- ✅ Backup otomatis ke Google Drive via rclone (fix constraint duplikat MariaDB)
 - ✅ Script instalasi Ubuntu 24 LTS
 - ✅ PM2 ecosystem config
 - ✅ Security: helmet, rate limiting, JWT token cache
