@@ -481,6 +481,99 @@ cat /var/log/backup-ejournal.log
 rclone ls gdrive:backup-ejournal-smk
 ```
 
+---
+
+### Restore database dari backup
+
+**Langkah lengkap restore di server baru:**
+
+**1. Pastikan database kosong atau buat ulang:**
+```bash
+mariadb -u root -p
+```
+```sql
+DROP DATABASE ejournal_smk;
+CREATE DATABASE ejournal_smk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+EXIT;
+```
+
+**2. Download backup dari Google Drive ke server:**
+```bash
+rclone copy gdrive:backup-ejournal-smk/backup_ejournal_smk.sql.gz /tmp/
+```
+
+**3. Restore database:**
+```bash
+gunzip < /tmp/backup_ejournal_smk.sql.gz | mariadb -u ejournal_user -p'PASSWORD' ejournal_smk
+```
+
+**4. Verifikasi data masuk:**
+```bash
+mariadb -u ejournal_user -p'PASSWORD' ejournal_smk -e "
+  SELECT COUNT(*) as guru FROM gurus;
+  SELECT COUNT(*) as siswa FROM siswas;
+  SELECT COUNT(*) as jurnal FROM jurnals;
+  SELECT COUNT(*) as absensi FROM absensis;
+"
+```
+
+**5. Restart aplikasi:**
+```bash
+pm2 restart ejournal-smk
+```
+
+---
+
+### Ganti akun Google Drive untuk backup
+
+Jika ingin mengganti ke akun Google Drive lain:
+
+**1. Hapus konfigurasi lama:**
+```bash
+rclone config delete gdrive
+```
+
+**2. Buat konfigurasi baru:**
+```bash
+rclone config
+```
+Ikuti langkah:
+```
+n → New remote
+name: gdrive
+Storage: drive
+client_id: (kosong, Enter)
+client_secret: (kosong, Enter)
+scope: 1
+root_folder_id: (kosong, Enter)
+service_account_file: (kosong, Enter)
+Edit advanced config: n
+Use auto config: n
+```
+
+**3. Di komputer/laptop Windows — jalankan perintah authorize yang muncul:**
+```powershell
+cd C:\rclone
+.\rclone.exe authorize "drive" "TOKEN_YANG_MUNCUL_DI_SERVER"
+```
+Login dengan akun Google baru, copy token yang muncul, paste ke server.
+
+**4. Selesai — test koneksi:**
+```bash
+rclone lsd gdrive:
+```
+
+**5. Buat folder backup di akun baru:**
+```bash
+rclone mkdir gdrive:backup-ejournal-smk
+```
+
+**6. Test upload:**
+```bash
+/usr/local/bin/backup-ejournal.sh
+rclone ls gdrive:backup-ejournal-smk
+```
+
 ### Reset database (hati-hati — hapus semua data!)
 
 ```bash
