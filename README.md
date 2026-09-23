@@ -526,53 +526,133 @@ pm2 restart ejournal-smk
 
 ### Ganti akun Google Drive untuk backup
 
-Jika ingin mengganti ke akun Google Drive lain:
+Jika ingin mengganti ke akun Google Drive lain, ikuti langkah berikut **secara berurutan**:
 
-**1. Hapus konfigurasi lama:**
+---
+
+**LANGKAH 1 — Di terminal SSH server: hapus konfigurasi lama**
 ```bash
 rclone config delete gdrive
 ```
 
-**2. Buat konfigurasi baru:**
+---
+
+**LANGKAH 2 — Di terminal SSH server: mulai konfigurasi baru**
 ```bash
 rclone config
 ```
-Ikuti langkah:
+
+Ikuti prompt satu per satu:
 ```
-n → New remote
-name: gdrive
-Storage: drive
-client_id: (kosong, Enter)
-client_secret: (kosong, Enter)
-scope: 1
-root_folder_id: (kosong, Enter)
-service_account_file: (kosong, Enter)
-Edit advanced config: n
-Use auto config: n
+e/n/d/r/c/s/q> n
+```
+```
+name> gdrive
+```
+```
+Storage> drive
+```
+```
+Continue using shared client_id? y/n> y
+```
+```
+client_id> (kosong, langsung Enter)
+```
+```
+client_secret> (kosong, langsung Enter)
+```
+```
+scope> 1
+```
+```
+root_folder_id> (kosong, langsung Enter)
+```
+```
+service_account_file> (kosong, langsung Enter)
+```
+```
+Edit advanced config? y/n> n
+```
+```
+Use auto config? y/n> n
 ```
 
-**3. Di komputer/laptop Windows — jalankan perintah authorize yang muncul:**
+Akan muncul perintah seperti ini — **copy token-nya** (`eyJ...`):
+```
+Execute the following on the machine with the web browser:
+    rclone authorize "drive" "eyJzY29wZSI6ImRyaXZlIn0"
+Then paste the result.
+config_token>
+```
+
+---
+
+**LANGKAH 3 — Di PowerShell komputer Windows: jalankan authorize**
+
+Buka PowerShell di komputer, masuk ke folder rclone:
 ```powershell
 cd C:\rclone
-.\rclone.exe authorize "drive" "TOKEN_YANG_MUNCUL_DI_SERVER"
+.\rclone.exe authorize "drive" "eyJzY29wZSI6ImRyaXZlIn0"
 ```
-Login dengan akun Google baru, copy token yang muncul, paste ke server.
+> Ganti `eyJzY29wZSI6ImRyaXZlIn0` dengan token asli yang muncul di server
 
-**4. Selesai — test koneksi:**
+Browser otomatis terbuka → login dengan **akun Google yang diinginkan** → klik **Allow/Izinkan**
+
+Di PowerShell akan muncul token panjang:
+```
+Paste the following into your remote machine --->
+eyJjbGllbnRfaWQiOiIiLCJjb....(panjang)....
+<---End paste
+```
+
+**Copy seluruh teks** antara `Paste the following` dan `End paste`
+
+---
+
+**LANGKAH 4 — Di terminal SSH server: paste token**
+
+Kembali ke terminal SSH, paste token di:
+```
+config_token> PASTE_TOKEN_DISINI
+```
+Lalu Enter.
+
+Jawab pertanyaan berikutnya:
+```
+Configure as Shared Drive? y/n> n
+```
+```
+Keep this remote? y/e/d> y
+```
+```
+e/n/d/r/c/s/q> q
+```
+
+---
+
+**LANGKAH 5 — Di terminal SSH server: test koneksi**
 ```bash
 rclone lsd gdrive:
 ```
+Harus muncul daftar folder Google Drive akun baru.
 
-**5. Buat folder backup di akun baru:**
+---
+
+**LANGKAH 6 — Di terminal SSH server: buat folder backup**
 ```bash
 rclone mkdir gdrive:backup-ejournal-smk
 ```
 
-**6. Test upload:**
+---
+
+**LANGKAH 7 — Di terminal SSH server: test backup upload**
 ```bash
 /usr/local/bin/backup-ejournal.sh
+```
+```bash
 rclone ls gdrive:backup-ejournal-smk
 ```
+Harus muncul file `backup_ejournal_smk.sql.gz` di Google Drive akun baru.
 
 ### Reset database (hati-hati — hapus semua data!)
 
