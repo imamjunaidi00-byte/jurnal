@@ -483,6 +483,135 @@ rclone ls gdrive:backup-ejournal-smk
 
 ---
 
+### Setup backup otomatis (jika belum ada / server baru)
+
+**LANGKAH 1 — Di terminal SSH server: buat script backup**
+```bash
+nano /usr/local/bin/backup-ejournal.sh
+```
+
+Isi dengan:
+```bash
+#!/bin/bash
+
+DB_USER="ejournal_user"
+DB_PASS="yC0YfgGgA5gPvJiIcLFAp5Y8dJuT58+I"
+DB_NAME="ejournal_smk"
+BACKUP_DIR="/var/backups/ejournal"
+GDRIVE_FOLDER="gdrive:backup-ejournal-smk"
+
+# Nama file TETAP agar selalu menimpa file lama di Google Drive
+FILE_BACKUP="${BACKUP_DIR}/backup_ejournal_smk.sql.gz"
+
+mkdir -p $BACKUP_DIR
+
+mariadb-dump --no-tablespaces --single-transaction \
+  -u $DB_USER -p"$DB_PASS" $DB_NAME \
+  | sed 's/CONSTRAINT `[0-9]*` FOREIGN KEY/FOREIGN KEY/g' \
+  | gzip > $FILE_BACKUP
+
+if [ $? -eq 0 ]; then
+    echo "[$(date)] Backup berhasil: $FILE_BACKUP"
+    rclone copyto $FILE_BACKUP $GDRIVE_FOLDER/backup_ejournal_smk.sql.gz
+    if [ $? -eq 0 ]; then
+        echo "[$(date)] Upload Google Drive berhasil"
+    else
+        echo "[$(date)] Upload Google Drive GAGAL"
+    fi
+else
+    echo "[$(date)] Backup GAGAL"
+fi
+```
+
+Simpan: `Ctrl+X` → `Y` → `Enter`
+
+---
+
+**LANGKAH 2 — Di terminal SSH server: beri izin eksekusi**
+```bash
+chmod +x /usr/local/bin/backup-ejournal.sh
+```
+
+---
+
+**LANGKAH 3 — Di terminal SSH server: pastikan timezone sudah WIB**
+```bash
+timedatectl set-timezone Asia/Jakarta
+timedatectl
+```
+Harus muncul `Time zone: Asia/Jakarta (WIB, +0700)`
+
+---
+
+**LANGKAH 4 — Di terminal SSH server: test jalankan script**
+```bash
+/usr/local/bin/backup-ejournal.sh
+```
+
+Output yang benar:
+```
+[Mon Sep 22 01:00:00 WIB 2026] Backup berhasil: /var/backups/ejournal/backup_ejournal_smk.sql.gz
+[Mon Sep 22 01:00:20 WIB 2026] Upload Google Drive berhasil
+```
+
+---
+
+**LANGKAH 5 — Di terminal SSH server: set jadwal otomatis via cron**
+```bash
+crontab -e
+```
+Pilih `1` (nano) jika ditanya editor.
+
+Tambahkan baris ini di paling bawah:
+```
+0 1 * * * /usr/local/bin/backup-ejournal.sh >> /var/log/backup-ejournal.log 2>&1
+```
+
+> `0 1 * * *` artinya: setiap hari jam **01.00 WIB** (karena timezone server sudah diset ke WIB)
+
+Simpan: `Ctrl+X` → `Y` → `Enter`
+
+---
+
+**LANGKAH 6 — Di terminal SSH server: verifikasi cron terdaftar**
+```bash
+crontab -l
+```
+
+Harus muncul:
+```
+0 1 * * * /usr/local/bin/backup-ejournal.sh >> /var/log/backup-ejournal.log 2>&1
+```
+
+---
+
+**LANGKAH 7 — Di terminal SSH server: cek file di Google Drive**
+```bash
+rclone ls gdrive:backup-ejournal-smk
+```
+
+Harus muncul:
+```
+53996 backup_ejournal_smk.sql.gz
+```
+
+---
+
+**Ubah jadwal backup** (jika ingin ganti waktu):
+```bash
+crontab -e
+```
+
+Contoh jadwal lain:
+| Waktu | Cron |
+|-------|------|
+| Jam 01.00 WIB | `0 1 * * *` |
+| Jam 02.00 WIB | `0 2 * * *` |
+| Jam 00.00 WIB (tengah malam) | `0 0 * * *` |
+| Jam 23.00 WIB | `0 23 * * *` |
+
+---
+
 ### Restore database dari backup
 
 **Langkah lengkap restore di server baru:**
