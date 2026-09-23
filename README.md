@@ -485,6 +485,165 @@ rclone ls gdrive:backup-ejournal-smk
 
 ### Setup backup otomatis (jika belum ada / server baru)
 
+> Prasyarat: rclone sudah terinstall dan terhubung ke Google Drive.
+> Jika belum, ikuti **panduan install rclone** di bawah ini terlebih dahulu.
+
+---
+
+### Install dan setup rclone (wajib sebelum backup ke Google Drive)
+
+> **Keterangan:** Semua perintah `Di terminal SSH server` dijalankan di terminal SSH server.
+> Perintah `Di PowerShell komputer` dijalankan di PowerShell Windows komputer/laptop Anda.
+
+---
+
+**LANGKAH 1 — Di terminal SSH server: install rclone**
+```bash
+curl https://rclone.org/install.sh | bash
+```
+
+Verifikasi berhasil:
+```bash
+rclone version
+```
+
+---
+
+**LANGKAH 2 — Di terminal SSH server: mulai konfigurasi Google Drive**
+```bash
+rclone config
+```
+
+Jawab prompt satu per satu:
+```
+e/n/d/r/c/s/q> n
+```
+```
+name> gdrive
+```
+```
+Storage> drive
+```
+```
+Continue using shared client_id? y/n> y
+```
+```
+client_id> (kosong, langsung Enter)
+```
+```
+client_secret> (kosong, langsung Enter)
+```
+```
+scope> 1
+```
+```
+root_folder_id> (kosong, langsung Enter)
+```
+```
+service_account_file> (kosong, langsung Enter)
+```
+```
+Edit advanced config? y/n> n
+```
+```
+Use auto config? y/n> n
+```
+
+Akan muncul perintah seperti ini di layar:
+```
+Execute the following on the machine with the web browser:
+    rclone authorize "drive" "eyJzY29wZSI6ImRyaXZlIn0"
+Then paste the result.
+config_token>
+```
+
+**Jangan Enter dulu — biarkan terminal server menunggu**
+
+---
+
+**LANGKAH 3 — Di komputer Windows: install rclone**
+
+1. Buka browser, download rclone di: **https://rclone.org/downloads/**
+2. Pilih **Windows - amd64** → download file `.zip`
+3. Extract ke folder `C:\rclone`
+4. Buka PowerShell, masuk ke folder rclone:
+```powershell
+cd C:\rclone
+```
+
+---
+
+**LANGKAH 4 — Di PowerShell komputer: jalankan authorize**
+
+Copy perintah `rclone authorize` yang muncul di server (token `eyJ...`), jalankan di PowerShell:
+```powershell
+.\rclone.exe authorize "drive" "eyJzY29wZSI6ImRyaXZlIn0"
+```
+> Ganti `eyJzY29wZSI6ImRyaXZlIn0` dengan token asli dari server
+
+Browser otomatis terbuka → login dengan **akun Google yang diinginkan** → klik **Allow/Izinkan**
+
+Di PowerShell akan muncul token panjang:
+```
+Paste the following into your remote machine --->
+eyJjbGllbnRfaWQiOiIiLCJjb....(panjang)....
+<---End paste
+```
+
+**Copy seluruh teks** antara `Paste the following` dan `End paste`
+
+---
+
+**LANGKAH 5 — Di terminal SSH server: paste token**
+
+Kembali ke terminal SSH server, paste token di:
+```
+config_token> PASTE_TOKEN_DISINI
+```
+Lalu Enter.
+
+Jawab pertanyaan berikutnya:
+```
+Configure as Shared Drive? y/n> n
+```
+```
+Keep this remote? y/e/d> y
+```
+```
+e/n/d/r/c/s/q> q
+```
+
+---
+
+**LANGKAH 6 — Di terminal SSH server: test koneksi**
+```bash
+rclone lsd gdrive:
+```
+
+Harus muncul daftar folder Google Drive Anda, contoh:
+```
+0 2024-12-23 02:28:51  -1 Dokumen
+0 2024-12-23 02:29:16  -1 Foto
+```
+
+---
+
+**LANGKAH 7 — Di terminal SSH server: buat folder backup**
+```bash
+rclone mkdir gdrive:backup-ejournal-smk
+```
+
+Verifikasi folder terbuat:
+```bash
+rclone lsd gdrive:
+```
+
+Harus muncul folder `backup-ejournal-smk` dalam daftar.
+
+---
+
+Setelah rclone berhasil terhubung, lanjut ke **Setup backup otomatis** di bawah.
+
 **LANGKAH 1 — Di terminal SSH server: buat script backup**
 ```bash
 nano /usr/local/bin/backup-ejournal.sh
