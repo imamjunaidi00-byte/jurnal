@@ -87,11 +87,22 @@ exports.bulkSave = async (req, res) => {
       return row;
     });
 
-    // upsert menggunakan updateOnDuplicate
-    const fields = ['uh','pts','pas','praktek','proyek','portofolio',
-                    'naPengetahuan','naKeterampilan','naAkhir','predikat',
-                    'deskripsi','uhDetail','praktekGrade','proyekGrade',
-                    'portofolioGrade','tampilkan','guru','updatedAt'];
+    // Upsert — hanya update field yang MEMANG dikirim item.
+    // Penting: uhDetail & tampilkan tidak boleh ditimpa kalau item tidak membawanya
+    // (mis. simpanNilai/publishSemuaNilai dari tab Kelola Nilai), agar detail nilai
+    // dari tab Input Detail tidak hilang.
+    const baseFields = ['uh','pts','pas','praktek','proyek','portofolio',
+                        'naPengetahuan','naKeterampilan','naAkhir','predikat'];
+    const optionalFields = ['deskripsi','uhDetail','praktekGrade','proyekGrade',
+                            'portofolioGrade','tampilkan','guru'];
+    const sentFields = new Set(
+      items.flatMap(it => Object.keys(it || {}))
+    );
+    const fields = [
+      ...baseFields,
+      ...optionalFields.filter(f => sentFields.has(f)),
+      'updatedAt',
+    ];
     await Nilai.bulkCreate(rows, { updateOnDuplicate: fields });
 
     return ok(res, null, `${rows.length} nilai berhasil disimpan.`);

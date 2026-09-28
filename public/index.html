@@ -3084,7 +3084,7 @@
         const GRADE_MAP = {'A+':100,'A':95,'A-':90,'B+':85,'B':80,'B-':75,'C+':70,'C':65,'C-':60,'D+':55,'D':50,'D-':45};
         const GRADES = ['A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-'];
 
-        // Daftar kolom per tipe
+        // Daftar kolom per tipe — di-restore dari config server / data tersimpan saat load
         let kolomList = { uh: ['UH 1'], praktek: ['Praktek 1'], proyek: ['Proyek 1'], portofolio: ['Porto 1'] };
         let detailNilaiData = {};
 
@@ -3110,16 +3110,37 @@
             const cfg = KOLOM_CONFIG[tipe];
             const n = kolomList[tipe].length + 1;
             kolomList[tipe].push(`${cfg.prefix} ${n}`);
+            simpanKolomKeServer();
             renderKolomList(tipe);
             renderDetailNilaiTable(document.getElementById('detail-kelas').value);
         }
 
         function hapusKolom(tipe, idx) {
             if (kolomList[tipe].length <= 1) return showToast(`Minimal 1 ${KOLOM_CONFIG[tipe].label}`, 'error');
+            const removed = kolomList[tipe][idx];
             kolomList[tipe].splice(idx, 1);
             kolomList[tipe] = kolomList[tipe].map((_, i) => `${KOLOM_CONFIG[tipe].prefix} ${i+1}`);
+            // Bersihkan data kolom terhapus & remap nilai ke nama kolom baru agar tidak muncul sebagai "kolom hantu"
+            Object.keys(detailNilaiData).forEach(sid => {
+                const d = detailNilaiData[sid];
+                if (d && d[removed] !== undefined) delete d[removed];
+                kolomList[tipe].forEach((nk, i) => {
+                    const oldKey = `${KOLOM_CONFIG[tipe].prefix} ${i+2}`;
+                    if (oldKey !== nk && d[oldKey] !== undefined && d[nk] === undefined) { d[nk] = d[oldKey]; delete d[oldKey]; }
+                });
+            });
+            simpanKolomKeServer();
             renderKolomList(tipe);
             renderDetailNilaiTable(document.getElementById('detail-kelas').value);
+        }
+
+        // ── Persist kolom nilai detail ke server (CONFIG.app.nilaiKolom) ──
+        function simpanKolomKeServer() {
+            try {
+                CONFIG.app = CONFIG.app || {};
+                CONFIG.app.nilaiKolom = JSON.parse(JSON.stringify(kolomList));
+                saveConfigToStorage();
+            } catch(e) {}
         }
 
         function renderKolomList(tipe) {
@@ -3146,6 +3167,13 @@
             const sel = document.getElementById('detail-kelas');
             if (!sel) return;
             sel.innerHTML = kelasopts || '<option value="">-- Belum ada kelas --</option>';
+            // Restore daftar kolom (UH 2, dst.) dari config server — agar tidak hilang setelah reload
+            const savedKolom = CONFIG.app?.nilaiKolom;
+            if (savedKolom && typeof savedKolom === 'object') {
+                ['uh','praktek','proyek','portofolio'].forEach(t => {
+                    if (Array.isArray(savedKolom[t]) && savedKolom[t].length) kolomList[t] = [...savedKolom[t]];
+                });
+            }
             renderSemuaKolomList();
             if (kl.length) {
                 loadDetailNilai();
@@ -3163,14 +3191,35 @@
                 const res = await api.get(`/api/nilai?kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`);
                 if (res.success) {
                     detailNilaiData = {};
+                    const maxKolom = { uh: 1, praktek: 1, proyek: 1, portofolio: 1 };
+                    const TIPE_PREFIX = { uh: 'UH', praktek: 'Praktek', proyek: 'Proyek', portofolio: 'Porto' };
                     res.data.forEach(n => {
                         const sid = n.siswaRef?.id || n.siswaId;
                         detailNilaiData[sid] = detailNilaiData[sid] || {};
                         // Load detail dari uhDetail JSON
                         if (n.uhDetail) {
-                            try { Object.assign(detailNilaiData[sid], JSON.parse(n.uhDetail)); } catch(e) {}
+                            try {
+                                const d = JSON.parse(n.uhDetail);
+                                Object.keys(d).forEach(k => {
+                                    detailNilaiData[sid][k] = d[k];
+                                    // Deteksi kolom dari data tersimpan: "UH 2" → uh index 2
+                                    Object.keys(TIPE_PREFIX).forEach(t => {
+                                        const m = k.match(new RegExp(`^${TIPE_PREFIX[t]} (\\d+)$`));
+                                        if (m) maxKolom[t] = Math.max(maxKolom[t], parseInt(m[1], 10));
+                                    });
+                                });
+                            } catch(e) {}
                         }
                     });
+                    // Restore daftar kolom dari data tersimpan (mis. UH 2 ada nilainya → kolom UH 2 muncul lagi)
+                    let kolomBerubah = false;
+                    Object.keys(maxKolom).forEach(t => {
+                        while (kolomList[t].length < maxKolom[t]) {
+                            kolomList[t].push(`${KOLOM_CONFIG[t].prefix} ${kolomList[t].length + 1}`);
+                            kolomBerubah = true;
+                        }
+                    });
+                    if (kolomBerubah) { simpanKolomKeServer(); renderSemuaKolomList(); }
                 }
             } catch(e) {}
             renderDetailNilaiTable(kelas);
@@ -3289,10 +3338,9 @@
                 const rataPR = rataOf(kolomList.proyek, d);
                 const rataPO = rataOf(kolomList.portofolio, d);
 
-                // Simpan semua detail sebagai JSON
+                // Simpan semua detail sebagai JSON — SEMUA key dikirim ke server
                 const allDetail = {};
-                [...kolomList.uh, ...kolomList.praktek, ...kolomList.proyek, ...kolomList.portofolio]
-                    .forEach(k => { if (d[k]) allDetail[k] = d[k]; });
+                Object.keys(d).forEach(k => { if (d[k]) allDetail[k] = d[k]; });
 
                 return {
                     siswaId: s.id, kelas,
