@@ -3167,6 +3167,11 @@
             const sel = document.getElementById('detail-kelas');
             if (!sel) return;
             sel.innerHTML = kelasopts || '<option value="">-- Belum ada kelas --</option>';
+            // Kembalikan pilihan ke kelas terakhir yang dipakai (persisten antar refresh)
+            try {
+                const lastKelas = localStorage.getItem('ejournal_detail_kelas');
+                if (lastKelas && [...sel.options].some(o => o.value === lastKelas)) sel.value = lastKelas;
+            } catch(e) {}
             // Restore daftar kolom (UH 2, dst.) dari config server — agar tidak hilang setelah reload
             const savedKolom = CONFIG.app?.nilaiKolom;
             if (savedKolom && typeof savedKolom === 'object') {
@@ -3187,6 +3192,8 @@
         async function loadDetailNilai() {
             const kelas = document.getElementById('detail-kelas').value;
             if (!kelas) return;
+            // Ingat kelas terakhir yang dipilih agar setelah refresh tetap di kelas yang sama
+            try { localStorage.setItem('ejournal_detail_kelas', kelas); } catch(e) {}
             try {
                 const res = await api.get(`/api/nilai?kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`);
                 if (res.success) {
