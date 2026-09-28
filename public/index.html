@@ -3295,7 +3295,7 @@
                     .forEach(k => { if (d[k]) allDetail[k] = d[k]; });
 
                 return {
-                    siswa: s.id, kelas,
+                    siswaId: s.id, kelas,
                     semester: CONFIG.semester, tahunAjaran: CONFIG.tahunAjaran,
                     mataPelajaran: mapel, guru: CONFIG.guru.nama,
                     uh: rataUH, pts: 0, pas: 0,
@@ -3305,7 +3305,7 @@
             });
 
             try {
-                const res = await api.post('/api/nilai/bulk', { data });
+                const res = await api.post('/api/nilai/bulk', { items: data });
                 if (res.success) {
                     showToast('✅ Nilai detail berhasil disimpan!');
                     // Sync kelas ke tab Kelola Nilai lalu reload
@@ -5468,7 +5468,7 @@
             const data = siswaKelas.map(s => {
                 const n = nilaiData[s.id] || {};
                 return {
-                    siswa: s.id, kelas,
+                    siswaId: s.id, kelas,
                     semester: CONFIG.semester, tahunAjaran: CONFIG.tahunAjaran,
                     mataPelajaran: mapel, guru: CONFIG.guru.nama,
                     uh: n.uh||0, pts: n.pts||0, pas: n.pas||0,
@@ -5480,7 +5480,7 @@
             try {
                 const btn = event.target.closest('button');
                 if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...'; }
-                const res = await api.post('/api/nilai/bulk', { data });
+                const res = await api.post('/api/nilai/bulk', { items: data });
                 if (res.success) {
                     showToast(status ? `✅ Semua nilai kelas ${kelas} ditampilkan ke siswa` : `Semua nilai kelas ${kelas} disembunyikan`);
                 } else {
