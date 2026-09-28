@@ -30,3 +30,7 @@ Thumbs.db
 
 # PM2
 .pm2/
+
+# Backup database — jangan diupload ke GitHub
+*.sql
+*.sql.gz
