@@ -138,10 +138,10 @@ async function upsertKelas(kelasList) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// UPSERT: Siswa
+// UPSERT: Siswa  (+ mark-as-exited untuk siswa yang tidak ada di SDMS)
 // ══════════════════════════════════════════════════════════════════════════════
 async function upsertSiswa(siswaList) {
-  let created = 0, updated = 0, failed = 0, errors = [];
+  let created = 0, updated = 0, failed = 0, markedKeluar = 0, errors = [];
 
   // ── Logging diagnostik: cetak sample field dari record pertama SDMS ─────────
   if (siswaList && siswaList.length > 0) {
@@ -149,6 +149,13 @@ async function upsertSiswa(siswaList) {
     console.log('[SDMS Sync] Sample field keys dari data siswa SDMS:', Object.keys(sample));
     console.log('[SDMS Sync] Sample data siswa pertama:', JSON.stringify(sample, null, 2).slice(0, 800));
   }
+
+  // ── Kumpulkan semua NISN yang dikirim SDMS (untuk deteksi siswa keluar) ──────
+  const sdmsNisnSet = new Set(
+    siswaList
+      .map(s => (s.nisn || '').trim())
+      .filter(n => n.length > 0)
+  );
 
   for (const s of siswaList) {
     try {
@@ -217,6 +224,28 @@ async function upsertSiswa(siswaList) {
         if (isNaN(Date.parse(tanggalLahir))) tanggalLahir = null;
       }
 
+      // ── Tentukan status dari SDMS ──────────────────────────────────────────
+      // SDMS bisa kirim: 'Aktif', 'Nonaktif', 'Lulus', 'Keluar', atau status lain
+      const statusValid = ['Aktif', 'Nonaktif', 'Lulus', 'Keluar'];
+      const rawStatus = (s.status || s.statusSiswa || s.student_status || 'Aktif').trim();
+      // Map nilai umum dari SDMS ke enum yang valid
+      const statusMap = {
+        'aktif':    'Aktif',
+        'active':   'Aktif',
+        'nonaktif': 'Nonaktif',
+        'inactive': 'Nonaktif',
+        'lulus':    'Lulus',
+        'graduate': 'Lulus',
+        'graduated':'Lulus',
+        'keluar':   'Keluar',
+        'pindah':   'Keluar',
+        'transfer': 'Keluar',
+        'do':       'Keluar',
+        'dropout':  'Keluar',
+      };
+      const statusNorm = statusMap[rawStatus.toLowerCase()] ||
+        (statusValid.includes(rawStatus) ? rawStatus : 'Aktif');
+
       const payload = {
         nama,
         nisn,
@@ -237,7 +266,7 @@ async function upsertSiswa(siswaList) {
         noHp:            s.noHp           || s.no_hp           || s.noTelp       || s.no_telp      || s.phone || null,
         tahunMasuk:      s.tahunMasuk     || s.tahun_masuk     || s.year_entry   || null,
         penerimaBantuan: normBantuan(s.penerimaBantuan || s.pernah_dapat_bantuan || s.bantuan),
-        status:          s.status === 'Aktif' ? 'Aktif' : (s.status || 'Aktif'),
+        status:          statusNorm,
         guruId:          null,
       };
 
@@ -274,7 +303,46 @@ async function upsertSiswa(siswaList) {
     }
   }
 
-  return { created, updated, failed, errors };
+  // ══════════════════════════════════════════════════════════════════════════
+  // MARK-AS-EXITED: Tandai siswa yang tidak ada di data SDMS sebagai Keluar
+  //
+  // Logika: Ambil semua siswa berstatus Aktif di DB lokal yang NISN-nya
+  // tidak ada dalam data kiriman SDMS → artinya sudah keluar/pindah/lulus.
+  // Hanya proses jika SDMS mengirim minimal 1 siswa (hindari bug saat
+  // SDMS kosong/timeout sebagian).
+  // ══════════════════════════════════════════════════════════════════════════
+  if (sdmsNisnSet.size > 0) {
+    try {
+      // Ambil semua siswa Aktif yang NISN-nya TIDAK ada di data SDMS
+      const siswaAktifLokal = await Siswa.findAll({
+        where: { status: 'Aktif', guruId: null },
+        attributes: ['id', 'nisn', 'nama', 'kelas'],
+        raw: true,
+      });
+
+      const keluarList = siswaAktifLokal.filter(sw => !sdmsNisnSet.has(sw.nisn));
+
+      if (keluarList.length > 0) {
+        const keluarIds = keluarList.map(sw => sw.id);
+        await Siswa.update(
+          { status: 'Keluar', kelasId: null, kelas: null },
+          { where: { id: { [Op.in]: keluarIds } } }
+        );
+        markedKeluar = keluarList.length;
+        console.log(
+          `[SDMS Sync] ${markedKeluar} siswa ditandai Keluar karena tidak ada di data SDMS:`,
+          keluarList.map(sw => `${sw.nama} (${sw.nisn})`).join(', ')
+        );
+      }
+    } catch (e) {
+      errors.push({ item: 'mark-keluar', error: e.message });
+      console.error('[SDMS Sync] Gagal mark siswa keluar:', e.message);
+    }
+  } else {
+    console.warn('[SDMS Sync] Data siswa dari SDMS kosong — skip mark-as-exited untuk keamanan.');
+  }
+
+  return { created, updated, failed, markedKeluar, errors };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -428,11 +496,12 @@ async function fullSync() {
       result.kelas = { created: 0, updated: 0, failed: 0 };
     }
 
-    // 3. Upsert Siswa
+    // 3. Upsert Siswa (termasuk mark-as-exited untuk siswa yang tidak ada di SDMS)
     if (data.siswa?.length) {
       result.siswa = await upsertSiswa(data.siswa);
     } else {
-      result.siswa = { created: 0, updated: 0, failed: 0 };
+      result.siswa = { created: 0, updated: 0, failed: 0, markedKeluar: 0 };
+      console.warn('[SDMS Sync] SDMS tidak mengirim data siswa — upsert dan mark-as-exited dilewati.');
     }
 
     // 3b. Update jumlahSiswa di setiap kelas berdasarkan count aktual

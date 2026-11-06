@@ -2678,9 +2678,12 @@ async function syncSdms(type) {
         </div>`;
       }
       if (d.siswa) {
+        const keluarBadge = (d.siswa.markedKeluar > 0)
+          ? ` &nbsp; <span class="text-orange-600">🚪 Keluar: <b>${d.siswa.markedKeluar}</b></span>`
+          : '';
         html += `<div class="bg-white rounded-lg p-3 border border-green-100">
           <div class="font-semibold text-gray-700 text-xs mb-1.5"><i class="fas fa-user-graduate text-green-400 mr-1"></i> Siswa</div>
-          <div class="text-xs text-gray-600">✅ Baru: <b>${d.siswa.created}</b> &nbsp; 🔄 Update: <b>${d.siswa.updated}</b> &nbsp; ❌ Gagal: <b>${d.siswa.failed}</b></div>
+          <div class="text-xs text-gray-600">✅ Baru: <b>${d.siswa.created}</b> &nbsp; 🔄 Update: <b>${d.siswa.updated}</b> &nbsp; ❌ Gagal: <b>${d.siswa.failed}</b>${keluarBadge}</div>
         </div>`;
       }
       if (d.guru) {
