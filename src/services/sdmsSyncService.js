@@ -203,6 +203,24 @@ async function upsertSiswa(siswaList) {
           attributes: ['id'],
         });
         kelasId = kelasRow?.id || null;
+        if (!kelasId) {
+          // Kelas belum ada di lokal — otomatis buat agar naik kelas tidak gagal
+          try {
+            const kelasBaru = await Kelas.create({
+              nama:        kelasNama,
+              tingkat:     normTingkat(null),   // default 10, akan dikoreksi saat sync kelas
+              jurusan:     '-',
+              tahunAjaran: '-',
+              waliKelas:   '',
+              guruId:      null,
+              rombel:      '1',
+            });
+            kelasId = kelasBaru.id;
+            console.log(`[SDMS Sync] Auto-buat kelas baru dari data siswa: "${kelasNama}" (id=${kelasId})`);
+          } catch (ek) {
+            console.warn(`[SDMS Sync] Tidak bisa auto-buat kelas "${kelasNama}": ${ek.message}`);
+          }
+        }
       }
 
       // ── Normalisasi agama ─────────────────────────────────────────────────
@@ -273,11 +291,17 @@ async function upsertSiswa(siswaList) {
       const existing = await Siswa.findOne({ where: { nisn } });
 
       if (existing) {
-        // Jangan timpa data yang sudah ada jika payload kosong/null
+        // ── Aturan update per field:
+        // - kelas & kelasId : SELALU ikut SDMS (naik kelas harus update)
+        //   Jika SDMS tidak kirim nama kelas sama sekali → set null (artinya tidak
+        //   diketahui), BUKAN pertahankan nilai lama yang sudah tidak valid.
+        // - Field biodata lain : pakai data SDMS jika ada, jika tidak ada
+        //   pertahankan data lokal (hindari menghapus data yang sudah dilengkapi).
         await existing.update({
           nama:            payload.nama,
-          kelas:           payload.kelas           || existing.kelas,
-          kelasId:         payload.kelasId         ?? existing.kelasId,
+          // Kelas: ikut SDMS sepenuhnya — penting untuk deteksi naik kelas
+          kelas:           payload.kelas   !== null ? payload.kelas   : existing.kelas,
+          kelasId:         payload.kelasId !== null ? payload.kelasId : existing.kelasId,
           jenisKelamin:    payload.jenisKelamin,
           tempatLahir:     payload.tempatLahir      || existing.tempatLahir,
           tanggalLahir:    payload.tanggalLahir     || existing.tanggalLahir,
