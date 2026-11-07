@@ -219,19 +219,18 @@ exports.getAktivitasGuru = async (req, res) => {
 // ─── GET /api/admin/aktivitas/stats ──────────────────────────────────────────
 exports.getAktivitasStats = async (req, res) => {
   try {
-    // Pakai raw query untuk hindari masalah GROUP BY di MariaDB strict mode
-    // CAST guruId ke UNSIGNED agar konsisten antara MySQL & MariaDB
-    const [results] = await sequelize.query(`
-      SELECT
-        CAST(ll.guruId AS UNSIGNED)  AS guruId,
-        CAST(COUNT(ll.id) AS SIGNED) AS totalLogin,
-        MAX(ll.loginAt)              AS lastLogin
-      FROM login_logs ll
-      GROUP BY ll.guruId
-      ORDER BY MAX(ll.loginAt) DESC
-    `);
+    // Gunakan Sequelize aggregate — lebih portable antar MySQL/MariaDB versi
+    const results = await LoginLog.findAll({
+      attributes: [
+        'guruId',
+        [sequelize.fn('COUNT', sequelize.col('id')),    'totalLogin'],
+        [sequelize.fn('MAX',   sequelize.col('loginAt')),'lastLogin'],
+      ],
+      group: ['guruId'],
+      raw:   true,
+    });
 
-    // Pastikan tipe data konsisten (beberapa driver kembalikan bigint/string)
+    // Normalisasi tipe agar konsisten di semua driver
     const normalized = results.map(r => ({
       guruId:     Number(r.guruId),
       totalLogin: Number(r.totalLogin),
@@ -241,7 +240,7 @@ exports.getAktivitasStats = async (req, res) => {
     return ok(res, normalized);
   } catch (err) {
     console.error('getAktivitasStats error:', err.message);
-    return fail(res, 'Gagal mengambil statistik aktivitas.', 500);
+    return fail(res, 'Gagal mengambil statistik aktivitas: ' + err.message, 500);
   }
 };
 

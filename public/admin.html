@@ -1205,17 +1205,19 @@ async function loadGuruList() {
   try {
     const [rGuru, rStats] = await Promise.all([
       api.get('/api/admin/guru'),
-      api.get('/api/admin/aktivitas/stats').catch(() => ({ data: [] })),
+      api.get('/api/admin/aktivitas/stats').catch(e => { console.warn('stats gagal:', e); return { success: false, data: [] }; }),
     ]);
     if (!rGuru.success) { showToast(rGuru.message||'Gagal memuat data guru.','error'); return; }
     guruList = (rGuru.data || []).sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id'));
     const statsMap = {};
-    (rStats.data||[]).forEach(s => {
-      // Sequelize/raw query mengembalikan guruId
-      const key = s.guruId || s._id;
-      if (key) {
-        statsMap[key] = s;
-        statsMap[String(key)] = s; // juga simpan sebagai string
+    const statsData = rStats.data || [];
+    console.log('[DEBUG] stats count:', statsData.length, 'sample:', statsData[0]);
+    statsData.forEach(s => {
+      // Simpan dengan key number dan string agar cocok dengan g.id dari apapun tipenya
+      const key = s.guruId ?? s._id ?? s.id;
+      if (key !== undefined && key !== null) {
+        statsMap[Number(key)] = s;
+        statsMap[String(key)] = s;
       }
     });
     renderGuruTable(guruList, statsMap);
