@@ -1203,20 +1203,18 @@ async function loadGuruList() {
   const tbody = document.getElementById('guru-table-body');
   tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-10 text-center text-gray-400 text-sm"><i class="fas fa-spinner fa-spin mr-2"></i>Memuat...</td></tr>';
   try {
-    const [rGuru, rStats] = await Promise.all([
+    const [rGuru] = await Promise.all([
       api.get('/api/admin/guru'),
-      api.get('/api/admin/aktivitas/stats').catch(e => { console.warn('stats gagal:', e); return { success: false, data: [] }; }),
     ]);
     if (!rGuru.success) { showToast(rGuru.message||'Gagal memuat data guru.','error'); return; }
     guruList = (rGuru.data || []).sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id'));
+    // statsMap tidak lagi dibutuhkan — totalLogin & lastLogin sudah ada di tiap objek guru
     const statsMap = {};
-    const statsData = (rStats.success !== false ? rStats.data : null) || [];
-    statsData.forEach(s => {
-      // Simpan dengan key number dan string agar cocok dengan g.id dari apapun tipenya
-      const key = s.guruId ?? s._id ?? s.id;
-      if (key !== undefined && key !== null) {
-        statsMap[Number(key)] = s;
-        statsMap[String(key)] = s;
+    (rGuru.data || []).forEach(g => {
+      if (g.id !== undefined && g.id !== null) {
+        const entry = { guruId: g.id, totalLogin: g.totalLogin || 0, lastLogin: g.lastLogin || null };
+        statsMap[Number(g.id)] = entry;
+        statsMap[String(g.id)] = entry;
       }
     });
     renderGuruTable(guruList, statsMap);
@@ -1266,8 +1264,8 @@ function renderGuruPage(statsMap) {
     const tgl = new Date(g.createdAt).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
     const inisial = (g.nama || g.username).substring(0,2).toUpperCase();
     const stats = statsMap[g.id] || statsMap[String(g.id)] || {};
-    const lastLogin  = stats.lastLogin  ? timeAgo(stats.lastLogin)  : '<span class="text-gray-300 text-xs">Belum pernah</span>';
-    const loginCount = stats.totalLogin ? Number(stats.totalLogin)  : 0;
+    const lastLogin  = (g.lastLogin || stats.lastLogin)   ? timeAgo(g.lastLogin || stats.lastLogin)  : '<span class="text-gray-300 text-xs">Belum pernah</span>';
+    const loginCount = Number(g.totalLogin ?? stats.totalLogin ?? 0);
     const loginBadge = loginCount > 0
       ? `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">${loginCount}×</span>`
       : '<span class="text-gray-300 text-xs">—</span>';
@@ -1735,7 +1733,8 @@ async function filterSiswaAdmin() {
     if (search) params.set('search', search);
     try {
       const res = await api.get('/api/admin/siswa?' + params.toString());
-      renderSiswaAdminTable(res.data || []);
+      const sorted = (res.data || []).sort((a,b) => (a.nama||'').localeCompare(b.nama||'','id'));
+      renderSiswaAdminTable(sorted);
     } catch(e) { showToast('Gagal memuat data','error'); }
     return;
   }
@@ -1744,6 +1743,8 @@ async function filterSiswaAdmin() {
   let list = siswaAdminAll;
   if (status) list = list.filter(s => s.status === status);
   if (search) list = list.filter(s => (s.nama||'').toLowerCase().includes(search)||(s.nisn||'').includes(search));
+  // Pastikan selalu urut nama A-Z
+  list = [...list].sort((a,b) => (a.nama||'').localeCompare(b.nama||'','id'));
   renderSiswaAdminTable(list);
 }
 

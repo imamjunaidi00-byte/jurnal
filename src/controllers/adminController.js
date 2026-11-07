@@ -12,14 +12,43 @@ const cache = require('../utils/cache');
 // ─── GET /api/admin/guru ─────────────────────────────────────────────────────
 exports.listGuru = async (req, res) => {
   try {
-    // Hanya tampilkan role 'guru', bukan admin
     const gurus = await Guru.findAll({
       where: { role: 'guru' },
       attributes: { exclude: ['password'] },
       order: [['nama', 'ASC']],
     });
-    return ok(res, gurus);
+
+    // Ambil stats login untuk semua guru sekaligus (aggregate di JS — paling portable)
+    const allLogs = await LoginLog.findAll({
+      attributes: ['guruId', 'loginAt'],
+      raw: true,
+    });
+
+    // Bangun map: guruId → { totalLogin, lastLogin }
+    const statsMap = {};
+    for (const row of allLogs) {
+      const gid = Number(row.guruId);
+      if (!gid) continue;
+      if (!statsMap[gid]) statsMap[gid] = { totalLogin: 0, lastLogin: null };
+      statsMap[gid].totalLogin++;
+      const t = row.loginAt ? new Date(row.loginAt) : null;
+      if (t && !isNaN(t) && (!statsMap[gid].lastLogin || t > statsMap[gid].lastLogin)) {
+        statsMap[gid].lastLogin = t;
+      }
+    }
+
+    // Gabungkan ke data guru
+    const result = gurus.map(g => {
+      const data  = g.toJSON();
+      const stats = statsMap[Number(g.id)] || {};
+      data.totalLogin = stats.totalLogin  || 0;
+      data.lastLogin  = stats.lastLogin   ? stats.lastLogin.toISOString() : null;
+      return data;
+    });
+
+    return ok(res, result);
   } catch (err) {
+    console.error('listGuru error:', err.message);
     return fail(res, 'Gagal mengambil data guru.', 500);
   }
 };
