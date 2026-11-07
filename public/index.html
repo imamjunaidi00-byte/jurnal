@@ -14,11 +14,13 @@
   <script>
     (function() {
       var _warn = console.warn.bind(console);
-      console.warn = function() {
-        var msg = arguments[0] && String(arguments[0]);
-        if (msg && msg.indexOf('cdn.tailwindcss.com') !== -1) return;
-        _warn.apply(console, arguments);
-      };
+      var _error = console.error.bind(console);
+      function isTailwindMsg(args) {
+        var msg = args[0] && String(args[0]);
+        return msg && (msg.indexOf('cdn.tailwindcss.com') !== -1 || msg.indexOf('PostCSS') !== -1 || msg.indexOf('Tailwind CSS') !== -1 && msg.indexOf('production') !== -1);
+      }
+      console.warn = function() { if (!isTailwindMsg(arguments)) _warn.apply(console, arguments); };
+      console.error = function() { if (!isTailwindMsg(arguments)) _error.apply(console, arguments); };
     })();
   </script>
     <!-- Font Awesome dimuat async agar tidak block render -->
