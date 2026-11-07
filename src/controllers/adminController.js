@@ -16,7 +16,7 @@ exports.listGuru = async (req, res) => {
     const gurus = await Guru.findAll({
       where: { role: 'guru' },
       attributes: { exclude: ['password'] },
-      order: [['createdAt', 'DESC']],
+      order: [['nama', 'ASC']],
     });
     return ok(res, gurus);
   } catch (err) {
