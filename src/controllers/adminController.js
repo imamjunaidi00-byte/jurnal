@@ -219,22 +219,32 @@ exports.getAktivitasGuru = async (req, res) => {
 // ─── GET /api/admin/aktivitas/stats ──────────────────────────────────────────
 exports.getAktivitasStats = async (req, res) => {
   try {
-    // Gunakan Sequelize aggregate — lebih portable antar MySQL/MariaDB versi
-    const results = await LoginLog.findAll({
-      attributes: [
-        'guruId',
-        [sequelize.fn('COUNT', sequelize.col('id')),    'totalLogin'],
-        [sequelize.fn('MAX',   sequelize.col('loginAt')),'lastLogin'],
-      ],
-      group: ['guruId'],
-      raw:   true,
+    // Ambil semua login log, lalu aggregate di JS — paling portable
+    // (hindari masalah GROUP BY strict mode & tipe data antar versi MariaDB)
+    const allLogs = await LoginLog.findAll({
+      attributes: ['guruId', 'loginAt'],
+      raw: true,
     });
 
-    // Normalisasi tipe agar konsisten di semua driver
-    const normalized = results.map(r => ({
-      guruId:     Number(r.guruId),
-      totalLogin: Number(r.totalLogin),
-      lastLogin:  r.lastLogin ? new Date(r.lastLogin).toISOString() : null,
+    // Aggregate manual: { guruId -> { totalLogin, lastLogin } }
+    const map = {};
+    for (const row of allLogs) {
+      const gid = Number(row.guruId);
+      if (!gid) continue;
+      if (!map[gid]) {
+        map[gid] = { guruId: gid, totalLogin: 0, lastLogin: null };
+      }
+      map[gid].totalLogin++;
+      const t = row.loginAt ? new Date(row.loginAt) : null;
+      if (t && (!map[gid].lastLogin || t > map[gid].lastLogin)) {
+        map[gid].lastLogin = t;
+      }
+    }
+
+    const normalized = Object.values(map).map(r => ({
+      guruId:     r.guruId,
+      totalLogin: r.totalLogin,
+      lastLogin:  r.lastLogin ? r.lastLogin.toISOString() : null,
     }));
 
     return ok(res, normalized);

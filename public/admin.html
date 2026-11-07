@@ -1210,8 +1210,7 @@ async function loadGuruList() {
     if (!rGuru.success) { showToast(rGuru.message||'Gagal memuat data guru.','error'); return; }
     guruList = (rGuru.data || []).sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id'));
     const statsMap = {};
-    const statsData = rStats.data || [];
-    console.log('[DEBUG] stats count:', statsData.length, 'sample:', statsData[0]);
+    const statsData = (rStats.success !== false ? rStats.data : null) || [];
     statsData.forEach(s => {
       // Simpan dengan key number dan string agar cocok dengan g.id dari apapun tipenya
       const key = s.guruId ?? s._id ?? s.id;
@@ -1687,7 +1686,10 @@ async function loadSiswaAdmin() {
       api.get('/api/admin/siswa/kelas-list').catch(() => ({ data: [] }))
     ]);
     if (!res.success) { showToast(res.message||'Gagal memuat siswa','error'); return; }
-    siswaAdminAll = res.data || [];
+    // Sort: nama A-Z
+    siswaAdminAll = (res.data || []).sort((a, b) =>
+      (a.nama || '').localeCompare(b.nama || '', 'id')
+    );
 
     // Update stats
     const aktif = siswaAdminAll.filter(s=>s.status==='Aktif').length;
@@ -1701,8 +1703,17 @@ async function loadSiswaAdmin() {
 
     const filterEl = document.getElementById('filter-kelas-admin');
     const cur = filterEl.value;
+    // Sort kelas: tingkat numerik (10,11,12) lalu nama A-Z
+    const kelasSorted = [...kelasList].sort((a, b) => {
+      const ta = Number(typeof a === 'object' ? a.tingkat : 99) || 99;
+      const tb = Number(typeof b === 'object' ? b.tingkat : 99) || 99;
+      if (ta !== tb) return ta - tb;
+      const na = typeof a === 'string' ? a : (a.nama || '');
+      const nb = typeof b === 'string' ? b : (b.nama || '');
+      return na.localeCompare(nb, 'id');
+    });
     // Ambil nama kelas dari objek atau string
-    filterEl.innerHTML = '<option value="">Semua Kelas</option>' + kelasList.map(k => {
+    filterEl.innerHTML = '<option value="">Semua Kelas</option>' + kelasSorted.map(k => {
       const nama = typeof k === 'string' ? k : (k.nama || k);
       return `<option value="${nama}"${nama===cur?' selected':''}>${nama}</option>`;
     }).join('');

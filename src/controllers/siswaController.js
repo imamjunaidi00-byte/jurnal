@@ -231,7 +231,16 @@ exports.kelasList = async (req, res) => {
       attributes: ['id', 'nama', 'tingkat', 'jurusan', 'tahunAjaran'],
       order: [['tingkat','ASC'],['nama','ASC']],
     });
-    return ok(res, list);
+
+    // Sort natural: tingkat numerik dulu (10,11,12), lalu nama A-Z
+    const sorted = [...list].sort((a, b) => {
+      const ta = Number(a.tingkat) || 99;
+      const tb = Number(b.tingkat) || 99;
+      if (ta !== tb) return ta - tb;
+      return (a.nama || '').localeCompare(b.nama || '', 'id');
+    });
+
+    return ok(res, sorted);
   } catch (err) {
     return fail(res, 'Gagal mengambil daftar kelas.', 500);
   }
