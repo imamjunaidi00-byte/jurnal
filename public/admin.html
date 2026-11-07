@@ -345,6 +345,31 @@
           </table>
         </div>
         <p id="siswa-admin-count" class="text-xs text-gray-400 mt-2 ml-1"></p>
+        <!-- Paginasi Siswa -->
+        <div id="siswa-pagination" class="hidden mt-4 flex items-center justify-between px-1 flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <p id="siswa-page-info" class="text-xs text-gray-500"></p>
+            <select id="siswa-per-page" onchange="siswaPerPageChange(this.value)"
+              class="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-blue-300 cursor-pointer">
+              <option value="40" selected>40 / hal</option>
+              <option value="10">10 / hal</option>
+              <option value="25">25 / hal</option>
+              <option value="50">50 / hal</option>
+              <option value="100">100 / hal</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="btn-siswa-prev" onclick="siswaPageChange(-1)"
+              class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+              <i class="fas fa-chevron-left text-xs"></i> Prev
+            </button>
+            <div id="siswa-page-numbers" class="flex gap-1"></div>
+            <button id="btn-siswa-next" onclick="siswaPageChange(1)"
+              class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
+              Next <i class="fas fa-chevron-right text-xs"></i>
+            </button>
+          </div>
+        </div>
       </div>
     </div><!-- end tab siswa -->
 
@@ -1073,6 +1098,10 @@ let importSiswaFile = null;
 let guruCurrentPage = 1;
 let GURU_PER_PAGE = 10;
 let guruFiltered = [];
+// Paginasi siswa
+let siswaCurrentPage = 1;
+let SISWA_PER_PAGE = 40;
+let siswaFiltered = [];
 
 // ── API Helper ─────────────────────────────────────────────────────────────
 const api = {
@@ -1794,21 +1823,37 @@ async function filterSiswaAdmin() {
 }
 
 function renderSiswaAdminTable(list) {
+  // Simpan list lengkap untuk pagination
+  siswaFiltered = list || [];
+  siswaCurrentPage = 1;
+  renderSiswaPage();
+}
+
+function renderSiswaPage() {
+  const total      = siswaFiltered.length;
+  const totalPages = Math.max(1, Math.ceil(total / SISWA_PER_PAGE));
+  siswaCurrentPage = Math.max(1, Math.min(siswaCurrentPage, totalPages));
+  const start      = (siswaCurrentPage - 1) * SISWA_PER_PAGE;
+  const pageList   = siswaFiltered.slice(start, start + SISWA_PER_PAGE);
+
   const tbody = document.getElementById('siswa-admin-tbody');
-  if (!list.length) {
+  if (!pageList.length) {
     tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-10 text-center text-gray-400 text-sm">Tidak ada data.</td></tr>';
-    document.getElementById('siswa-admin-count').textContent='';
+    document.getElementById('siswa-admin-count').textContent = '';
+    document.getElementById('siswa-pagination').classList.add('hidden');
     updateSiswaBulkBar();
     return;
   }
-  tbody.innerHTML = list.map((s,i) => {
+
+  tbody.innerHTML = pageList.map((s, i) => {
     const isL = s.jenisKelamin === 'L';
     const statusColor = s.status==='Aktif'?'bg-green-100 text-green-700':s.status==='Lulus'?'bg-blue-100 text-blue-700':s.status==='Keluar'?'bg-red-100 text-red-700':'bg-gray-100 text-gray-600';
+    const globalNo = start + i + 1;
     return `<tr class="border-b border-gray-50 hover:bg-gray-50">
       <td class="px-4 py-3 text-center">
         <input type="checkbox" class="siswa-admin-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer" value="${s.id}" onchange="updateSiswaBulkBar()">
       </td>
-      <td class="px-4 py-3 text-gray-500 text-sm text-center">${i+1}</td>
+      <td class="px-4 py-3 text-gray-500 text-sm text-center">${globalNo}</td>
       <td class="px-4 py-3"><div class="flex items-center gap-3">
         <div class="w-9 h-9 rounded-full ${isL?'bg-blue-100 text-blue-700':'bg-pink-100 text-pink-700'} flex items-center justify-center font-bold text-sm">${(s.nama||'?').charAt(0)}</div>
         <span class="font-medium text-gray-900">${s.nama||'-'}</span>
@@ -1823,8 +1868,53 @@ function renderSiswaAdminTable(list) {
       </div></td>
     </tr>`;
   }).join('');
-  document.getElementById('siswa-admin-count').textContent = `Menampilkan ${list.length} siswa`;
+
+  // Info & pagination
+  document.getElementById('siswa-admin-count').textContent = '';
+  document.getElementById('siswa-page-info').textContent =
+    `Menampilkan ${start+1}–${Math.min(start+SISWA_PER_PAGE, total)} dari ${total} siswa`;
+
+  // Sync dropdown
+  const ppEl = document.getElementById('siswa-per-page');
+  if (ppEl) ppEl.value = String(SISWA_PER_PAGE);
+
+  const paginEl = document.getElementById('siswa-pagination');
+  if (total <= SISWA_PER_PAGE) { paginEl.classList.add('hidden'); updateSiswaBulkBar(); return; }
+  paginEl.classList.remove('hidden');
+
+  document.getElementById('btn-siswa-prev').disabled = siswaCurrentPage <= 1;
+  document.getElementById('btn-siswa-next').disabled = siswaCurrentPage >= totalPages;
+
+  // Nomor halaman
+  const pageNums = document.getElementById('siswa-page-numbers');
+  let pages = '';
+  for (let p = 1; p <= totalPages; p++) {
+    if (p === siswaCurrentPage) {
+      pages += `<button class="w-8 h-8 rounded-lg bg-blue-600 text-white text-xs font-bold">${p}</button>`;
+    } else if (p === 1 || p === totalPages || Math.abs(p - siswaCurrentPage) <= 1) {
+      pages += `<button onclick="siswaGoToPage(${p})" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold transition-colors">${p}</button>`;
+    } else if (Math.abs(p - siswaCurrentPage) === 2) {
+      pages += `<span class="w-8 h-8 flex items-center justify-center text-gray-400 text-xs">…</span>`;
+    }
+  }
+  pageNums.innerHTML = pages;
   updateSiswaBulkBar();
+}
+
+function siswaPageChange(delta) {
+  siswaCurrentPage += delta;
+  renderSiswaPage();
+}
+
+function siswaGoToPage(page) {
+  siswaCurrentPage = page;
+  renderSiswaPage();
+}
+
+function siswaPerPageChange(val) {
+  SISWA_PER_PAGE = parseInt(val, 10) || 40;
+  siswaCurrentPage = 1;
+  renderSiswaPage();
 }
 
 // ── SISWA: Tambah / Edit ───────────────────────────────────────────────────
