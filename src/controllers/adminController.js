@@ -192,10 +192,11 @@ exports.getAktivitas = async (req, res) => {
     const logs = await LoginLog.findAll({
       include: [{ model: Guru, as: 'guruRef', attributes: ['nama', 'username', 'role'] }],
       order:   [['loginAt', 'DESC']],
-      limit:   10,
+      limit:   20,
     });
     return ok(res, logs);
   } catch (err) {
+    console.error('getAktivitas error:', err.message);
     return fail(res, 'Gagal mengambil aktivitas login.', 500);
   }
 };
@@ -219,19 +220,25 @@ exports.getAktivitasGuru = async (req, res) => {
 exports.getAktivitasStats = async (req, res) => {
   try {
     // Pakai raw query untuk hindari masalah GROUP BY di MariaDB strict mode
+    // CAST guruId ke UNSIGNED agar konsisten antara MySQL & MariaDB
     const [results] = await sequelize.query(`
       SELECT
-        ll.guruId,
-        COUNT(ll.id)     AS totalLogin,
-        MAX(ll.loginAt)  AS lastLogin,
-        g.nama,
-        g.username
+        CAST(ll.guruId AS UNSIGNED)  AS guruId,
+        CAST(COUNT(ll.id) AS SIGNED) AS totalLogin,
+        MAX(ll.loginAt)              AS lastLogin
       FROM login_logs ll
-      LEFT JOIN gurus g ON g.id = ll.guruId
-      GROUP BY ll.guruId, g.id, g.nama, g.username
+      GROUP BY ll.guruId
       ORDER BY MAX(ll.loginAt) DESC
     `);
-    return ok(res, results);
+
+    // Pastikan tipe data konsisten (beberapa driver kembalikan bigint/string)
+    const normalized = results.map(r => ({
+      guruId:     Number(r.guruId),
+      totalLogin: Number(r.totalLogin),
+      lastLogin:  r.lastLogin ? new Date(r.lastLogin).toISOString() : null,
+    }));
+
+    return ok(res, normalized);
   } catch (err) {
     console.error('getAktivitasStats error:', err.message);
     return fail(res, 'Gagal mengambil statistik aktivitas.', 500);
