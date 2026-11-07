@@ -4,7 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Panel - E-Journal SMK</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Konfigurasi Tailwind — harus sebelum script Tailwind dimuat
+    window.tailwind = window.tailwind || {};
+  </script>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <script>
+    // Suppress Tailwind CDN production warning
+    if (typeof tailwind !== 'undefined' && tailwind.config) {
+      tailwind.config = { ...tailwind.config };
+    }
+    // Override console.warn untuk filter pesan Tailwind CDN saja
+    (function() {
+      const _warn = console.warn.bind(console);
+      console.warn = function(...args) {
+        const msg = args[0] && String(args[0]);
+        if (msg && msg.includes('cdn.tailwindcss.com')) return;
+        _warn(...args);
+      };
+    })();
+  </script>
   <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"></noscript>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap&font-display=swap" rel="stylesheet">

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -11,6 +11,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- Tailwind dimuat sync karena dipakai untuk render awal -->
     <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    (function() {
+      var _warn = console.warn.bind(console);
+      console.warn = function() {
+        var msg = arguments[0] && String(arguments[0]);
+        if (msg && msg.indexOf('cdn.tailwindcss.com') !== -1) return;
+        _warn.apply(console, arguments);
+      };
+    })();
+  </script>
     <!-- Font Awesome dimuat async agar tidak block render -->
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"></noscript>
