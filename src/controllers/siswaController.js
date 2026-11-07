@@ -35,7 +35,11 @@ exports.list = async (req, res) => {
     const { count, rows } = await Siswa.findAndCountAll({
       where,
       include: [{ model: Kelas, as: 'kelasRef', attributes: ['id','nama','tingkat','jurusan'], required: false }],
-      order:   [['nama', 'ASC']],
+      order: [
+        [{ model: Kelas, as: 'kelasRef' }, 'tingkat', 'ASC'],
+        [{ model: Kelas, as: 'kelasRef' }, 'nama',    'ASC'],
+        ['nama', 'ASC'],
+      ],
       limit,
       offset:  (page - 1) * limit,
     });

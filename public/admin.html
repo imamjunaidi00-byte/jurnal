@@ -1225,7 +1225,22 @@ async function loadGuruList() {
   }
 }
 
-function timeAgo(date) {
+// Helper: sort siswa berdasarkan tingkat kelas → nama kelas → nama siswa
+function sortSiswa(list) {
+  return [...list].sort((a, b) => {
+    // Tingkat kelas (10, 11, 12) — siswa tanpa kelas masuk paling bawah
+    const ta = Number((a.kelasRef && a.kelasRef.tingkat) || 99);
+    const tb = Number((b.kelasRef && b.kelasRef.tingkat) || 99);
+    if (ta !== tb) return ta - tb;
+    // Nama kelas A-Z dalam tingkat yang sama
+    const ka = (a.kelasRef && a.kelasRef.nama) || (a.kelas || '');
+    const kb = (b.kelasRef && b.kelasRef.nama) || (b.kelas || '');
+    const kc = ka.localeCompare(kb, 'id');
+    if (kc !== 0) return kc;
+    // Nama siswa A-Z dalam kelas yang sama
+    return (a.nama || '').localeCompare(b.nama || '', 'id');
+  });
+}
   if (!date) return '<span class="text-gray-300">Belum pernah</span>';
   const d = (date instanceof Date) ? date : new Date(date);
   if (isNaN(d.getTime())) return '<span class="text-gray-300">Belum pernah</span>';
@@ -1684,10 +1699,8 @@ async function loadSiswaAdmin() {
       api.get('/api/admin/siswa/kelas-list').catch(() => ({ data: [] }))
     ]);
     if (!res.success) { showToast(res.message||'Gagal memuat siswa','error'); return; }
-    // Sort: nama A-Z
-    siswaAdminAll = (res.data || []).sort((a, b) =>
-      (a.nama || '').localeCompare(b.nama || '', 'id')
-    );
+    // Sort: kelas (X→XI→XII → nama kelas A-Z) → nama siswa A-Z
+    siswaAdminAll = sortSiswa(res.data || []);
 
     // Update stats
     const aktif = siswaAdminAll.filter(s=>s.status==='Aktif').length;
@@ -1733,8 +1746,7 @@ async function filterSiswaAdmin() {
     if (search) params.set('search', search);
     try {
       const res = await api.get('/api/admin/siswa?' + params.toString());
-      const sorted = (res.data || []).sort((a,b) => (a.nama||'').localeCompare(b.nama||'','id'));
-      renderSiswaAdminTable(sorted);
+      renderSiswaAdminTable(sortSiswa(res.data || []));
     } catch(e) { showToast('Gagal memuat data','error'); }
     return;
   }
@@ -1743,9 +1755,8 @@ async function filterSiswaAdmin() {
   let list = siswaAdminAll;
   if (status) list = list.filter(s => s.status === status);
   if (search) list = list.filter(s => (s.nama||'').toLowerCase().includes(search)||(s.nisn||'').includes(search));
-  // Pastikan selalu urut nama A-Z
-  list = [...list].sort((a,b) => (a.nama||'').localeCompare(b.nama||'','id'));
-  renderSiswaAdminTable(list);
+  // Urut: kelas → nama siswa
+  renderSiswaAdminTable(sortSiswa(list));
 }
 
 function renderSiswaAdminTable(list) {
