@@ -203,8 +203,17 @@
           </table>
         </div>
         <!-- Paginasi Guru -->
-        <div id="guru-pagination" class="hidden mt-4 flex items-center justify-between px-1">
-          <p id="guru-page-info" class="text-xs text-gray-500"></p>
+        <div id="guru-pagination" class="hidden mt-4 flex items-center justify-between px-1 flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <p id="guru-page-info" class="text-xs text-gray-500"></p>
+            <select id="guru-per-page" onchange="guruPerPageChange(this.value)"
+              class="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-300 cursor-pointer">
+              <option value="10" selected>10 / hal</option>
+              <option value="25">25 / hal</option>
+              <option value="50">50 / hal</option>
+              <option value="100">100 / hal</option>
+            </select>
+          </div>
           <div class="flex items-center gap-1.5">
             <button id="btn-guru-prev" onclick="guruPageChange(-1)"
               class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed">
@@ -1062,7 +1071,7 @@ let guruList = [], siswaAdminList = [], siswaAdminAll = [], kelasMasterList = []
 let importSiswaFile = null;
 // Paginasi guru
 let guruCurrentPage = 1;
-const GURU_PER_PAGE = 10;
+let GURU_PER_PAGE = 10;
 let guruFiltered = [];
 
 // ── API Helper ─────────────────────────────────────────────────────────────
@@ -1338,6 +1347,10 @@ function renderGuruPage(statsMap) {
   document.getElementById('guru-page-info').textContent =
     `Menampilkan ${start+1}–${Math.min(start+GURU_PER_PAGE, total)} dari ${total} guru`;
 
+  // Sync nilai dropdown per-page
+  const ppEl = document.getElementById('guru-per-page');
+  if (ppEl) ppEl.value = String(GURU_PER_PAGE);
+
   // Tombol prev/next
   document.getElementById('btn-guru-prev').disabled = guruCurrentPage <= 1;
   document.getElementById('btn-guru-next').disabled = guruCurrentPage >= totalPages;
@@ -1365,6 +1378,13 @@ function guruPageChange(delta) {
 function guruGoToPage(page) {
   guruCurrentPage = page;
   renderGuruPage();
+}
+
+function guruPerPageChange(val) {
+  GURU_PER_PAGE = parseInt(val, 10) || 10;
+  guruCurrentPage = 1;
+  renderGuruPage();
+}
 }
 
 function filterGuru(q) {
