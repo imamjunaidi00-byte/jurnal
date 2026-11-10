@@ -3488,8 +3488,6 @@
                     ? Math.round(tpVals.reduce((a, b) => a + b, 0) / tpVals.length)
                     : 0;
 
-                const praktek    = Math.min(100, Math.max(0, Number(d.praktek    || 0)));
-                const proyek     = Math.min(100, Math.max(0, Number(d.proyek     || 0)));
                 const praktek    = getRataSkill(d, 'praktek');
                 const proyek     = getRataSkill(d, 'proyek');
                 const portofolio = getRataSkill(d, 'portofolio');
