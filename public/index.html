@@ -1018,20 +1018,33 @@
 
             <!-- Tab: Mind Map -->
             <div id="jadwal-tab-mindmap" class="hidden">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h3 class="font-bold text-xl text-gray-900">Mind Map Materi</h3>
-                        <p class="text-sm text-gray-500 mt-0.5">Buat peta konsep interaktif untuk memudahkan siswa belajar</p>
+            <div class="rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+                <!-- Header dengan gradient -->
+                <div class="bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-3 mb-1">
+                                <div class="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-brain text-white text-lg"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-xl text-white">Mind Map Materi</h3>
+                                    <p class="text-sm text-purple-200">Peta konsep interaktif untuk pembelajaran</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 flex-wrap items-center">
+                            <select id="filter-mindmap-mapel" onchange="filterMindMap()" class="px-4 py-2.5 bg-white bg-opacity-20 text-white border border-white border-opacity-30 rounded-xl focus:ring-2 focus:ring-white focus:outline-none text-sm backdrop-blur-sm placeholder-white">
+                            </select>
+                            <button onclick="bukaEditorMindMap()" class="px-5 py-2.5 bg-white text-purple-700 rounded-xl hover:bg-purple-50 transition-all flex items-center gap-2 text-sm font-bold shadow-lg">
+                                <i class="fas fa-plus"></i> Buat Mind Map
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex gap-2 flex-wrap">
-                        <select id="filter-mindmap-mapel" onchange="filterMindMap()" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-sm shadow-sm"></select>
-                        <button onclick="bukaEditorMindMap()" class="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all flex items-center gap-2 text-sm font-semibold shadow-lg shadow-purple-200">
-                            <i class="fas fa-plus"></i> Buat Mind Map
-                        </button>
-                    </div>
+                    <!-- Stats bar -->
+                    <div id="mm-stats-bar" class="mt-4 flex gap-4 flex-wrap"></div>
                 </div>
-                <div class="p-6">
+                <div class="bg-gray-50 p-6">
                     <div id="mindmap-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
                 </div>
             </div>
@@ -8041,52 +8054,142 @@
 
         function renderMindMapCards(list) {
             const el = document.getElementById('mindmap-list');
+
+            // Update stats bar
+            const statsBar = document.getElementById('mm-stats-bar');
+            if (statsBar) {
+                const total = mindMapData.length;
+                const mapels = new Set(mindMapData.map(m => m.mataPelajaran).filter(Boolean)).size;
+                statsBar.innerHTML = total === 0 ? '' : `
+                    <div class="flex items-center gap-2 bg-white bg-opacity-20 rounded-lg px-3 py-1.5">
+                        <i class="fas fa-project-diagram text-white text-xs"></i>
+                        <span class="text-white text-xs font-semibold">${total} Mind Map</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-white bg-opacity-20 rounded-lg px-3 py-1.5">
+                        <i class="fas fa-book text-white text-xs"></i>
+                        <span class="text-white text-xs font-semibold">${mapels} Mata Pelajaran</span>
+                    </div>`;
+            }
+
             if (!list.length) {
-                el.innerHTML = `<div class="col-span-full text-center py-16 text-gray-400">
-                    <i class="fas fa-project-diagram text-5xl mb-3 block text-gray-200"></i>
-                    <p class="font-medium">Belum ada mind map</p>
-                    <p class="text-sm mt-1">Klik "Buat Mind Map" untuk membuat peta konsep materi</p>
+                el.innerHTML = `
+                <div class="col-span-full">
+                    <div class="text-center py-16 px-6 bg-white rounded-2xl border-2 border-dashed border-purple-200">
+                        <div class="w-24 h-24 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-lg">
+                            <i class="fas fa-brain text-4xl text-purple-500"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Belum Ada Mind Map</h3>
+                        <p class="text-gray-500 mb-6 max-w-sm mx-auto">Mulai buat peta konsep interaktif untuk memudahkan siswa memahami materi pelajaran</p>
+                        <button onclick="bukaEditorMindMap()" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2 mx-auto">
+                            <i class="fas fa-plus"></i> Buat Mind Map Pertama
+                        </button>
+                    </div>
                 </div>`;
                 return;
             }
-            el.innerHTML = list.map(m => {
-                const root = m.nodes?.text || m.judul;
-                const cabang = (m.nodes?.children || []).length;
-                const d = new Date(m.updatedAt);
-                const tgl = d.toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' });
+
+            // Warna gradient per card
+            const gradients = [
+                'from-purple-500 to-indigo-600',
+                'from-pink-500 to-rose-600',
+                'from-blue-500 to-cyan-600',
+                'from-emerald-500 to-teal-600',
+                'from-amber-500 to-orange-600',
+                'from-violet-500 to-purple-600',
+            ];
+
+            el.innerHTML = list.map((m, idx) => {
+                const root      = m.nodes?.text || m.judul;
+                const cabang    = (m.nodes?.children || []).length;
+                const totalNode = countNodes(m.nodes);
+                const d         = new Date(m.updatedAt);
+                const tgl       = d.toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' });
+                const warna     = m.warna || '#8b5cf6';
+                const grad      = gradients[idx % gradients.length];
+
+                // Mini preview cabang utama (maks 3)
+                const branches  = (m.nodes?.children || []).slice(0, 3);
+                const branchHTML = branches.map(b =>
+                    `<div class="flex items-center gap-1.5 py-1">
+                        <div class="w-2 h-2 rounded-full flex-shrink-0" style="background:${b.color||warna}"></div>
+                        <span class="text-xs text-gray-600 truncate">${b.text}</span>
+                        ${b.children?.length ? `<span class="text-xs text-gray-400">(${b.children.length})</span>` : ''}
+                    </div>`
+                ).join('');
+                const moreBranch = cabang > 3 ? `<p class="text-xs text-gray-400 mt-1">+${cabang-3} cabang lainnya...</p>` : '';
+
                 return `
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden group">
-                    <div class="h-2 w-full" style="background:${m.warna || '#8b5cf6'}"></div>
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer"
+                     onclick="editMindMap('${m.id}')">
+                    <!-- Colorful header -->
+                    <div class="bg-gradient-to-r ${grad} p-5 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-white bg-opacity-10 rounded-full -translate-y-8 translate-x-8"></div>
+                        <div class="absolute bottom-0 left-0 w-16 h-16 bg-white bg-opacity-10 rounded-full translate-y-6 -translate-x-4"></div>
+                        <div class="relative">
+                            <div class="flex justify-between items-start">
+                                <div class="w-12 h-12 bg-white bg-opacity-25 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                                    <i class="fas fa-brain text-white text-xl"></i>
+                                </div>
+                                <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
+                                    <button onclick="editMindMap('${m.id}')" class="w-8 h-8 rounded-lg bg-white bg-opacity-20 hover:bg-opacity-40 text-white flex items-center justify-center transition-all" title="Edit">
+                                        <i class="fas fa-pen text-xs"></i>
+                                    </button>
+                                    <button onclick="deleteMindMap('${m.id}','${m.judul.replace(/'/g,"\\'")}'); event.stopPropagation();" class="w-8 h-8 rounded-lg bg-white bg-opacity-20 hover:bg-red-500 text-white flex items-center justify-center transition-all" title="Hapus">
+                                        <i class="fas fa-trash text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <h4 class="font-bold text-white text-lg mt-3 leading-tight">${m.judul}</h4>
+                            <div class="flex gap-2 mt-2 flex-wrap">
+                                ${m.mataPelajaran ? `<span class="px-2 py-0.5 bg-white bg-opacity-25 text-white rounded-lg text-xs font-medium">${m.mataPelajaran}</span>` : ''}
+                                ${m.kelas ? `<span class="px-2 py-0.5 bg-white bg-opacity-25 text-white rounded-lg text-xs font-medium">${m.kelas}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card body -->
                     <div class="p-5">
-                        <div class="flex justify-between items-start mb-3">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg" style="background:${m.warna || '#8b5cf6'}">
-                                <i class="fas fa-project-diagram"></i>
+                        <!-- Stats row -->
+                        <div class="flex gap-3 mb-4">
+                            <div class="flex-1 bg-purple-50 rounded-xl p-3 text-center">
+                                <p class="text-2xl font-bold text-purple-700">${cabang}</p>
+                                <p class="text-xs text-purple-500 font-medium">Cabang</p>
                             </div>
-                            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onclick="editMindMap('${m.id}')" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center" title="Edit">
-                                    <i class="fas fa-pen text-xs"></i>
-                                </button>
-                                <button onclick="previewMindMap('${m.id}')" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center justify-center" title="Preview">
-                                    <i class="fas fa-eye text-xs"></i>
-                                </button>
-                                <button onclick="deleteMindMap('${m.id}','${m.judul}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center" title="Hapus">
-                                    <i class="fas fa-trash text-xs"></i>
-                                </button>
+                            <div class="flex-1 bg-indigo-50 rounded-xl p-3 text-center">
+                                <p class="text-2xl font-bold text-indigo-700">${totalNode}</p>
+                                <p class="text-xs text-indigo-500 font-medium">Total Node</p>
+                            </div>
+                            <div class="flex-1 bg-blue-50 rounded-xl p-3 text-center">
+                                <p class="text-sm font-bold text-blue-700">${tgl}</p>
+                                <p class="text-xs text-blue-500 font-medium">Update</p>
                             </div>
                         </div>
-                        <h4 class="font-bold text-gray-900 mb-1">${m.judul}</h4>
-                        <p class="text-xs text-gray-500 mb-3">${m.deskripsi || 'Tidak ada deskripsi'}</p>
-                        <div class="flex flex-wrap gap-2 mb-3">
-                            ${m.mataPelajaran ? `<span class="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">${m.mataPelajaran}</span>` : ''}
-                            ${m.kelas ? `<span class="px-2 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-medium">${m.kelas}</span>` : ''}
-                        </div>
-                        <div class="flex items-center justify-between text-xs text-gray-400 pt-3 border-t border-gray-50">
-                            <span><i class="fas fa-sitemap mr-1"></i>${cabang} cabang utama</span>
-                            <span>${tgl}</span>
-                        </div>
+                        <!-- Branch preview -->
+                        ${branches.length > 0 ? `
+                        <div class="border border-gray-100 rounded-xl p-3 bg-gray-50">
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Cabang Utama</p>
+                            ${branchHTML}
+                            ${moreBranch}
+                        </div>` : `
+                        <div class="border border-dashed border-gray-200 rounded-xl p-4 text-center">
+                            <p class="text-xs text-gray-400">Belum ada cabang — klik untuk mulai edit</p>
+                        </div>`}
+                    </div>
+                    <!-- Footer -->
+                    <div class="px-5 pb-4">
+                        <button onclick="editMindMap('${m.id}'); event.stopPropagation();" class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fas fa-edit"></i> Buka & Edit
+                        </button>
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // Helper: hitung total node rekursif
+        function countNodes(node) {
+            if (!node) return 0;
+            let count = 1;
+            (node.children || []).forEach(c => { count += countNodes(c); });
+            return count;
         }
 
         function bukaModalMindMap(data = null) {
