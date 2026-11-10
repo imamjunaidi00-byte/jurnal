@@ -70,6 +70,96 @@
             #print-area * { visibility: visible !important; }
             @page { size: A4 landscape; margin: 10mm; }
         }
+
+        /* ── Mind Map Visual Canvas ── */
+        #mm-canvas-container { cursor: grab; user-select: none; }
+        #mm-canvas-container.panning { cursor: grabbing; }
+        #mm-canvas-transform-wrapper { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
+        .mm-node {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 14px;
+            color: white;
+            cursor: pointer;
+            transition: box-shadow 0.15s, transform 0.1s;
+            white-space: nowrap;
+            min-width: 80px;
+            max-width: 220px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            user-select: none;
+            z-index: 10;
+        }
+        .mm-node.mm-node-root {
+            padding: 16px 28px;
+            font-size: 17px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            z-index: 11;
+        }
+        .mm-node.mm-node-selected {
+            box-shadow: 0 0 0 3px white, 0 0 0 5px var(--node-color, #8b5cf6), 0 8px 24px rgba(0,0,0,0.4);
+            transform: scale(1.05);
+        }
+        .mm-node .mm-node-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            pointer-events: none;
+        }
+        .mm-node-toolbar {
+            position: absolute;
+            top: -52px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 4px;
+            background: rgba(15,23,42,0.97);
+            border-radius: 12px;
+            padding: 6px 8px;
+            z-index: 100;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            pointer-events: all;
+            white-space: nowrap;
+        }
+        .mm-node-toolbar button {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            border: none;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+        .mm-node-toolbar button:hover { background: rgba(255,255,255,0.15); }
+        .mm-inline-edit {
+            background: rgba(255,255,255,0.15);
+            border: 2px solid white;
+            border-radius: 999px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 2px 10px;
+            outline: none;
+            min-width: 60px;
+            max-width: 180px;
+        }
+        #mm-canvas-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+            background-size: 28px 28px;
+            pointer-events: none;
+            z-index: 0;
+        }
     </style>
     <script>
         tailwind.config = {
@@ -1069,22 +1159,28 @@
                 <button onclick="mmAddBranch()" class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl text-sm font-semibold hover:from-green-700 hover:to-green-800 flex items-center gap-2 shadow-md shadow-green-200">
                     <i class="fas fa-plus"></i> Tambah Kategori Utama
                 </button>
+                <button onclick="mmResetLayout()" title="Reset Layout" class="px-3 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 shadow-md">
+                    <i class="fas fa-redo-alt text-xs"></i> Reset
+                </button>
+                <button onclick="mmZoomFit()" title="Zoom Fit" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 shadow-md">
+                    <i class="fas fa-compress-arrows-alt text-xs"></i> Fit
+                </button>
+                <button id="mm-toggle-view-btn" onclick="mmToggleView()" title="Toggle View" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 shadow-md">
+                    <i class="fas fa-list text-xs"></i> List
+                </button>
                 <div class="w-px h-6 bg-gray-200 ml-2"></div>
                 <button onclick="simpanMindMap()" class="px-5 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 shadow-md shadow-purple-200">
                     <i class="fas fa-save"></i> Simpan
                 </button>
             </div>
             <!-- Canvas -->
-            <div class="flex-1 relative overflow-hidden flex bg-gray-50" id="mm-canvas-container">
-                <!-- Tree View (replacing canvas) -->
-                <div class="flex-1 overflow-y-auto p-8">
-                    <div id="mm-tree-view" class="max-w-5xl mx-auto space-y-3">
-                        <!-- Tree will be rendered here -->
-                    </div>
-                </div>
-                
+            <div class="flex-1 relative overflow-hidden flex" id="mm-canvas-container" style="background:#0f172a">
+                <!-- SVG layer untuk koneksi garis -->
+                <svg id="mm-svg-connections" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:1;"></svg>
+                <!-- HTML layer untuk node -->
+                <div id="mm-nodes-layer" style="position:absolute;top:0;left:0;width:0;height:0;z-index:2;"></div>
                 <!-- Material Preview Panel -->
-                <div id="mm-material-preview" class="hidden w-96 bg-white border-l border-gray-200 overflow-y-auto shadow-xl">
+                <div id="mm-material-preview" class="hidden" style="position:absolute;right:0;top:0;bottom:0;width:384px;background:white;border-left:1px solid #e5e7eb;overflow-y:auto;z-index:20;">
                     <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-blue-50 sticky top-0 z-10">
                         <div class="flex items-center justify-between mb-3">
                             <div class="flex-1">
@@ -6767,22 +6863,717 @@
                 text, 
                 color: color || MM_COLORS[0], 
                 children: [],
-                materials: [] // Array untuk menyimpan materi: {type: 'link'|'pdf'|'image'|'video'|'text', title: '', url: '', content: ''}
+                materials: []
             };
         }
 
-        // ── EDITOR FULLSCREEN BARU ──────────────────────────────
+        // ── VISUAL CANVAS STATE ──────────────────────────────
         let mmCurrentNodes = null;
         let mmZoomLevel = 1;
         let mmSelectedNodeId = null;
-        let mmEditingNodeId = null; // Track which node is being edited
-        let mmCanvasOffset = { x: 0, y: 0 };
-        let mmIsDragging = false;
-        let mmDragStart = { x: 0, y: 0 };
+        let mmEditingNodeId = null;
+        let mmViewMode = 'canvas'; // 'canvas' | 'list'
+        let mmTransform = { x: 0, y: 0, scale: 1 };
+        let mmIsPanning = false;
+        let mmPanStart = { x: 0, y: 0 };
+        let mmDragNodeId = null;
+        let mmDragNodeOffset = { x: 0, y: 0 };
+        let mmCanvasEventsAttached = false;
+
+        // ── NODE WIDTH ESTIMATE ──────────────────────────────
+        function mmEstimateNodeWidth(text) {
+            return Math.max(80, Math.min(220, text.length * 9 + 56));
+        }
+
+        // ── AUTO LAYOUT ──────────────────────────────
+        function mmAutoLayout() {
+            if (!mmCurrentNodes) return;
+            const container = document.getElementById('mm-canvas-container');
+            const cw = container ? container.offsetWidth : 1200;
+            const ch = container ? container.offsetHeight : 700;
+            const cx = cw / 2;
+            const cy = ch / 2;
+
+            if (mmCurrentNodes.x === undefined) {
+                mmCurrentNodes.x = cx;
+                mmCurrentNodes.y = cy;
+            }
+
+            const level1 = mmCurrentNodes.children || [];
+            const r1 = 220;
+            level1.forEach((child, i) => {
+                if (child.x === undefined) {
+                    const angle = (i / level1.length) * 2 * Math.PI - Math.PI / 2;
+                    child.x = cx + r1 * Math.cos(angle);
+                    child.y = cy + r1 * Math.sin(angle);
+                }
+                const parentAngle = Math.atan2(child.y - cy, child.x - cx);
+                const level2 = child.children || [];
+                const r2 = 170;
+                level2.forEach((grandchild, j) => {
+                    if (grandchild.x === undefined) {
+                        const spread = Math.PI * 0.7;
+                        const startAngle = parentAngle - spread / 2;
+                        const angle2 = level2.length === 1
+                            ? parentAngle
+                            : startAngle + (j / (level2.length - 1)) * spread;
+                        grandchild.x = child.x + r2 * Math.cos(angle2);
+                        grandchild.y = child.y + r2 * Math.sin(angle2);
+                    }
+                    // Level 3+
+                    const pAngle2 = Math.atan2(grandchild.y - child.y, grandchild.x - child.x);
+                    const level3 = grandchild.children || [];
+                    const r3 = 140;
+                    level3.forEach((n3, k) => {
+                        if (n3.x === undefined) {
+                            const spread3 = Math.PI * 0.5;
+                            const startAngle3 = pAngle2 - spread3 / 2;
+                            const a3 = level3.length === 1
+                                ? pAngle2
+                                : startAngle3 + (k / (level3.length - 1)) * spread3;
+                            n3.x = grandchild.x + r3 * Math.cos(a3);
+                            n3.y = grandchild.y + r3 * Math.sin(a3);
+                        }
+                    });
+                });
+            });
+        }
+
+        // ── RENDER CONNECTIONS SVG ──────────────────────────────
+        function mmRenderConnections() {
+            const svgEl = document.getElementById('mm-svg-connections');
+            if (!svgEl || !mmCurrentNodes) return;
+            const paths = [];
+            const nh = 44;
+
+            function drawEdges(parent) {
+                (parent.children || []).forEach(child => {
+                    const pw = mmEstimateNodeWidth(parent.text);
+                    const cw = mmEstimateNodeWidth(child.text);
+                    const isRoot = parent.id === mmCurrentNodes.id;
+                    let sx, sy, ex, ey, c1x, c1y, c2x, c2y;
+                    if (isRoot) {
+                        // from center of root to edge of child
+                        const angle = Math.atan2(child.y - parent.y, child.x - parent.x);
+                        const rootHalfW = mmEstimateNodeWidth(parent.text) / 2 + 8;
+                        const rootHalfH = nh / 2 + 4;
+                        sx = parent.x + rootHalfW * Math.cos(angle);
+                        sy = parent.y + rootHalfH * Math.sin(angle);
+                        // enter child at the near edge
+                        const cDist = cw / 2 + 4;
+                        const rAngle = Math.atan2(parent.y - child.y, parent.x - child.x);
+                        ex = child.x + cDist * Math.cos(rAngle);
+                        ey = child.y + (nh / 2) * Math.sin(rAngle);
+                        c1x = sx + (ex - sx) * 0.45;
+                        c1y = sy;
+                        c2x = sx + (ex - sx) * 0.55;
+                        c2y = ey;
+                    } else {
+                        // horizontal bezier from right of parent to left of child (or vice versa)
+                        const goRight = child.x >= parent.x;
+                        if (goRight) {
+                            sx = parent.x + pw / 2; sy = parent.y;
+                            ex = child.x - cw / 2; ey = child.y;
+                        } else {
+                            sx = parent.x - pw / 2; sy = parent.y;
+                            ex = child.x + cw / 2; ey = child.y;
+                        }
+                        const ctrl = Math.abs(ex - sx) * 0.5;
+                        c1x = sx + (goRight ? ctrl : -ctrl); c1y = sy;
+                        c2x = ex + (goRight ? -ctrl : ctrl); c2y = ey;
+                    }
+                    paths.push(`<path d="M${sx},${sy} C${c1x},${c1y} ${c2x},${c2y} ${ex},${ey}" stroke="${child.color}" stroke-opacity="0.75" stroke-width="2.5" fill="none" stroke-linecap="round"/>`);
+                    drawEdges(child);
+                });
+            }
+            drawEdges(mmCurrentNodes);
+            svgEl.innerHTML = paths.join('');
+        }
+
+        // ── RENDER NODES DOM ──────────────────────────────
+        function mmRenderNodes() {
+            const layer = document.getElementById('mm-nodes-layer');
+            if (!layer || !mmCurrentNodes) return;
+            layer.innerHTML = '';
+            const nh = 44;
+
+            function renderNode(node, isRoot) {
+                const w = mmEstimateNodeWidth(node.text);
+                const h = isRoot ? 56 : nh;
+                const left = node.x - w / 2;
+                const top = node.y - h / 2;
+                const isSelected = mmSelectedNodeId === node.id;
+                const isEditing = mmEditingNodeId === node.id;
+                const hasMaterials = node.materials && node.materials.length > 0;
+
+                const div = document.createElement('div');
+                div.className = 'mm-node' + (isRoot ? ' mm-node-root' : '') + (isSelected ? ' mm-node-selected' : '');
+                div.dataset.nodeId = node.id;
+                div.style.cssText = `left:${left}px;top:${top}px;background:${node.color};--node-color:${node.color};width:${w}px;height:${h}px;`;
+
+                if (isEditing) {
+                    const inp = document.createElement('input');
+                    inp.className = 'mm-inline-edit';
+                    inp.value = node.text;
+                    inp.style.width = (w - 36) + 'px';
+                    inp.addEventListener('blur', () => mmFinishEdit(node.id, inp.value));
+                    inp.addEventListener('keydown', e => {
+                        if (e.key === 'Enter') inp.blur();
+                        if (e.key === 'Escape') { mmEditingNodeId = null; mmRenderNodes(); }
+                        e.stopPropagation();
+                    });
+                    inp.addEventListener('click', e => e.stopPropagation());
+                    inp.addEventListener('mousedown', e => e.stopPropagation());
+                    div.appendChild(inp);
+                    setTimeout(() => { inp.focus(); inp.select(); }, 30);
+                } else {
+                    const span = document.createElement('span');
+                    span.className = 'mm-node-text';
+                    span.textContent = node.text;
+                    div.appendChild(span);
+                    if (hasMaterials) {
+                        const badge = document.createElement('span');
+                        badge.style.cssText = 'font-size:10px;opacity:0.85;margin-left:2px;';
+                        badge.textContent = '📎' + node.materials.length;
+                        div.appendChild(badge);
+                    }
+                }
+
+                // Toolbar for selected node
+                if (isSelected && !isEditing) {
+                    const tb = document.createElement('div');
+                    tb.className = 'mm-node-toolbar';
+                    const btns = [
+                        { icon: '✏️', title: 'Edit', action: `mmStartEdit('${node.id}')` },
+                        { icon: '➕', title: 'Tambah Sub', action: `mmAddChildCanvas('${node.id}')` },
+                        { icon: '🎨', title: 'Warna', action: `mmShowColorPicker('${node.id}')` },
+                        { icon: '📎', title: 'Materi', action: `mmShowMaterials()` },
+                    ];
+                    if (!isRoot) btns.push({ icon: '🗑️', title: 'Hapus', action: `mmDeleteCanvasNode('${node.id}')` });
+                    btns.forEach(b => {
+                        const btn = document.createElement('button');
+                        btn.title = b.title;
+                        btn.textContent = b.icon;
+                        btn.style.background = 'transparent';
+                        btn.setAttribute('onclick', b.action + '; event.stopPropagation()');
+                        tb.appendChild(btn);
+                    });
+                    div.appendChild(tb);
+                }
+
+                // Events
+                div.addEventListener('mousedown', e => {
+                    if (e.target.closest('.mm-node-toolbar')) return;
+                    e.stopPropagation();
+                    mmDragNodeId = node.id;
+                    const rect = div.getBoundingClientRect();
+                    const container = document.getElementById('mm-canvas-container');
+                    const cr = container.getBoundingClientRect();
+                    mmDragNodeOffset.x = (e.clientX - cr.left - mmTransform.x) / mmTransform.scale - node.x;
+                    mmDragNodeOffset.y = (e.clientY - cr.top - mmTransform.y) / mmTransform.scale - node.y;
+                });
+                div.addEventListener('click', e => {
+                    if (e.target.closest('.mm-node-toolbar')) return;
+                    e.stopPropagation();
+                    mmSelectCanvasNode(node.id);
+                });
+                div.addEventListener('dblclick', e => {
+                    e.stopPropagation();
+                    mmStartEdit(node.id);
+                });
+
+                layer.appendChild(div);
+                (node.children || []).forEach(c => renderNode(c, false));
+            }
+            renderNode(mmCurrentNodes, true);
+        }
+
+        // ── APPLY TRANSFORM ──────────────────────────────
+        function mmApplyTransform() {
+            const svgEl = document.getElementById('mm-svg-connections');
+            const layer = document.getElementById('mm-nodes-layer');
+            if (svgEl) svgEl.style.transform = `translate(${mmTransform.x}px,${mmTransform.y}px) scale(${mmTransform.scale})`;
+            if (layer) layer.style.transform = `translate(${mmTransform.x}px,${mmTransform.y}px) scale(${mmTransform.scale})`;
+        }
+
+        // ── MAIN RENDER ──────────────────────────────
+        function mmRenderCanvas() {
+            if (mmViewMode === 'list') { mmRenderTreeView(); return; }
+            if (!mmCurrentNodes) return;
+            mmAutoLayout();
+            mmRenderConnections();
+            mmRenderNodes();
+            mmApplyTransform();
+            if (!mmCanvasEventsAttached) mmAttachCanvasEvents();
+        }
+
+        // ── ATTACH CANVAS EVENTS ──────────────────────────────
+        function mmAttachCanvasEvents() {
+            const container = document.getElementById('mm-canvas-container');
+            if (!container) return;
+            mmCanvasEventsAttached = true;
+
+            container.addEventListener('mousedown', e => {
+                if (e.target.closest('.mm-node') || e.target.closest('.mm-node-toolbar')) return;
+                mmIsPanning = true;
+                mmPanStart.x = e.clientX - mmTransform.x;
+                mmPanStart.y = e.clientY - mmTransform.y;
+                container.classList.add('panning');
+                mmSelectCanvasNode(null);
+            });
+
+            container.addEventListener('mousemove', e => {
+                if (mmDragNodeId) {
+                    const node = mmFindNodeById(mmCurrentNodes, mmDragNodeId);
+                    if (node) {
+                        const cr = container.getBoundingClientRect();
+                        node.x = (e.clientX - cr.left - mmTransform.x) / mmTransform.scale - mmDragNodeOffset.x;
+                        node.y = (e.clientY - cr.top - mmTransform.y) / mmTransform.scale - mmDragNodeOffset.y;
+                        // Update DOM position directly for performance
+                        const el = container.querySelector(`.mm-node[data-node-id="${mmDragNodeId}"]`);
+                        if (el) {
+                            const w = mmEstimateNodeWidth(node.text);
+                            const h = node.id === mmCurrentNodes.id ? 56 : 44;
+                            el.style.left = (node.x - w/2) + 'px';
+                            el.style.top = (node.y - h/2) + 'px';
+                        }
+                        mmRenderConnections();
+                    }
+                } else if (mmIsPanning) {
+                    mmTransform.x = e.clientX - mmPanStart.x;
+                    mmTransform.y = e.clientY - mmPanStart.y;
+                    mmApplyTransform();
+                }
+            });
+
+            container.addEventListener('mouseup', () => {
+                mmDragNodeId = null;
+                mmIsPanning = false;
+                container.classList.remove('panning');
+            });
+
+            container.addEventListener('mouseleave', () => {
+                mmDragNodeId = null;
+                mmIsPanning = false;
+                container.classList.remove('panning');
+            });
+
+            container.addEventListener('wheel', e => {
+                e.preventDefault();
+                const cr = container.getBoundingClientRect();
+                const mx = e.clientX - cr.left;
+                const my = e.clientY - cr.top;
+                const prevScale = mmTransform.scale;
+                const newScale = Math.min(3, Math.max(0.2, prevScale * (1 - e.deltaY * 0.001)));
+                // Zoom toward mouse cursor
+                mmTransform.x = mx - (mx - mmTransform.x) * (newScale / prevScale);
+                mmTransform.y = my - (my - mmTransform.y) * (newScale / prevScale);
+                mmTransform.scale = newScale;
+                mmApplyTransform();
+            }, { passive: false });
+        }
+
+        // ── SELECT NODE ──────────────────────────────
+        function mmSelectCanvasNode(id) {
+            mmSelectedNodeId = id;
+            if (id) {
+                const node = mmFindNodeById(mmCurrentNodes, id);
+                if (node) mmShowPreview(node);
+            } else {
+                mmClosePreview();
+            }
+            mmRenderNodes();
+        }
+
+        // ── START INLINE EDIT ──────────────────────────────
+        function mmStartEdit(id) {
+            mmEditingNodeId = id;
+            mmSelectedNodeId = id;
+            mmRenderNodes();
+        }
+
+        function mmFinishEdit(id, newText) {
+            const text = (newText || '').trim();
+            const node = mmFindNodeById(mmCurrentNodes, id);
+            if (node && text) {
+                node.text = text;
+                showToast('✅ Teks diperbarui');
+            }
+            mmEditingNodeId = null;
+            mmRenderCanvas();
+        }
+
+        // ── ADD BRANCH (top level) ──────────────────────────────
+        function mmAddBranch() {
+            if (!mmCurrentNodes.children) mmCurrentNodes.children = [];
+            const color = MM_COLORS[mmCurrentNodes.children.length % MM_COLORS.length];
+            const newNode = mmNewNode('Kategori baru', color);
+            mmCurrentNodes.children.push(newNode);
+            // Position radially from root
+            const count = mmCurrentNodes.children.length;
+            const angle = ((count - 1) / count) * 2 * Math.PI - Math.PI / 2;
+            const r = 220;
+            const cx = mmCurrentNodes.x || 600;
+            const cy = mmCurrentNodes.y || 350;
+            newNode.x = cx + r * Math.cos(angle);
+            newNode.y = cy + r * Math.sin(angle);
+            // Re-layout remaining nodes
+            mmCurrentNodes.children.forEach((ch, i) => {
+                const a = (i / count) * 2 * Math.PI - Math.PI / 2;
+                ch.x = cx + r * Math.cos(a);
+                ch.y = cy + r * Math.sin(a);
+            });
+            mmSelectedNodeId = newNode.id;
+            mmEditingNodeId = newNode.id;
+            mmRenderCanvas();
+            showToast('✅ Kategori utama ditambahkan');
+        }
+
+        // ── ADD CHILD TO EXISTING NODE ──────────────────────────────
+        function mmAddChildCanvas(parentId) {
+            const parent = mmFindNodeById(mmCurrentNodes, parentId);
+            if (!parent) return;
+            if (!parent.children) parent.children = [];
+            const newNode = mmNewNode('Sub-kategori', parent.color);
+            parent.children.push(newNode);
+            // Position around parent
+            const count = parent.children.length;
+            const parentAngle = mmFindParentId(mmCurrentNodes, parentId)
+                ? Math.atan2(parent.y - (mmFindNodeById(mmCurrentNodes, mmFindParentId(mmCurrentNodes, parentId))?.y || 0),
+                             parent.x - (mmFindNodeById(mmCurrentNodes, mmFindParentId(mmCurrentNodes, parentId))?.x || 0))
+                : 0;
+            const r = 160;
+            const spread = Math.PI * 0.6;
+            parent.children.forEach((ch, i) => {
+                if (ch.x === undefined || ch.id === newNode.id) {
+                    const a = count === 1 ? parentAngle : parentAngle - spread/2 + (i/(count-1||1))*spread;
+                    ch.x = parent.x + r * Math.cos(a);
+                    ch.y = parent.y + r * Math.sin(a);
+                }
+            });
+            mmSelectedNodeId = newNode.id;
+            mmEditingNodeId = newNode.id;
+            mmRenderCanvas();
+        }
+
+        // ── DELETE NODE ──────────────────────────────
+        function mmDeleteCanvasNode(id) {
+            if (!confirm('Hapus node ini dan semua sub-node nya?')) return;
+            mmRemoveNodeFromTree(id);
+            if (mmSelectedNodeId === id) {
+                mmSelectedNodeId = null;
+                mmClosePreview();
+            }
+            mmRenderCanvas();
+            showToast('✅ Node dihapus');
+        }
+
+        // ── ZOOM FIT ──────────────────────────────
+        function mmZoomFit() {
+            if (!mmCurrentNodes) return;
+            const container = document.getElementById('mm-canvas-container');
+            if (!container) return;
+            const cw = container.offsetWidth;
+            const ch = container.offsetHeight;
+            const pad = 80;
+
+            // Collect all node positions
+            const positions = [];
+            function collectPos(node) {
+                if (node.x !== undefined) positions.push({ x: node.x, y: node.y });
+                (node.children || []).forEach(collectPos);
+            }
+            collectPos(mmCurrentNodes);
+            if (!positions.length) return;
+
+            const minX = Math.min(...positions.map(p => p.x)) - 120;
+            const maxX = Math.max(...positions.map(p => p.x)) + 120;
+            const minY = Math.min(...positions.map(p => p.y)) - 40;
+            const maxY = Math.max(...positions.map(p => p.y)) + 40;
+            const bw = maxX - minX;
+            const bh = maxY - minY;
+            const scaleX = (cw - pad * 2) / bw;
+            const scaleY = (ch - pad * 2) / bh;
+            const scale = Math.min(scaleX, scaleY, 2);
+            mmTransform.scale = scale;
+            mmTransform.x = (cw - bw * scale) / 2 - minX * scale;
+            mmTransform.y = (ch - bh * scale) / 2 - minY * scale;
+            mmApplyTransform();
+        }
+
+        // ── RESET LAYOUT ──────────────────────────────
+        function mmResetLayout() {
+            function clearPos(node) {
+                delete node.x; delete node.y;
+                (node.children || []).forEach(clearPos);
+            }
+            if (mmCurrentNodes) clearPos(mmCurrentNodes);
+            mmTransform = { x: 0, y: 0, scale: 1 };
+            mmRenderCanvas();
+            setTimeout(mmZoomFit, 50);
+        }
+
+        // ── TOGGLE VIEW ──────────────────────────────
+        function mmToggleView() {
+            const btn = document.getElementById('mm-toggle-view-btn');
+            if (mmViewMode === 'canvas') {
+                mmViewMode = 'list';
+                if (btn) btn.innerHTML = '<i class="fas fa-project-diagram text-xs"></i> Canvas';
+                mmRenderTreeView();
+            } else {
+                mmViewMode = 'canvas';
+                if (btn) btn.innerHTML = '<i class="fas fa-list text-xs"></i> List';
+                mmRenderCanvas();
+            }
+        }
+
+        // ── TREE VIEW (LIST MODE) ──────────────────────────────
+        function mmRenderTreeView() {
+            const container = document.getElementById('mm-canvas-container');
+            if (!container || !mmCurrentNodes) return;
+
+            // Remove canvas elements
+            const svg = document.getElementById('mm-svg-connections');
+            const nodesLayer = document.getElementById('mm-nodes-layer');
+            const preview = document.getElementById('mm-material-preview');
+            if (svg) svg.innerHTML = '';
+            if (nodesLayer) nodesLayer.innerHTML = '';
+
+            // Create or reuse list container
+            let listEl = document.getElementById('mm-tree-view-list');
+            if (!listEl) {
+                listEl = document.createElement('div');
+                listEl.id = 'mm-tree-view-list';
+                listEl.style.cssText = 'position:absolute;inset:0;overflow-y:auto;padding:32px;z-index:5;background:#f9fafb;';
+                container.insertBefore(listEl, preview);
+            }
+            listEl.classList.remove('hidden');
+            if (svg) svg.style.display = 'none';
+
+            const children = mmCurrentNodes.children || [];
+            if (children.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-16"><div class="w-24 h-24 bg-gradient-to-br from-purple-100 to-blue-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl"><i class="fas fa-sitemap text-4xl text-purple-600"></i></div><h3 class="text-xl font-bold text-gray-900 mb-2">Belum Ada Kategori</h3><p class="text-gray-500 mb-6">Mulai buat mind map dengan menambahkan kategori utama</p><button onclick="mmAddBranch()" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg inline-flex items-center gap-2"><i class="fas fa-plus"></i> Tambah Kategori Pertama</button></div>`;
+            } else {
+                listEl.innerHTML = `<div class="max-w-3xl mx-auto space-y-3">` + children.map((child, i) => mmBuildListHTML(child, 0, null, i)).join('') + `</div>`;
+            }
+        }
+
+        function mmBuildListHTML(node, level, parentNum, index) {
+            if (!node) return '';
+            const hasChildren = node.children && node.children.length > 0;
+            const hasMaterials = node.materials && node.materials.length > 0;
+            const myNum = parentNum ? `${parentNum}.${index+1}` : `${index+1}`;
+            const indent = level * 32;
+            let html = `<div style="margin-left:${indent}px" class="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-purple-200 transition-all cursor-pointer" onclick="mmSelectListNode('${node.id}')">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-lg" style="background:${node.color}20;color:${node.color}">${myNum}</span>
+                    <span class="font-semibold text-gray-900 flex-1">${node.text}</span>
+                    ${hasMaterials ? `<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">📎 ${node.materials.length}</span>` : ''}
+                    <button onclick="event.stopPropagation();mmShowColorPicker('${node.id}')" class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:${node.color}" title="Warna"><i class="fas fa-palette text-xs text-white"></i></button>
+                    <button onclick="event.stopPropagation();mmSelectListNode('${node.id}');mmShowMaterials()" class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center" title="Materi"><i class="fas fa-paperclip text-xs"></i></button>
+                    <button onclick="event.stopPropagation();mmStartListEdit('${node.id}')" class="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center" title="Edit"><i class="fas fa-pen text-xs"></i></button>
+                    <button onclick="event.stopPropagation();mmAddChildCanvas('${node.id}');mmViewMode='list';mmRenderTreeView()" class="w-7 h-7 rounded-lg bg-green-100 text-green-600 flex items-center justify-center" title="Tambah Sub"><i class="fas fa-plus text-xs"></i></button>
+                    <button onclick="event.stopPropagation();mmDeleteCanvasNode('${node.id}')" class="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
+                </div>
+            </div>`;
+            if (hasChildren) {
+                html += node.children.map((ch, i) => mmBuildListHTML(ch, level + 1, myNum, i)).join('');
+            }
+            return html;
+        }
+
+        function mmSelectListNode(id) {
+            mmSelectedNodeId = id;
+            const node = mmFindNodeById(mmCurrentNodes, id);
+            if (node) mmShowPreview(node);
+        }
+
+        function mmStartListEdit(id) {
+            const newText = prompt('Edit teks node:', mmFindNodeById(mmCurrentNodes, id)?.text || '');
+            if (newText && newText.trim()) {
+                const node = mmFindNodeById(mmCurrentNodes, id);
+                if (node) { node.text = newText.trim(); mmRenderTreeView(); showToast('✅ Teks diperbarui'); }
+            }
+        }
+
+        // ── OLD TREE HELPERS (kept for compatibility) ──────────────────────────────
+        let mmDragOverNodeId = null;
+        let mmDragPosition = null;
+
+        function mmGetNumbering(parentNumbers, index) {
+            return parentNumbers ? `${parentNumbers}.${index + 1}` : `${index + 1}`;
+        }
+
+        function mmFindParentId(root, targetId, parentId = null) {
+            if (!root) return null;
+            if (root.id === targetId) return parentId;
+            for (const child of (root.children || [])) {
+                const found = mmFindParentId(child, targetId, root.id);
+                if (found !== null) return found;
+            }
+            return null;
+        }
+
+        function mmRemoveNodeFromTree(nodeId) {
+            const removeFrom = (parent) => {
+                if (!parent.children) return null;
+                const idx = parent.children.findIndex(c => c.id === nodeId);
+                if (idx !== -1) return parent.children.splice(idx, 1)[0];
+                for (const child of parent.children) {
+                    const found = removeFrom(child);
+                    if (found) return found;
+                }
+                return null;
+            };
+            const rootIdx = (mmCurrentNodes.children || []).findIndex(c => c.id === nodeId);
+            if (rootIdx !== -1) return mmCurrentNodes.children.splice(rootIdx, 1)[0];
+            return removeFrom(mmCurrentNodes);
+        }
+
+        function mmFindNodeById(node, id) {
+            if (!node) return null;
+            if (node.id === id) return node;
+            for (const child of (node.children || [])) {
+                const found = mmFindNodeById(child, id);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        function mmSelectTreeNode(id) {
+            mmSelectedNodeId = id;
+            const node = mmFindNodeById(mmCurrentNodes, id);
+            if (!node) return;
+            mmShowPreview(node);
+            if (mmViewMode === 'canvas') mmRenderNodes();
+            else mmRenderTreeView();
+        }
+
+        function mmToggleExpand(id) {
+            const node = mmFindNodeById(mmCurrentNodes, id);
+            if (!node) return;
+            node._expanded = !node._expanded;
+            mmRenderTreeView();
+        }
+
+        function mmEditTreeNode(id) {
+            if (mmViewMode === 'canvas') { mmStartEdit(id); return; }
+            mmStartListEdit(id);
+        }
+
+        function mmSaveEdit(id) {
+            const input = document.getElementById(`edit-input-${id}`);
+            if (!input) return;
+            const newText = input.value.trim();
+            if (!newText) return showToast('Teks tidak boleh kosong', 'error');
+            const node = mmFindNodeById(mmCurrentNodes, id);
+            if (node) {
+                node.text = newText;
+                mmEditingNodeId = null;
+                mmRenderCanvas();
+                if (mmSelectedNodeId === id) mmShowPreview(node);
+                showToast('✅ Teks berhasil diubah');
+            }
+        }
+
+        function mmCancelEdit() {
+            mmEditingNodeId = null;
+            mmRenderCanvas();
+        }
+
+        function mmAddChildToNode(id) { mmAddChildCanvas(id); }
+
+        function mmDeleteTreeNode(id) { mmDeleteCanvasNode(id); }
+
+        function mmInitDragDrop() {}
+        function mmOnDragStart() {}
+        function mmOnDragEnd() {}
+        function mmOnDragOver() {}
+        function mmOnDragLeave() {}
+        function mmOnDrop() {}
+        function mmInitializePositions() {}
+        function mmDrawConnections() {}
+        function mmDrawAllNodes() {}
+        function mmDrawSingleNode() {}
+        function mmInitCanvasEvents() {}
+        function mmFindNodeAt() { return null; }
+        function mmSelectNode(id) { mmSelectCanvasNode(id); }
+        function mmDeselectNode() { mmSelectCanvasNode(null); }
+        function mmApplyNodeEdit() {}
+        function mmSetNodeColor(color) { if (mmSelectedNodeId) { const n = mmFindNodeById(mmCurrentNodes, mmSelectedNodeId); if (n) { n.color = color; mmRenderCanvas(); } } }
+        function mmDeleteSelectedNode() { if (mmSelectedNodeId) mmDeleteCanvasNode(mmSelectedNodeId); }
+        function mmDeleteNodeById(node, id) { mmRemoveNodeFromTree(id); }
+        function mmAddChild() { if (mmSelectedNodeId) mmAddChildCanvas(mmSelectedNodeId); }
+        function mmZoom(delta) { mmTransform.scale = Math.min(2, Math.max(0.4, mmTransform.scale + delta)); mmApplyTransform(); }
+        function mmFitView() { mmZoomFit(); }
+
+        // ── COLOR PICKER ──────────────────────────────
+        let mmColorPickerNodeId = null;
+
+        function mmShowColorPicker(id) {
+            mmColorPickerNodeId = id;
+            const node = mmFindNodeById(mmCurrentNodes, id);
+            if (!node) return;
+            const grid = document.getElementById('color-picker-grid');
+            grid.innerHTML = MM_COLORS.map(color => `
+                <button onclick="mmSetColor('${color}')"
+                        class="w-full aspect-square rounded-xl transition-all hover:scale-110 hover:shadow-lg flex items-center justify-center"
+                        style="background: ${color}">
+                    ${node.color === color ? '<i class="fas fa-check text-white text-xl"></i>' : ''}
+                </button>
+            `).join('');
+            document.getElementById('modal-color-picker').classList.remove('hidden');
+        }
+
+        function mmCloseColorPicker() {
+            document.getElementById('modal-color-picker').classList.add('hidden');
+            mmColorPickerNodeId = null;
+        }
+
+        function mmSetColor(color) {
+            if (!mmColorPickerNodeId) return;
+            const node = mmFindNodeById(mmCurrentNodes, mmColorPickerNodeId);
+            if (node) {
+                node.color = color;
+                mmRenderCanvas();
+                if (mmSelectedNodeId === mmColorPickerNodeId) mmShowPreview(node);
+                showToast('✅ Warna berhasil diubah');
+            }
+            mmCloseColorPicker();
+        }
+
+        function mmShowPreview(node) {
+            const panel = document.getElementById('mm-material-preview');
+            const title = document.getElementById('mm-preview-title');
+            const container = document.getElementById('mm-preview-materials');
+            if (!panel || !title || !container) return;
+            title.textContent = node.text;
+            panel.classList.remove('hidden');
+            const materials = node.materials || [];
+            if (!materials.length) {
+                container.innerHTML = `<div class="text-center py-12"><div class="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"><i class="fas fa-folder-open text-3xl text-blue-600"></i></div><p class="text-base text-gray-700 font-semibold mb-1">Belum ada materi</p><p class="text-sm text-gray-500">Klik tombol "Tambah Materi Baru" untuk menambahkan</p></div>`;
+                return;
+            }
+            const getIcon = t => ({ link:'fa-link', pdf:'fa-file-pdf', video:'fa-video', image:'fa-image', text:'fa-sticky-note' }[t] || 'fa-file');
+            const getColor = t => ({ link:'blue', pdf:'red', video:'purple', image:'green', text:'yellow' }[t] || 'gray');
+            container.innerHTML = materials.map(m => {
+                const color = getColor(m.type); const icon = getIcon(m.type);
+                return `<div class="bg-gradient-to-r from-${color}-50 to-white border-2 border-${color}-200 rounded-xl p-4 mb-3 hover:shadow-lg transition-all"><div class="flex items-start gap-3"><div class="w-12 h-12 rounded-xl bg-${color}-100 text-${color}-600 flex items-center justify-center shrink-0 shadow-md"><i class="fas ${icon} text-lg"></i></div><div class="flex-1 min-w-0"><h5 class="font-bold text-gray-900 text-sm mb-2">${m.title}</h5>${m.type==='text'?`<p class="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">${m.content}</p>`:`<a href="${m.url}" target="_blank" class="inline-flex items-center gap-2 text-xs text-${color}-600 hover:text-${color}-800 font-medium bg-${color}-50 px-3 py-2 rounded-lg hover:bg-${color}-100 transition-colors"><i class="fas fa-external-link-alt"></i> Buka Link</a>`}</div></div></div>`;
+            }).join('');
+        }
+
+        function mmClosePreview() {
+            const panel = document.getElementById('mm-material-preview');
+            if (panel) panel.classList.add('hidden');
+        }
 
         async function bukaEditorMindMap(data = null) {
             mmCurrentNodes = data?.nodes || mmNewNode('Topik Utama', '#8b5cf6');
             mmSelectedNodeId = null;
+            mmEditingNodeId = null;
+            mmViewMode = 'canvas';
+            mmTransform = { x: 0, y: 0, scale: 1 };
+            mmCanvasEventsAttached = false;
             
             document.getElementById('mm-edit-id').value = data?.id || '';
             document.getElementById('mm-judul').value = data?.judul || '';
@@ -6799,13 +7590,21 @@
                 '<option value="">-- Kelas --</option>' + getKelasList().map(k => `<option value="${k}" ${data?.kelas===k?'selected':''}>${k}</option>`).join('');
             
             document.getElementById('editor-mindmap').classList.remove('hidden');
-            mmRenderTreeView();
+            const toggleBtn = document.getElementById('mm-toggle-view-btn');
+            if (toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-list text-xs"></i> List';
+            setTimeout(() => { mmRenderCanvas(); setTimeout(mmZoomFit, 80); }, 50);
             setTimeout(() => document.getElementById('mm-judul').focus(), 100);
         }
 
         function tutupEditorMindMap() {
             document.getElementById('editor-mindmap').classList.add('hidden');
             mmSelectedNodeId = null;
+            mmEditingNodeId = null;
+            // Clean up list view if any
+            const listEl = document.getElementById('mm-tree-view-list');
+            if (listEl) listEl.remove();
+            const svg = document.getElementById('mm-svg-connections');
+            if (svg) svg.style.display = '';
         }
 
         async function simpanMindMap() {
@@ -6832,1031 +7631,6 @@
                 } else showToast(res.message || 'Gagal menyimpan', 'error');
             } catch(e) { showToast('Gagal terhubung ke server', 'error'); }
         }
-
-        function mmRenderCanvas() {
-            mmRenderTreeView();
-        }
-
-        // ── DRAG & DROP STATE ──────────────────────────────
-        let mmDragNodeId = null;
-        let mmDragOverNodeId = null;
-        let mmDragPosition = null; // 'before' | 'after' | 'inside'
-
-        // Hitung nomor otomatis berdasarkan posisi di tree
-        function mmGetNumbering(parentNumbers, index) {
-            return parentNumbers ? `${parentNumbers}.${index + 1}` : `${index + 1}`;
-        }
-
-        function mmRenderTreeView() {
-            const container = document.getElementById('mm-tree-view');
-            if (!container || !mmCurrentNodes) return;
-            
-            const children = mmCurrentNodes.children || [];
-            if (children.length === 0) {
-                container.innerHTML = `
-                <div class="text-center py-16">
-                    <div class="w-24 h-24 bg-gradient-to-br from-purple-100 to-blue-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl">
-                        <i class="fas fa-sitemap text-4xl text-purple-600"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Belum Ada Kategori</h3>
-                    <p class="text-gray-500 mb-6">Mulai buat mind map dengan menambahkan kategori utama</p>
-                    <button onclick="mmAddBranch()" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg inline-flex items-center gap-2">
-                        <i class="fas fa-plus"></i> Tambah Kategori Pertama
-                    </button>
-                </div>`;
-            } else {
-                container.innerHTML = `<div class="mm-drop-zone space-y-3" data-parent-id="__root__">` +
-                    children.map((child, i) => mmBuildTreeHTML(child, 0, null, i, children.length)).join('') +
-                `</div>`;
-                mmInitDragDrop();
-            }
-        }
-
-        function mmBuildTreeHTML(node, level, parentNum, index, siblingCount) {
-            if (!node) return '';
-            
-            const hasChildren = node.children && node.children.length > 0;
-            const isExpanded = node._expanded !== false;
-            const hasMaterials = node.materials && node.materials.length > 0;
-            const isSelected = mmSelectedNodeId === node.id;
-            const isEditing = node.id === mmEditingNodeId;
-            const isDragging = mmDragNodeId === node.id;
-            const isDragOver = mmDragOverNodeId === node.id;
-
-            // Nomor otomatis
-            const myNumber = mmGetNumbering(parentNum, index);
-
-            const indent = level * 40;
-            const bgColor = isSelected ? 'bg-purple-50 border-purple-300' : 'bg-white border-gray-200';
-            const shadowClass = isSelected ? 'shadow-md' : 'shadow-sm hover:shadow-md';
-            const draggingClass = isDragging ? 'opacity-40 scale-95' : '';
-            const dragOverClass = isDragOver && mmDragPosition === 'inside' ? 'ring-2 ring-purple-400 ring-offset-1' : '';
-
-            let html = `
-            <div class="mm-node-wrapper transition-all duration-150 ${draggingClass}"
-                 data-node-id="${node.id}"
-                 data-parent-id="${mmFindParentId(mmCurrentNodes, node.id) || '__root__'}"
-                 style="margin-left: ${indent}px">
-
-                <!-- Drop indicator BEFORE -->
-                <div class="mm-drop-indicator mm-drop-before h-1 rounded-full mx-2 mb-1 transition-all duration-150 ${isDragOver && mmDragPosition === 'before' ? 'bg-purple-500 opacity-100 scale-y-150' : 'opacity-0'}"
-                     data-drop-target="${node.id}" data-drop-pos="before"></div>
-
-                <div class="flex items-center gap-3 p-4 ${bgColor} border-2 rounded-xl ${shadowClass} ${dragOverClass} hover:border-purple-200 transition-all group cursor-pointer"
-                     onclick="mmSelectTreeNode('${node.id}')"
-                     draggable="true"
-                     data-node-id="${node.id}"
-                     style="background: linear-gradient(135deg, ${node.color || '#8b5cf6'}15 0%, transparent 100%)">
-
-                    <!-- Drag Handle -->
-                    <div class="drag-handle w-5 flex flex-col gap-0.5 shrink-0 cursor-grab active:cursor-grabbing opacity-30 group-hover:opacity-70 transition-opacity"
-                         title="Seret untuk memindahkan">
-                        <span class="block h-0.5 w-4 rounded bg-gray-400"></span>
-                        <span class="block h-0.5 w-4 rounded bg-gray-400"></span>
-                        <span class="block h-0.5 w-4 rounded bg-gray-400"></span>
-                    </div>
-
-                    <!-- Nomor Otomatis -->
-                    <div class="shrink-0 min-w-[2rem] text-center">
-                        <span class="text-xs font-bold px-1.5 py-0.5 rounded-lg"
-                              style="background: ${node.color || '#8b5cf6'}20; color: ${node.color || '#8b5cf6'}">
-                            ${myNumber}
-                        </span>
-                    </div>
-
-                    <!-- Expand/Collapse Button -->
-                    ${hasChildren ? `
-                    <button onclick="event.stopPropagation(); mmToggleExpand('${node.id}')" 
-                            class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all"
-                            style="background: ${node.color || '#8b5cf6'}; color: white; box-shadow: 0 2px 8px ${node.color || '#8b5cf6'}40">
-                        <i class="fas fa-${isExpanded ? 'chevron-down' : 'chevron-right'} text-sm"></i>
-                    </button>` : 
-                    `<div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background: ${node.color || '#8b5cf6'}20">
-                        <i class="fas fa-circle text-xs" style="color: ${node.color || '#8b5cf6'}"></i>
-                    </div>`}
-                    
-                    <!-- Node Content -->
-                    <div class="flex-1 min-w-0">
-                        ${isEditing ? `
-                        <input type="text" 
-                               id="edit-input-${node.id}" 
-                               value="${node.text.replace(/"/g, '&quot;')}"
-                               onblur="mmSaveEdit('${node.id}')"
-                               onkeydown="if(event.key==='Enter') mmSaveEdit('${node.id}'); if(event.key==='Escape') mmCancelEdit()"
-                               onclick="event.stopPropagation()"
-                               class="w-full px-3 py-2 border-2 border-purple-500 rounded-lg text-base font-semibold focus:outline-none focus:ring-2 focus:ring-purple-300"
-                               autofocus>
-                        ` : `
-                        <div class="flex items-center gap-2">
-                            <h3 class="font-semibold text-gray-900 text-base">${node.text}</h3>
-                            ${hasMaterials ? `
-                            <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center gap-1">
-                                <i class="fas fa-paperclip"></i> ${node.materials.length}
-                            </span>` : ''}
-                        </div>
-                        ${hasMaterials ? `<p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle"></i> Klik untuk melihat materi</p>` : ''}
-                        `}
-                    </div>
-                    
-                    <!-- Action Buttons -->
-                    ${!isEditing ? `
-                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="event.stopPropagation(); mmShowColorPicker('${node.id}')" 
-                                class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                                style="background: ${node.color || '#8b5cf6'}; color: white;"
-                                title="Ubah Warna">
-                            <i class="fas fa-palette text-xs"></i>
-                        </button>
-                        <button onclick="event.stopPropagation(); mmSelectTreeNode('${node.id}'); mmShowMaterials()" 
-                                class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors"
-                                title="Tambah Materi">
-                            <i class="fas fa-paperclip text-xs"></i>
-                        </button>
-                        <button onclick="event.stopPropagation(); mmEditTreeNode('${node.id}')" 
-                                class="w-8 h-8 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center transition-colors"
-                                title="Edit Teks">
-                            <i class="fas fa-pen text-xs"></i>
-                        </button>
-                        <button onclick="event.stopPropagation(); mmAddChildToNode('${node.id}')" 
-                                class="w-8 h-8 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 flex items-center justify-center transition-colors"
-                                title="Tambah Sub">
-                            <i class="fas fa-plus text-xs"></i>
-                        </button>
-                        <button onclick="event.stopPropagation(); mmDeleteTreeNode('${node.id}')" 
-                                class="w-8 h-8 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition-colors"
-                                title="Hapus">
-                            <i class="fas fa-trash text-xs"></i>
-                        </button>
-                    </div>
-                    ` : ''}
-                </div>
-
-                <!-- Drop indicator AFTER -->
-                <div class="mm-drop-indicator mm-drop-after h-1 rounded-full mx-2 mt-1 transition-all duration-150 ${isDragOver && mmDragPosition === 'after' ? 'bg-purple-500 opacity-100 scale-y-150' : 'opacity-0'}"
-                     data-drop-target="${node.id}" data-drop-pos="after"></div>
-            </div>`;
-            
-            // Render children if expanded
-            if (hasChildren && isExpanded) {
-                html += `<div class="mt-2 space-y-2 mm-drop-zone" data-parent-id="${node.id}" style="margin-left:${indent + 40}px">`;
-                node.children.forEach((child, i) => {
-                    html += mmBuildTreeHTML(child, 0, myNumber, i, node.children.length);
-                });
-                html += '</div>';
-            }
-            
-            return html;
-        }
-
-        // Cari parent ID dari sebuah node
-        function mmFindParentId(root, targetId, parentId = null) {
-            if (!root) return null;
-            if (root.id === targetId) return parentId;
-            for (const child of (root.children || [])) {
-                const found = mmFindParentId(child, targetId, root.id);
-                if (found !== null) return found;
-            }
-            return null;
-        }
-
-        // Hapus node dari tree, return node yang dihapus
-        function mmRemoveNodeFromTree(nodeId) {
-            const removeFrom = (parent) => {
-                if (!parent.children) return null;
-                const idx = parent.children.findIndex(c => c.id === nodeId);
-                if (idx !== -1) {
-                    return parent.children.splice(idx, 1)[0];
-                }
-                for (const child of parent.children) {
-                    const found = removeFrom(child);
-                    if (found) return found;
-                }
-                return null;
-            };
-            // Cek root children
-            const rootIdx = (mmCurrentNodes.children || []).findIndex(c => c.id === nodeId);
-            if (rootIdx !== -1) return mmCurrentNodes.children.splice(rootIdx, 1)[0];
-            return removeFrom(mmCurrentNodes);
-        }
-
-        // ── DRAG & DROP LOGIC ──────────────────────────────
-        function mmInitDragDrop() {
-            const container = document.getElementById('mm-tree-view');
-            if (!container) return;
-
-            // Delegasi event ke container
-            container.querySelectorAll('[draggable="true"]').forEach(el => {
-                el.addEventListener('dragstart', mmOnDragStart);
-                el.addEventListener('dragend', mmOnDragEnd);
-            });
-
-            container.addEventListener('dragover', mmOnDragOver);
-            container.addEventListener('dragleave', mmOnDragLeave);
-            container.addEventListener('drop', mmOnDrop);
-        }
-
-        function mmOnDragStart(e) {
-            const nodeId = e.currentTarget.dataset.nodeId;
-            if (!nodeId) return;
-            mmDragNodeId = nodeId;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', nodeId);
-            setTimeout(() => mmRenderTreeView(), 50);
-        }
-
-        function mmOnDragEnd(e) {
-            mmDragNodeId = null;
-            mmDragOverNodeId = null;
-            mmDragPosition = null;
-            mmRenderTreeView();
-        }
-
-        function mmOnDragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-
-            const wrapper = e.target.closest('.mm-node-wrapper');
-            if (!wrapper) return;
-
-            const targetId = wrapper.dataset.nodeId;
-            if (!targetId || targetId === mmDragNodeId) return;
-
-            // Cek apakah target adalah descendant dari drag node (tidak boleh drop ke anaknya sendiri)
-            const dragNode = mmFindNodeById(mmCurrentNodes, mmDragNodeId);
-            if (mmFindNodeById(dragNode, targetId)) return;
-
-            const rect = wrapper.getBoundingClientRect();
-            const y = e.clientY - rect.top;
-            const h = rect.height;
-
-            let pos;
-            if (y < h * 0.25) pos = 'before';
-            else if (y > h * 0.75) pos = 'after';
-            else pos = 'inside';
-
-            mmDragOverNodeId = targetId;
-            mmDragPosition = pos;
-            mmRenderTreeView();
-        }
-
-        function mmOnDragLeave(e) {
-            if (!e.relatedTarget || !e.currentTarget.contains(e.relatedTarget)) {
-                mmDragOverNodeId = null;
-                mmDragPosition = null;
-                mmRenderTreeView();
-            }
-        }
-
-        function mmOnDrop(e) {
-            e.preventDefault();
-            if (!mmDragNodeId || !mmDragOverNodeId || !mmDragPosition) {
-                mmDragNodeId = null; mmDragOverNodeId = null; mmDragPosition = null;
-                return;
-            }
-
-            const dragId = mmDragNodeId;
-            const targetId = mmDragOverNodeId;
-            const pos = mmDragPosition;
-
-            mmDragNodeId = null;
-            mmDragOverNodeId = null;
-            mmDragPosition = null;
-
-            // Ambil node yang di-drag
-            const dragNode = mmRemoveNodeFromTree(dragId);
-            if (!dragNode) { mmRenderTreeView(); return; }
-
-            if (pos === 'inside') {
-                // Jadikan anak dari target
-                const target = mmFindNodeById(mmCurrentNodes, targetId);
-                if (target) {
-                    if (!target.children) target.children = [];
-                    target.children.push(dragNode);
-                    target._expanded = true;
-                }
-            } else {
-                // Sisipkan sebelum/sesudah target di parent yang sama
-                const insertInto = (parent) => {
-                    if (!parent.children) return false;
-                    const idx = parent.children.findIndex(c => c.id === targetId);
-                    if (idx !== -1) {
-                        const insertIdx = pos === 'before' ? idx : idx + 1;
-                        parent.children.splice(insertIdx, 0, dragNode);
-                        return true;
-                    }
-                    for (const child of parent.children) {
-                        if (insertInto(child)) return true;
-                    }
-                    return false;
-                };
-
-                // Cek root children dulu
-                const rootIdx = (mmCurrentNodes.children || []).findIndex(c => c.id === targetId);
-                if (rootIdx !== -1) {
-                    const insertIdx = pos === 'before' ? rootIdx : rootIdx + 1;
-                    mmCurrentNodes.children.splice(insertIdx, 0, dragNode);
-                } else {
-                    insertInto(mmCurrentNodes);
-                }
-            }
-
-            mmRenderTreeView();
-            showToast('✅ Urutan berhasil diubah');
-        }
-
-        function mmSelectTreeNode(id) {
-            mmSelectedNodeId = id;
-            const node = mmFindNodeById(mmCurrentNodes, id);
-            if (!node) return;
-            
-            mmShowPreview(node);
-            mmRenderTreeView();
-        }
-
-        function mmToggleExpand(id) {
-            const node = mmFindNodeById(mmCurrentNodes, id);
-            if (!node) return;
-            
-            node._expanded = !node._expanded;
-            mmRenderTreeView();
-        }
-
-        function mmEditTreeNode(id) {
-            mmEditingNodeId = id;
-            mmRenderTreeView();
-            // Focus will be set by autofocus attribute
-        }
-
-        function mmSaveEdit(id) {
-            const input = document.getElementById(`edit-input-${id}`);
-            if (!input) return;
-            
-            const newText = input.value.trim();
-            if (!newText) {
-                showToast('Teks tidak boleh kosong', 'error');
-                return;
-            }
-            
-            const node = mmFindNodeById(mmCurrentNodes, id);
-            if (node) {
-                node.text = newText;
-                mmEditingNodeId = null;
-                mmRenderTreeView();
-                if (mmSelectedNodeId === id) {
-                    mmShowPreview(node);
-                }
-                showToast('✅ Teks berhasil diubah');
-            }
-        }
-
-        function mmCancelEdit() {
-            mmEditingNodeId = null;
-            mmRenderTreeView();
-        }
-
-        // ── COLOR PICKER ──────────────────────────────
-        let mmColorPickerNodeId = null;
-
-        function mmShowColorPicker(id) {
-            mmColorPickerNodeId = id;
-            const node = mmFindNodeById(mmCurrentNodes, id);
-            if (!node) return;
-            
-            const grid = document.getElementById('color-picker-grid');
-            grid.innerHTML = MM_COLORS.map(color => `
-                <button onclick="mmSetColor('${color}')" 
-                        class="w-full aspect-square rounded-xl transition-all hover:scale-110 hover:shadow-lg flex items-center justify-center"
-                        style="background: ${color}">
-                    ${node.color === color ? '<i class="fas fa-check text-white text-xl"></i>' : ''}
-                </button>
-            `).join('');
-            
-            document.getElementById('modal-color-picker').classList.remove('hidden');
-        }
-
-        function mmCloseColorPicker() {
-            document.getElementById('modal-color-picker').classList.add('hidden');
-            mmColorPickerNodeId = null;
-        }
-
-        function mmSetColor(color) {
-            if (!mmColorPickerNodeId) return;
-            
-            const node = mmFindNodeById(mmCurrentNodes, mmColorPickerNodeId);
-            if (node) {
-                node.color = color;
-                mmRenderTreeView();
-                if (mmSelectedNodeId === mmColorPickerNodeId) {
-                    mmShowPreview(node);
-                }
-                showToast('✅ Warna berhasil diubah');
-            }
-            
-            mmCloseColorPicker();
-        }
-
-        function mmAddChildToNode(id) {
-            const parent = mmFindNodeById(mmCurrentNodes, id);
-            if (!parent) return;
-            
-            if (!parent.children) parent.children = [];
-            const newNode = mmNewNode('Sub-kategori baru', parent.color);
-            parent.children.push(newNode);
-            parent._expanded = true;
-            
-            mmRenderTreeView();
-            
-            // Auto-edit the new node
-            setTimeout(() => {
-                mmEditTreeNode(newNode.id);
-            }, 100);
-            
-            showToast('✅ Sub-kategori ditambahkan');
-        }
-
-        function mmDeleteTreeNode(id) {
-            if (!confirm('Hapus kategori ini dan semua sub-kategori nya?')) return;
-            
-            // Check if it's a direct child of root
-            if (mmCurrentNodes.children) {
-                const index = mmCurrentNodes.children.findIndex(c => c.id === id);
-                if (index !== -1) {
-                    mmCurrentNodes.children.splice(index, 1);
-                    if (mmSelectedNodeId === id) {
-                        mmDeselectNode();
-                    }
-                    mmRenderTreeView();
-                    showToast('✅ Kategori dihapus');
-                    return;
-                }
-            }
-            
-            // Otherwise search in tree
-            const deleteFromNode = (node) => {
-                if (!node || !node.children) return false;
-                const index = node.children.findIndex(c => c.id === id);
-                if (index !== -1) {
-                    node.children.splice(index, 1);
-                    return true;
-                }
-                for (const child of node.children) {
-                    if (deleteFromNode(child)) return true;
-                }
-                return false;
-            };
-            
-            if (deleteFromNode(mmCurrentNodes)) {
-                if (mmSelectedNodeId === id) {
-                    mmDeselectNode();
-                }
-                mmRenderTreeView();
-                showToast('✅ Kategori dihapus');
-            }
-        }
-
-        function mmInitializePositions(node, x, y, level = 0) {
-            if (!node) return;
-            
-            node._x = x;
-            node._y = y;
-            node._level = level;
-            node._expanded = node._expanded !== undefined ? node._expanded : true; // Default expanded
-            
-            const children = node.children || [];
-            if (children.length === 0) return;
-            
-            // Horizontal layout - children go to the right
-            const horizontalSpacing = 300;
-            const verticalSpacing = 100;
-            
-            // Calculate total height needed for all children
-            const totalHeight = (children.length - 1) * verticalSpacing;
-            const startY = y - totalHeight / 2;
-            
-            children.forEach((child, i) => {
-                const childX = x + horizontalSpacing;
-                const childY = startY + (i * verticalSpacing);
-                mmInitializePositions(child, childX, childY, level + 1);
-            });
-        }
-
-        function mmDrawConnections(ctx, node) {
-            if (!node || !node.children || !node._expanded) return;
-            
-            const children = node.children || [];
-            children.forEach(child => {
-                if (!child._x || !child._y) return;
-                
-                // Draw straight line with arrow
-                ctx.strokeStyle = child.color || '#d1d5db';
-                ctx.lineWidth = 2;
-                ctx.lineCap = 'round';
-                
-                const startX = node._x + (node._bounds ? node._bounds.width / 2 : 50);
-                const startY = node._y;
-                const endX = child._x - (child._bounds ? child._bounds.width / 2 : 50);
-                const endY = child._y;
-                
-                // Draw line
-                ctx.beginPath();
-                ctx.moveTo(startX, startY);
-                ctx.lineTo(endX, endY);
-                ctx.stroke();
-                
-                // Draw arrow
-                const angle = Math.atan2(endY - startY, endX - startX);
-                const arrowSize = 8;
-                ctx.fillStyle = child.color || '#d1d5db';
-                ctx.beginPath();
-                ctx.moveTo(endX, endY);
-                ctx.lineTo(endX - arrowSize * Math.cos(angle - Math.PI / 6), endY - arrowSize * Math.sin(angle - Math.PI / 6));
-                ctx.lineTo(endX - arrowSize * Math.cos(angle + Math.PI / 6), endY - arrowSize * Math.sin(angle + Math.PI / 6));
-                ctx.closePath();
-                ctx.fill();
-                
-                // Recursively draw child connections
-                mmDrawConnections(ctx, child);
-            });
-        }
-
-        function mmDrawAllNodes(ctx, node) {
-            if (!node) return;
-            
-            mmDrawSingleNode(ctx, node);
-            
-            // Only draw children if node is expanded
-            if (node._expanded) {
-                const children = node.children || [];
-                children.forEach(child => mmDrawAllNodes(ctx, child));
-            }
-        }
-
-        function mmDrawSingleNode(ctx, node) {
-            if (!node || node._x === undefined) return;
-            
-            const isSelected = mmSelectedNodeId === node.id;
-            const hasMaterials = node.materials && node.materials.length > 0;
-            const hasChildren = node.children && node.children.length > 0;
-            const isExpanded = node._expanded;
-            
-            const padding = 20;
-            const fontSize = 14;
-            const minWidth = 150;
-            const maxWidth = 300;
-            
-            ctx.font = `600 ${fontSize}px Inter, sans-serif`;
-            const textWidth = ctx.measureText(node.text).width;
-            let boxWidth = Math.max(Math.min(textWidth + padding * 2, maxWidth), minWidth);
-            const boxHeight = 50;
-            
-            const x = node._x;
-            const y = node._y;
-            
-            // Draw shadow
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
-            ctx.shadowBlur = 10;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 3;
-            
-            // Draw box with rounded corners
-            ctx.fillStyle = node.color || '#8b5cf6';
-            ctx.beginPath();
-            const radius = 25;
-            ctx.roundRect(x - boxWidth/2, y - boxHeight/2, boxWidth, boxHeight, radius);
-            ctx.fill();
-            
-            // Reset shadow
-            ctx.shadowColor = 'transparent';
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
-            
-            // Draw selection border
-            if (isSelected) {
-                ctx.strokeStyle = '#1f2937';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-            }
-            
-            // Draw text (truncate if too long)
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            let displayText = node.text;
-            if (textWidth > maxWidth - padding * 2) {
-                // Truncate text
-                let truncated = node.text;
-                while (ctx.measureText(truncated + '...').width > maxWidth - padding * 2 && truncated.length > 0) {
-                    truncated = truncated.slice(0, -1);
-                }
-                displayText = truncated + '...';
-            }
-            ctx.fillText(displayText, x, y - 5);
-            
-            // Draw material indicator if has materials
-            if (hasMaterials) {
-                ctx.font = '600 10px Inter, sans-serif';
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.fillText(`📎 ${node.materials.length} materi`, x, y + 12);
-            }
-            
-            // Draw expand/collapse button if has children
-            if (hasChildren) {
-                const btnSize = 24;
-                const btnX = x + boxWidth/2 - btnSize/2 - 5;
-                const btnY = y - boxHeight/2 + btnSize/2 + 5;
-                
-                // Button background
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.beginPath();
-                ctx.arc(btnX, btnY, btnSize/2, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Button icon
-                ctx.fillStyle = node.color || '#8b5cf6';
-                ctx.font = 'bold 12px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(isExpanded ? '−' : '+', btnX, btnY);
-                
-                // Store button bounds for click detection
-                node._expandBtn = {
-                    x: btnX - btnSize/2,
-                    y: btnY - btnSize/2,
-                    width: btnSize,
-                    height: btnSize
-                };
-            }
-            
-            // Store bounds for click detection
-            node._bounds = { 
-                x: x - boxWidth/2, 
-                y: y - boxHeight/2, 
-                width: boxWidth, 
-                height: boxHeight 
-            };
-        }
-
-        function mmInitCanvasEvents() {
-            const canvas = document.getElementById('mm-canvas');
-            if (!canvas) return;
-            
-            let draggedNode = null;
-            let isDraggingCanvas = false;
-            let dragStartPos = { x: 0, y: 0 };
-            let canvasStartOffset = { x: 0, y: 0 };
-            
-            const getMousePos = (e) => {
-                const rect = canvas.getBoundingClientRect();
-                return {
-                    x: (e.clientX - rect.left - canvas.width / 2 - mmCanvasOffset.x) / mmZoomLevel,
-                    y: (e.clientY - rect.top - canvas.height / 2 - mmCanvasOffset.y) / mmZoomLevel
-                };
-            };
-            
-            canvas.addEventListener('mousedown', (e) => {
-                const mousePos = getMousePos(e);
-                const clicked = mmFindNodeAt(mmCurrentNodes, mousePos.x, mousePos.y);
-                
-                if (clicked) {
-                    // Check if clicking on expand button
-                    if (clicked._expandBtn) {
-                        const btn = clicked._expandBtn;
-                        if (mousePos.x >= btn.x && mousePos.x <= btn.x + btn.width &&
-                            mousePos.y >= btn.y && mousePos.y <= btn.y + btn.height) {
-                            // Toggle expand/collapse
-                            clicked._expanded = !clicked._expanded;
-                            mmRenderCanvas();
-                            e.preventDefault();
-                            return;
-                        }
-                    }
-                    
-                    if (e.shiftKey) {
-                        // Shift + click on node = drag node
-                        draggedNode = clicked;
-                        dragStartPos = { x: mousePos.x, y: mousePos.y };
-                        canvas.style.cursor = 'move';
-                        e.preventDefault();
-                    } else {
-                        // Normal click on node = select
-                        mmSelectNode(clicked.id);
-                        e.preventDefault();
-                    }
-                } else {
-                    // Click on empty space = drag canvas
-                    isDraggingCanvas = true;
-                    dragStartPos = { x: e.clientX, y: e.clientY };
-                    canvasStartOffset = { ...mmCanvasOffset };
-                    canvas.style.cursor = 'grabbing';
-                    mmDeselectNode();
-                }
-            });
-            
-            // Double click to open materials
-            canvas.addEventListener('dblclick', (e) => {
-                const mousePos = getMousePos(e);
-                const clicked = mmFindNodeAt(mmCurrentNodes, mousePos.x, mousePos.y);
-                
-                if (clicked) {
-                    mmSelectNode(clicked.id);
-                    setTimeout(() => mmShowMaterials(), 100);
-                    e.preventDefault();
-                }
-            });
-            
-            canvas.addEventListener('mousemove', (e) => {
-                if (draggedNode) {
-                    // Dragging a node
-                    const mousePos = getMousePos(e);
-                    draggedNode._x = mousePos.x;
-                    draggedNode._y = mousePos.y;
-                    mmRenderCanvas();
-                } else if (isDraggingCanvas) {
-                    // Dragging canvas
-                    const dx = e.clientX - dragStartPos.x;
-                    const dy = e.clientY - dragStartPos.y;
-                    mmCanvasOffset.x = canvasStartOffset.x + dx;
-                    mmCanvasOffset.y = canvasStartOffset.y + dy;
-                    mmRenderCanvas();
-                } else {
-                    // Just hovering - update cursor
-                    const mousePos = getMousePos(e);
-                    const hovered = mmFindNodeAt(mmCurrentNodes, mousePos.x, mousePos.y);
-                    if (hovered) {
-                        canvas.style.cursor = e.shiftKey ? 'move' : 'pointer';
-                    } else {
-                        canvas.style.cursor = 'grab';
-                    }
-                }
-            });
-            
-            canvas.addEventListener('mouseup', () => {
-                draggedNode = null;
-                isDraggingCanvas = false;
-                canvas.style.cursor = 'grab';
-            });
-            
-            canvas.addEventListener('mouseleave', () => {
-                draggedNode = null;
-                isDraggingCanvas = false;
-                canvas.style.cursor = 'grab';
-            });
-            
-            canvas.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const delta = e.deltaY > 0 ? -0.1 : 0.1;
-                mmZoom(delta);
-            });
-            
-            // Update cursor on shift key
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Shift' && !draggedNode && !isDraggingCanvas) {
-                    const rect = canvas.getBoundingClientRect();
-                    const mouseX = (lastMouseX - rect.left - canvas.width / 2 - mmCanvasOffset.x) / mmZoomLevel;
-                    const mouseY = (lastMouseY - rect.top - canvas.height / 2 - mmCanvasOffset.y) / mmZoomLevel;
-                    const hovered = mmFindNodeAt(mmCurrentNodes, mouseX, mouseY);
-                    if (hovered) canvas.style.cursor = 'move';
-                }
-            });
-            
-            document.addEventListener('keyup', (e) => {
-                if (e.key === 'Shift' && !draggedNode && !isDraggingCanvas) {
-                    canvas.style.cursor = 'grab';
-                }
-            });
-            
-            // Track mouse position for shift key cursor update
-            let lastMouseX = 0, lastMouseY = 0;
-            canvas.addEventListener('mousemove', (e) => {
-                lastMouseX = e.clientX;
-                lastMouseY = e.clientY;
-            });
-        }
-
-        function mmFindNodeAt(node, x, y) {
-            if (!node) return null;
-            
-            // Check current node
-            if (node._bounds) {
-                const b = node._bounds;
-                if (x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height) {
-                    return node;
-                }
-            }
-            
-            // Check children (in reverse order so top nodes are checked first)
-            const children = node.children || [];
-            for (let i = children.length - 1; i >= 0; i--) {
-                const found = mmFindNodeAt(children[i], x, y);
-                if (found) return found;
-            }
-            
-            return null;
-        }
-
-        function mmSelectNode(id) {
-            mmSelectedNodeId = id;
-            const node = mmFindNodeById(mmCurrentNodes, id);
-            if (!node) return;
-            
-            document.getElementById('mm-node-text-input').value = node.text;
-            document.getElementById('mm-node-toolbar').classList.remove('hidden');
-            document.getElementById('mm-node-toolbar').classList.add('flex');
-            
-            // Show material preview panel
-            mmShowPreview(node);
-            
-            mmRenderCanvas();
-        }
-
-        function mmDeselectNode() {
-            mmSelectedNodeId = null;
-            document.getElementById('mm-node-toolbar').classList.add('hidden');
-            document.getElementById('mm-node-toolbar').classList.remove('flex');
-            mmClosePreview();
-            mmRenderCanvas();
-        }
-
-        function mmShowPreview(node) {
-            const panel = document.getElementById('mm-material-preview');
-            const title = document.getElementById('mm-preview-title');
-            const container = document.getElementById('mm-preview-materials');
-            
-            title.textContent = node.text;
-            panel.classList.remove('hidden');
-            
-            const materials = node.materials || [];
-            
-            if (!materials.length) {
-                container.innerHTML = `
-                <div class="text-center py-12">
-                    <div class="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        <i class="fas fa-folder-open text-3xl text-blue-600"></i>
-                    </div>
-                    <p class="text-base text-gray-700 font-semibold mb-1">Belum ada materi</p>
-                    <p class="text-sm text-gray-500">Klik tombol "Tambah Materi Baru" untuk menambahkan link, PDF, video, atau catatan</p>
-                </div>`;
-                return;
-            }
-            
-            const getIcon = (type) => {
-                const icons = {
-                    link: 'fa-link',
-                    pdf: 'fa-file-pdf',
-                    video: 'fa-video',
-                    image: 'fa-image',
-                    text: 'fa-sticky-note'
-                };
-                return icons[type] || 'fa-file';
-            };
-            
-            const getColor = (type) => {
-                const colors = {
-                    link: 'blue',
-                    pdf: 'red',
-                    video: 'purple',
-                    image: 'green',
-                    text: 'yellow'
-                };
-                return colors[type] || 'gray';
-            };
-            
-            container.innerHTML = materials.map(m => {
-                const color = getColor(m.type);
-                const icon = getIcon(m.type);
-                
-                return `
-                <div class="bg-gradient-to-r from-${color}-50 to-white border-2 border-${color}-200 rounded-xl p-4 mb-3 hover:shadow-lg transition-all">
-                    <div class="flex items-start gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-${color}-100 text-${color}-600 flex items-center justify-center shrink-0 shadow-md">
-                            <i class="fas ${icon} text-lg"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h5 class="font-bold text-gray-900 text-sm mb-2">${m.title}</h5>
-                            ${m.type === 'text' ? 
-                                `<p class="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">${m.content}</p>` :
-                                `<a href="${m.url}" target="_blank" class="inline-flex items-center gap-2 text-xs text-${color}-600 hover:text-${color}-800 font-medium bg-${color}-50 px-3 py-2 rounded-lg hover:bg-${color}-100 transition-colors">
-                                    <i class="fas fa-external-link-alt"></i> Buka Link
-                                </a>`
-                            }
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        function mmClosePreview() {
-            document.getElementById('mm-material-preview').classList.add('hidden');
-        }
-
-        function mmFindNodeById(node, id) {
-            if (!node) return null;
-            if (node.id === id) return node;
-            for (const child of (node.children || [])) {
-                const found = mmFindNodeById(child, id);
-                if (found) return found;
-            }
-            return null;
-        }
-
-        function mmApplyNodeEdit() {
-            if (!mmSelectedNodeId) return;
-            const text = document.getElementById('mm-node-text-input').value.trim();
-            if (!text) return showToast('Teks node tidak boleh kosong', 'error');
-            
-            const node = mmFindNodeById(mmCurrentNodes, mmSelectedNodeId);
-            if (node) {
-                node.text = text;
-                mmRenderCanvas();
-                showToast('✅ Node diperbarui');
-            }
-        }
-
-        function mmSetNodeColor(color) {
-            if (!mmSelectedNodeId) return;
-            const node = mmFindNodeById(mmCurrentNodes, mmSelectedNodeId);
-            if (node) {
-                node.color = color;
-                mmRenderCanvas();
-            }
-        }
-
-        function mmDeleteSelectedNode() {
-            if (!mmSelectedNodeId) return;
-            if (mmSelectedNodeId === mmCurrentNodes.id) {
-                return showToast('Tidak bisa menghapus node root', 'error');
-            }
-            if (!confirm('Hapus node ini dan semua sub-node nya?')) return;
-            
-            mmDeleteNodeById(mmCurrentNodes, mmSelectedNodeId);
-            mmDeselectNode();
-            showToast('✅ Node dihapus');
-        }
-
-        function mmDeleteNodeById(node, id) {
-            if (!node || !node.children) return false;
-            const index = node.children.findIndex(c => c.id === id);
-            if (index !== -1) {
-                node.children.splice(index, 1);
-                return true;
-            }
-            for (const child of node.children) {
-                if (mmDeleteNodeById(child, id)) return true;
-            }
-            return false;
-        }
-
-        function mmAddChild() {
-            if (!mmSelectedNodeId) return showToast('Pilih node terlebih dahulu', 'error');
-            const parent = mmFindNodeById(mmCurrentNodes, mmSelectedNodeId);
-            if (!parent) return;
-            
-            if (!parent.children) parent.children = [];
-            const newNode = mmNewNode('Sub-cabang', parent.color);
-            
-            // Calculate position for new child
-            const angle = (parent.children.length * Math.PI * 2) / (parent.children.length + 1);
-            const radius = 150;
-            newNode._x = (parent._x || 0) + Math.cos(angle) * radius;
-            newNode._y = (parent._y || 0) + Math.sin(angle) * radius;
-            
-            parent.children.push(newNode);
-            mmRenderCanvas();
-            showToast('✅ Sub-cabang ditambahkan');
-        }
-
-        function mmAddBranch() {
-            if (!mmCurrentNodes.children) mmCurrentNodes.children = [];
-            const colors = MM_COLORS;
-            const color = colors[mmCurrentNodes.children.length % colors.length];
-            const newNode = mmNewNode('Kategori baru', color);
-            
-            mmCurrentNodes.children.push(newNode);
-            mmCurrentNodes._expanded = true;
-            mmRenderTreeView();
-            
-            // Auto-edit the new node
-            setTimeout(() => {
-                mmEditTreeNode(newNode.id);
-            }, 100);
-            
-            showToast('✅ Kategori utama ditambahkan');
-        }
-
-        function mmZoom(delta) {
-            mmZoomLevel = Math.min(2, Math.max(0.4, mmZoomLevel + delta));
-            mmRenderCanvas();
-        }
-
-        function mmFitView() {
-            mmZoomLevel = 1;
-            mmCanvasOffset = { x: 0, y: 0 };
-            // Re-initialize positions to auto-arrange
-            mmInitializePositions(mmCurrentNodes, 0, 0);
-            mmRenderCanvas();
-        }
-
         function printMindMap() {
             const judul = document.getElementById('mm-judul').value || 'Mind Map';
             showToast('Fitur print dalam pengembangan');
