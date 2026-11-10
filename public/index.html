@@ -715,18 +715,33 @@
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             <!-- Praktek -->
                             <div class="bg-green-50 rounded-xl p-3 border border-green-100">
-                                <h4 class="font-semibold text-green-800 text-xs uppercase tracking-wide mb-2">Praktek</h4>
-                                <p class="text-xs text-green-600">Input nilai 0-100 di tabel bawah</p>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-green-800 text-xs uppercase tracking-wide">Praktek</h4>
+                                    <button onclick="tambahSkillCol('praktek')" class="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-semibold hover:bg-green-200 transition-colors">
+                                        <i class="fas fa-plus mr-1"></i>Tambah
+                                    </button>
+                                </div>
+                                <div id="praktek-columns-list" class="flex flex-wrap gap-1.5"></div>
                             </div>
                             <!-- Proyek -->
                             <div class="bg-purple-50 rounded-xl p-3 border border-purple-100">
-                                <h4 class="font-semibold text-purple-800 text-xs uppercase tracking-wide mb-2">Proyek</h4>
-                                <p class="text-xs text-purple-600">Input nilai 0-100 di tabel bawah</p>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-purple-800 text-xs uppercase tracking-wide">Proyek</h4>
+                                    <button onclick="tambahSkillCol('proyek')" class="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-semibold hover:bg-purple-200 transition-colors">
+                                        <i class="fas fa-plus mr-1"></i>Tambah
+                                    </button>
+                                </div>
+                                <div id="proyek-columns-list" class="flex flex-wrap gap-1.5"></div>
                             </div>
                             <!-- Portofolio -->
                             <div class="bg-pink-50 rounded-xl p-3 border border-pink-100">
-                                <h4 class="font-semibold text-pink-800 text-xs uppercase tracking-wide mb-2">Portofolio</h4>
-                                <p class="text-xs text-pink-600">Input nilai 0-100 di tabel bawah</p>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-pink-800 text-xs uppercase tracking-wide">Portofolio</h4>
+                                    <button onclick="tambahSkillCol('portofolio')" class="px-2 py-1 bg-pink-100 text-pink-700 rounded-lg text-xs font-semibold hover:bg-pink-200 transition-colors">
+                                        <i class="fas fa-plus mr-1"></i>Tambah
+                                    </button>
+                                </div>
+                                <div id="portofolio-columns-list" class="flex flex-wrap gap-1.5"></div>
                             </div>
                         </div>
                     </div>
@@ -3088,6 +3103,69 @@
         let detailNilaiData = {};
         let _tpIdCounter = 1; // counter untuk ID unik TP
 
+        // Skill columns (Praktek, Proyek, Portofolio) — dinamis seperti TP
+        const skillConfig = {
+            praktek:    { prefix: 'Praktek',    color: 'green',  label: 'Praktek'    },
+            proyek:     { prefix: 'Proyek',     color: 'purple', label: 'Proyek'     },
+            portofolio: { prefix: 'Porto',      color: 'pink',   label: 'Portofolio' },
+        };
+        let skillColumns = {
+            praktek:    [{ id: 1, kode: 'Praktek1', label: 'Praktek 1' }],
+            proyek:     [{ id: 1, kode: 'Proyek1',  label: 'Proyek 1'  }],
+            portofolio: [{ id: 1, kode: 'Porto1',   label: 'Porto 1'   }],
+        };
+        let _skillIdCounter = { praktek: 1, proyek: 1, portofolio: 1 };
+
+        function tambahSkillCol(type) {
+            _skillIdCounter[type]++;
+            const n = _skillIdCounter[type];
+            const cfg = skillConfig[type];
+            skillColumns[type].push({ id: n, kode: cfg.prefix + n, label: cfg.label + ' ' + n });
+            renderSkillColumnsList(type);
+            renderDetailNilaiTable(document.getElementById('detail-kelas').value);
+        }
+
+        function hapusSkillCol(type, id) {
+            if (skillColumns[type].length <= 1) return showToast('Minimal 1 kolom harus ada', 'error');
+            skillColumns[type] = skillColumns[type].filter(c => c.id !== id);
+            // Bersihkan data yang dihapus
+            Object.keys(detailNilaiData).forEach(sid => {
+                const d = detailNilaiData[sid];
+                if (d) delete d[type + '_' + id];
+            });
+            renderSkillColumnsList(type);
+            renderDetailNilaiTable(document.getElementById('detail-kelas').value);
+        }
+
+        function renderSkillColumnsList(type) {
+            const el = document.getElementById(type + '-columns-list');
+            if (!el) return;
+            const cfg = skillConfig[type];
+            const cols = skillColumns[type];
+            el.innerHTML = cols.map(c =>
+                `<span class="inline-flex items-center gap-1 px-2 py-1 bg-${cfg.color}-100 text-${cfg.color}-800 rounded-lg text-xs font-medium">
+                    ${c.kode}
+                    <button onclick="hapusSkillCol('${type}',${c.id})" ${cols.length <= 1 ? 'disabled class="opacity-30 cursor-not-allowed"' : `class="hover:text-red-500 transition-colors"`}>
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </span>`
+            ).join('');
+        }
+
+        function renderAllSkillLists() {
+            renderSkillColumnsList('praktek');
+            renderSkillColumnsList('proyek');
+            renderSkillColumnsList('portofolio');
+        }
+
+        // Hitung rata-rata satu tipe skill dari data
+        function getRataSkill(d, type) {
+            const cols = skillColumns[type];
+            if (!cols.length) return 0;
+            const vals = cols.map(c => Number(d[type + '_' + c.id] || 0));
+            return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+        }
+
         function tambahTP() {
             _tpIdCounter++;
             const kode = 'TP' + _tpIdCounter;
@@ -3131,12 +3209,19 @@
             updateNilaiDetailLive(siswaId);
         }
 
-        function setSkillNilai(siswaId, field, val) {
+        function setSkillNilai(siswaId, field, val, colId) {
             if (!detailNilaiData[siswaId]) detailNilaiData[siswaId] = {};
             const clampedVal = Math.min(100, Math.max(0, Number(val) || 0));
-            detailNilaiData[siswaId][field] = clampedVal;
+            // Simpan per kolom: praktek_1, praktek_2, dst
+            const key = colId !== undefined ? field + '_' + colId : field;
+            detailNilaiData[siswaId][key] = clampedVal;
 
-            // Update nilaiData real-time
+            // Hitung rata-rata dan sync ke field utama (untuk backward compat simpan)
+            const d = detailNilaiData[siswaId];
+            if (['praktek','proyek','portofolio'].includes(field)) {
+                d[field] = getRataSkill(d, field);
+            }
+
             hitungNilaiDetailRow(siswaId);
             updateNilaiDetailLive(siswaId);
         }
@@ -3148,13 +3233,13 @@
             const rataTP = tpVals.length > 0
                 ? Math.round(tpVals.reduce((a, b) => a + b, 0) / tpVals.length)
                 : 0;
-            // Keterampilan
-            const praktek = Number(d.praktek || 0);
-            const proyek = Number(d.proyek || 0);
-            const portofolio = Number(d.portofolio || 0);
+            // Keterampilan — rata-rata tiap jenis
+            const praktek    = getRataSkill(d, 'praktek');
+            const proyek     = getRataSkill(d, 'proyek');
+            const portofolio = getRataSkill(d, 'portofolio');
             const naKeter = Math.round((praktek + proyek + portofolio) / 3);
             const naAkhir = Math.round(rataTP * 0.6 + naKeter * 0.4);
-            return { rataTP, naKeter, naAkhir };
+            return { rataTP, praktek, proyek, portofolio, naKeter, naAkhir };
         }
 
         function getNaAkhirPredikat(naAkhir) {
@@ -3166,18 +3251,22 @@
         }
 
         function updateNilaiDetailLive(siswaId) {
-            const { rataTP, naAkhir } = hitungNilaiDetailRow(siswaId);
+            const { rataTP, praktek, proyek, portofolio, naAkhir } = hitungNilaiDetailRow(siswaId);
             const { predikat, color } = getNaAkhirPredikat(naAkhir);
 
-            // Update rata TP cell
             const rataTPEl = document.getElementById(`rata-tp-${siswaId}`);
             if (rataTPEl) rataTPEl.textContent = rataTP;
 
-            // Update NA Akhir cell
+            const rataPraktekEl = document.getElementById(`rata-praktek-${siswaId}`);
+            if (rataPraktekEl) rataPraktekEl.textContent = praktek;
+            const rataProyekEl = document.getElementById(`rata-proyek-${siswaId}`);
+            if (rataProyekEl) rataProyekEl.textContent = proyek;
+            const rataPortoEl = document.getElementById(`rata-porto-${siswaId}`);
+            if (rataPortoEl) rataPortoEl.textContent = portofolio;
+
             const naAkhirEl = document.getElementById(`na-akhir-${siswaId}`);
             if (naAkhirEl) naAkhirEl.textContent = naAkhir;
 
-            // Update Predikat cell
             const predEl = document.getElementById(`predikat-${siswaId}`);
             if (predEl) {
                 predEl.textContent = predikat;
@@ -3205,6 +3294,7 @@
                 if (lastKelas && [...sel.options].some(o => o.value === lastKelas)) sel.value = lastKelas;
             } catch(e) {}
             renderTPColumnsList();
+            renderAllSkillLists();
             if (kl.length) {
                 loadDetailNilai();
             } else {
@@ -3243,10 +3333,14 @@
                             } catch(e) {}
                         }
 
-                        // Load keterampilan
+                        // Load keterampilan — assign ke kolom pertama (backward compat)
                         detailNilaiData[sid].praktek    = n.praktek    || 0;
                         detailNilaiData[sid].proyek     = n.proyek     || 0;
                         detailNilaiData[sid].portofolio = n.portofolio || 0;
+                        // Assign ke kolom skill pertama
+                        detailNilaiData[sid]['praktek_1']    = n.praktek    || 0;
+                        detailNilaiData[sid]['proyek_1']     = n.proyek     || 0;
+                        detailNilaiData[sid]['portofolio_1'] = n.portofolio || 0;
                     });
 
                     // Rebuild tpColumns dari data tersimpan jika lebih banyak dari default
@@ -3258,6 +3352,7 @@
                         _tpIdCounter = maxTPId;
                     }
                     renderTPColumnsList();
+                    renderAllSkillLists();
                 }
             } catch(e) {}
             renderDetailNilaiTable(kelas);
@@ -3273,25 +3368,37 @@
                 return;
             }
 
-            // Build header dinamis untuk kolom TP
+            // Build header dinamis untuk kolom TP dan Skill
             const tpHeaders = tpColumns.map(tp =>
                 `<th class="px-2 py-3 text-center font-semibold bg-blue-50 text-blue-700 text-xs">${tp.kode}</th>`
+            ).join('');
+            const praktekHeaders = skillColumns.praktek.map(c =>
+                `<th class="px-2 py-3 text-center font-semibold bg-green-50 text-green-700 text-xs">${c.kode}</th>`
+            ).join('');
+            const proyekHeaders = skillColumns.proyek.map(c =>
+                `<th class="px-2 py-3 text-center font-semibold bg-purple-50 text-purple-700 text-xs">${c.kode}</th>`
+            ).join('');
+            const portoHeaders = skillColumns.portofolio.map(c =>
+                `<th class="px-2 py-3 text-center font-semibold bg-pink-50 text-pink-700 text-xs">${c.kode}</th>`
             ).join('');
 
             header.innerHTML = `
                 <th class="px-3 py-3 text-left font-semibold sticky left-0 bg-gray-50 text-xs">No</th>
                 <th class="px-3 py-3 text-left font-semibold sticky left-8 bg-gray-50 whitespace-nowrap text-xs">Nama Siswa</th>
                 ${tpHeaders}
-                <th class="px-2 py-3 text-center font-semibold bg-blue-100 text-blue-800 text-xs">Rata-rata TP</th>
-                <th class="px-2 py-3 text-center font-semibold bg-green-50 text-green-700 text-xs">Praktek</th>
-                <th class="px-2 py-3 text-center font-semibold bg-purple-50 text-purple-700 text-xs">Proyek</th>
-                <th class="px-2 py-3 text-center font-semibold bg-pink-50 text-pink-700 text-xs">Portofolio</th>
+                <th class="px-2 py-3 text-center font-semibold bg-blue-100 text-blue-800 text-xs">Rata TP</th>
+                ${praktekHeaders}
+                <th class="px-2 py-3 text-center font-semibold bg-green-100 text-green-800 text-xs">Rata Praktek</th>
+                ${proyekHeaders}
+                <th class="px-2 py-3 text-center font-semibold bg-purple-100 text-purple-800 text-xs">Rata Proyek</th>
+                ${portoHeaders}
+                <th class="px-2 py-3 text-center font-semibold bg-pink-100 text-pink-800 text-xs">Rata Porto</th>
                 <th class="px-2 py-3 text-center font-semibold bg-gray-100 text-gray-700 text-xs">NA Akhir</th>
                 <th class="px-2 py-3 text-center font-semibold bg-gray-100 text-gray-700 text-xs">Predikat</th>`;
 
             tbody.innerHTML = siswaKelas.map((s, i) => {
                 const d = detailNilaiData[s.id] || {};
-                const { rataTP, naAkhir } = hitungNilaiDetailRow(s.id);
+                const { rataTP, praktek, proyek, portofolio, naAkhir } = hitungNilaiDetailRow(s.id);
                 const { predikat, color } = getNaAkhirPredikat(naAkhir);
 
                 const tpCells = tpColumns.map(tp => {
@@ -3303,9 +3410,32 @@
                     </td>`;
                 }).join('');
 
-                const praktek    = Number(d.praktek    || 0);
-                const proyek     = Number(d.proyek     || 0);
-                const portofolio = Number(d.portofolio || 0);
+                const praktekCells = skillColumns.praktek.map(c => {
+                    const val = Number(d['praktek_' + c.id] || 0);
+                    return `<td class="px-1 py-2 text-center bg-green-50">
+                        <input type="number" value="${val}" min="0" max="100"
+                            class="w-14 px-1 py-1.5 text-center border border-green-200 rounded-lg text-xs focus:ring-2 focus:ring-green-400 outline-none bg-white"
+                            oninput="setSkillNilai('${s.id}','praktek',this.value,${c.id})">
+                    </td>`;
+                }).join('');
+
+                const proyekCells = skillColumns.proyek.map(c => {
+                    const val = Number(d['proyek_' + c.id] || 0);
+                    return `<td class="px-1 py-2 text-center bg-purple-50">
+                        <input type="number" value="${val}" min="0" max="100"
+                            class="w-14 px-1 py-1.5 text-center border border-purple-200 rounded-lg text-xs focus:ring-2 focus:ring-purple-400 outline-none bg-white"
+                            oninput="setSkillNilai('${s.id}','proyek',this.value,${c.id})">
+                    </td>`;
+                }).join('');
+
+                const portoCells = skillColumns.portofolio.map(c => {
+                    const val = Number(d['portofolio_' + c.id] || 0);
+                    return `<td class="px-1 py-2 text-center bg-pink-50">
+                        <input type="number" value="${val}" min="0" max="100"
+                            class="w-14 px-1 py-1.5 text-center border border-pink-200 rounded-lg text-xs focus:ring-2 focus:ring-pink-400 outline-none bg-white"
+                            oninput="setSkillNilai('${s.id}','portofolio',this.value,${c.id})">
+                    </td>`;
+                }).join('');
 
                 return `<tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
                     <td class="px-3 py-2 text-xs text-gray-500 sticky left-0 bg-white">${i+1}</td>
@@ -3314,20 +3444,17 @@
                     <td class="px-2 py-2 text-center bg-blue-100">
                         <span id="rata-tp-${s.id}" class="font-bold text-blue-800 text-xs">${rataTP}</span>
                     </td>
-                    <td class="px-1 py-2 text-center bg-green-50">
-                        <input type="number" value="${praktek}" min="0" max="100"
-                            class="w-14 px-1 py-1.5 text-center border border-green-200 rounded-lg text-xs focus:ring-2 focus:ring-green-400 outline-none bg-white"
-                            oninput="setSkillNilai('${s.id}','praktek',this.value)">
+                    ${praktekCells}
+                    <td class="px-2 py-2 text-center bg-green-100">
+                        <span id="rata-praktek-${s.id}" class="font-bold text-green-800 text-xs">${praktek}</span>
                     </td>
-                    <td class="px-1 py-2 text-center bg-purple-50">
-                        <input type="number" value="${proyek}" min="0" max="100"
-                            class="w-14 px-1 py-1.5 text-center border border-purple-200 rounded-lg text-xs focus:ring-2 focus:ring-purple-400 outline-none bg-white"
-                            oninput="setSkillNilai('${s.id}','proyek',this.value)">
+                    ${proyekCells}
+                    <td class="px-2 py-2 text-center bg-purple-100">
+                        <span id="rata-proyek-${s.id}" class="font-bold text-purple-800 text-xs">${proyek}</span>
                     </td>
-                    <td class="px-1 py-2 text-center bg-pink-50">
-                        <input type="number" value="${portofolio}" min="0" max="100"
-                            class="w-14 px-1 py-1.5 text-center border border-pink-200 rounded-lg text-xs focus:ring-2 focus:ring-pink-400 outline-none bg-white"
-                            oninput="setSkillNilai('${s.id}','portofolio',this.value)">
+                    ${portoCells}
+                    <td class="px-2 py-2 text-center bg-pink-100">
+                        <span id="rata-porto-${s.id}" class="font-bold text-pink-800 text-xs">${portofolio}</span>
                     </td>
                     <td class="px-2 py-2 text-center bg-gray-100">
                         <span id="na-akhir-${s.id}" class="font-bold text-gray-800 text-xs">${naAkhir}</span>
@@ -3363,7 +3490,9 @@
 
                 const praktek    = Math.min(100, Math.max(0, Number(d.praktek    || 0)));
                 const proyek     = Math.min(100, Math.max(0, Number(d.proyek     || 0)));
-                const portofolio = Math.min(100, Math.max(0, Number(d.portofolio || 0)));
+                const praktek    = getRataSkill(d, 'praktek');
+                const proyek     = getRataSkill(d, 'proyek');
+                const portofolio = getRataSkill(d, 'portofolio');
 
                 return {
                     siswaId: s.id, kelas,
