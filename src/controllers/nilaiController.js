@@ -60,7 +60,8 @@ exports.list = async (req, res) => {
     });
     return ok(res, list);
   } catch (err) {
-    return fail(res, 'Gagal mengambil data nilai.', 500);
+    console.error('[nilai.list] Error:', err.message, err.sql || '');
+    return fail(res, 'Gagal mengambil data nilai: ' + err.message, 500);
   }
 };
 
