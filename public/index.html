@@ -5789,22 +5789,29 @@
 
             const rows = siswaKelas.map((s, i) => {
                 const n = nilaiData[s.id] || {};
-                const nilaiAkhirTP = n.nilaiAkhir || n.naPengetahuan || Math.round((n.uh||0)*0.2+(n.pts||0)*0.3+(n.pas||0)*0.5);
+                const rataTP = n.nilaiAkhir || n.naPengetahuan || 0;
+                const pts = n.pts || 0;
+                const pas = n.pas || 0;
                 const praktek=n.praktek||0, proyek=n.proyek||0, portofolio=n.portofolio||0;
                 const naKeter = Math.round((praktek+proyek+portofolio)/3);
+                const hasPtsPas = pts > 0 || pas > 0;
+                const naPenget = hasPtsPas ? Math.round(rataTP*0.6+pts*0.2+pas*0.2) : rataTP;
                 const absen = absensiRekap[s.id.toString()] || {hadir:0,sakit:0,izin:0,alpha:0,dispensasi:0,pulang_cepat:0};
                 const totalAbsen = absen.hadir+absen.sakit+absen.izin+absen.alpha+(absen.dispensasi||0)+(absen.pulang_cepat||0);
                 const nilaiHadir = totalAbsen ? Math.round(((absen.hadir*100)+(absen.sakit*75)+(absen.izin*75)+((absen.dispensasi||0)*75)+((absen.pulang_cepat||0)*50))/totalAbsen) : 0;
-                const naAkhir = Math.round(nilaiAkhirTP*bp + naKeter*bk + nilaiHadir*bh);
+                const naAkhir = Math.round(naPenget*bp + naKeter*bk + nilaiHadir*bh);
                 const predikat = naAkhir>=90?'A':naAkhir>=80?'B':naAkhir>=70?'C':naAkhir>=60?'D':'E';
-                const pctHadir = totalAbsen ? Math.round(((absen.hadir*100)+(absen.sakit*75)+(absen.izin*75)+((absen.dispensasi||0)*75)+((absen.pulang_cepat||0)*50))/totalAbsen)+'%' : '-';
+                const pctHadir = totalAbsen ? nilaiHadir+'%' : '-';
                 const sikap = hitungRataSikap(s.id) || '-';
                 const bg = i%2===0 ? '' : 'background:#f9fafb';
                 return `<tr style="${bg}">
                     <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${i+1}</td>
                     <td style="padding:3px 5px;border:1px solid #ccc;font-weight:600">${s.nama}</td>
                     <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${s.nisn||'-'}</td>
-                    <td style="text-align:center;padding:3px 4px;border:1px solid #ccc;background:#dbeafe;font-weight:bold">${nilaiAkhirTP}</td>
+                    <td style="text-align:center;padding:3px 4px;border:1px solid #ccc;background:#dbeafe;font-weight:bold">${rataTP}</td>
+                    <td style="text-align:center;padding:3px 4px;border:1px solid #ccc;background:#dbeafe">${pts}</td>
+                    <td style="text-align:center;padding:3px 4px;border:1px solid #ccc;background:#dbeafe">${pas}</td>
+                    <td style="text-align:center;padding:3px 4px;border:1px solid #ccc;background:#dcfce7;font-weight:bold">${naPenget}</td>
                     <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${praktek}</td>
                     <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${proyek}</td>
                     <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${portofolio}</td>
@@ -5818,7 +5825,7 @@
 
             // Font size adaptif berdasarkan jumlah siswa
             const jumlahSiswa = siswaKelas.length;
-            const fsize = jumlahSiswa <= 20 ? 9 : jumlahSiswa <= 30 ? 8.5 : jumlahSiswa <= 36 ? 8 : jumlahSiswa <= 45 ? 7.5 : 7;
+            const fsize = jumlahSiswa <= 20 ? 8.5 : jumlahSiswa <= 30 ? 8 : jumlahSiswa <= 36 ? 7.5 : 7;
             const printContent = `<div style="font-family:Arial,sans-serif;font-size:${fsize}px;padding:0;margin:0">
                 <div style="text-align:center;margin-bottom:8px;border-bottom:2px solid #1d4ed8;padding-bottom:6px">
                     <h2 style="margin:0;font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:1px">DAFTAR NILAI SISWA</h2>
@@ -5841,17 +5848,19 @@
                         <td style="padding:1px 0">Guru</td>
                         <td colspan="3" style="padding:1px 0">: <strong>${CONFIG.guru.nama||'-'}</strong></td>
                     </tr>
+                    <tr>
+                        <td style="padding:1px 0">Bobot</td>
+                        <td colspan="3" style="padding:1px 0">: Pengetahuan ${CONFIG.bobotNilai?.pengetahuan??60}% + Keterampilan ${CONFIG.bobotNilai?.keterampilan??40}%${(CONFIG.bobotNilai?.kehadiran??0)>0?' + Kehadiran '+(CONFIG.bobotNilai?.kehadiran??0)+'%':''}</td>
+                    </tr>
                 </table>
-                <table style="width:100%;border-collapse:collapse;font-size:8.5px">
+                <table style="width:100%;border-collapse:collapse;font-size:8px">
                     <thead>
                         <tr style="background:#1d4ed8;color:white">
-                            <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center;width:20px">No</th>
-                            <th rowspan="2" style="padding:3px 5px;border:1px solid #93c5fd;text-align:left">Nama Siswa</th>
+                            <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center;width:18px">No</th>
+                            <th rowspan="2" style="padding:3px 5px;border:1px solid #93c5fd;text-align:left;min-width:90px">Nama Siswa</th>
                             <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">NISN</th>
-                            <th colspan="1" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">Pengetahuan</th>
-                            <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center;background:#166534">NA-K</th>
-                            <th colspan="3" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">Keterampilan</th>
-                            <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center;background:#166534">NA-K</th>
+                            <th colspan="4" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">Pengetahuan</th>
+                            <th colspan="4" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">Keterampilan</th>
                             <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center;background:#6d28d9">NA</th>
                             <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">Pred</th>
                             <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">Hadir</th>
@@ -5859,9 +5868,13 @@
                         </tr>
                         <tr style="background:#2563eb;color:white">
                             <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">Rata TP</th>
+                            <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">PTS</th>
+                            <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">PAS</th>
+                            <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center;background:#166534">NA-P</th>
                             <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">Praktek</th>
                             <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">Proyek</th>
                             <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">Porto</th>
+                            <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center;background:#166534">NA-K</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -5870,9 +5883,8 @@
                     <div style="text-align:center;font-size:9px;min-width:180px">
                         <p style="margin:0">............., ............. ${new Date().getFullYear()}</p>
                         <p style="margin:2px 0">Guru Mata Pelajaran</p>
-                        <br/><br/><br/><br/><br/><br/><br/>
-                        <p style="margin:0 0 3px 0;font-weight:bold">${CONFIG.guru.nama||'_________________'}</p>
-                        <div style="border-top:2px solid #222;width:100%"></div>
+                        <br/><br/><br/><br/><br/>
+                        <p style="margin:0 0 3px 0;font-weight:bold;text-decoration:underline">${CONFIG.guru.nama||'_________________'}</p>
                     </div>
                 </div>
             </div>`;

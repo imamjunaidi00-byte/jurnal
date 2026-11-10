@@ -167,16 +167,44 @@ exports.download = async (req, res) => {
       order:   [[{ model: Siswa, as: 'siswaRef' }, 'nama', 'ASC']],
       raw: true, nest: true,
     });
-    const data = list.map((n, i) => ({
-      No: i + 1,
-      Nama: n.siswaRef.nama, NISN: n.siswaRef.nisn,
-      'Mata Pelajaran': n.mataPelajaran, Kelas: n.kelas,
-      'Nilai TP (Rata-rata)': n.nilaiAkhir || n.naPengetahuan,
-      'Detail TP': n.tpList || '[]',
-      'Praktek': n.praktek, 'Proyek': n.proyek, 'Portofolio': n.portofolio,
-      'NA Pengetahuan': n.naPengetahuan, 'NA Keterampilan': n.naKeterampilan,
-      'NA Akhir': n.naAkhir, 'Predikat': n.predikat,
-    }));
+
+    const data = list.map((n, i) => {
+      // Parse tpList untuk ekspansi ke kolom TP1, TP2, ...
+      let tpCols = {};
+      try {
+        const tpArr = JSON.parse(n.tpList || '[]');
+        if (Array.isArray(tpArr)) {
+          tpArr.forEach((tp, idx) => {
+            tpCols[tp.kode || `TP${idx+1}`] = tp.nilai || 0;
+          });
+        }
+      } catch(e) {}
+
+      const rataTP = n.nilaiAkhir || n.naPengetahuan || 0;
+      const pts    = n.pts || 0;
+      const pas    = n.pas || 0;
+      const naKeter = n.naKeterampilan || 0;
+
+      return {
+        No:               i + 1,
+        Nama:             n.siswaRef.nama,
+        NISN:             n.siswaRef.nisn,
+        'Kelas':          n.kelas,
+        'Mata Pelajaran': n.mataPelajaran,
+        ...tpCols,
+        'Rata TP':        rataTP,
+        'PTS':            pts,
+        'PAS':            pas,
+        'NA Pengetahuan': n.naPengetahuan,
+        'Praktek':        n.praktek,
+        'Proyek':         n.proyek,
+        'Portofolio':     n.portofolio,
+        'NA Keterampilan':naKeter,
+        'NA Akhir':       n.naAkhir,
+        'Predikat':       n.predikat,
+      };
+    });
+
     const buffer = writeExcel(data, 'Nilai');
     res.setHeader('Content-Disposition', 'attachment; filename="nilai.xlsx"');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -203,24 +231,27 @@ exports.downloadTemplate = async (req, res) => {
 
     // Buat baris template — siswa sudah terisi, nilai kosong (0)
     const data = siswaList.map((s, i) => ({
-      'No':            i + 1,
-      'Nama':          s.nama,
-      'NISN':          s.nisn || '',
-      'Mata Pelajaran': '',       // harus diisi user
-      'TP1':           0,
-      'TP2':           0,
-      'TP3':           0,
-      'Praktek':       0,
-      'Proyek':        0,
-      'Portofolio':    0,
+      'No':             i + 1,
+      'Nama':           s.nama,
+      'NISN':           s.nisn || '',
+      'Mata Pelajaran': '',   // harus diisi user
+      'TP1':            0,
+      'TP2':            0,
+      'TP3':            0,
+      'PTS':            0,
+      'PAS':            0,
+      'Praktek':        0,
+      'Proyek':         0,
+      'Portofolio':     0,
     }));
 
-    // Jika kelas kosong, tetap buat template header saja dengan 1 baris contoh
+    // Jika kelas kosong, buat 1 baris contoh
     if (!data.length) {
       data.push({
         'No': 1, 'Nama': 'Contoh Siswa', 'NISN': '0012345678',
         'Mata Pelajaran': 'Nama Mapel',
         'TP1': 85, 'TP2': 80, 'TP3': 90,
+        'PTS': 78, 'PAS': 82,
         'Praktek': 80, 'Proyek': 75, 'Portofolio': 80,
       });
     }
@@ -232,19 +263,20 @@ exports.downloadTemplate = async (req, res) => {
     // Set lebar kolom
     ws['!cols'] = [
       { wch: 5 }, { wch: 30 }, { wch: 15 }, { wch: 25 },
-      { wch: 6 }, { wch: 6 }, { wch: 6 },
+      { wch: 6 }, { wch: 6 }, { wch: 6 }, { wch: 6 }, { wch: 6 },
       { wch: 8 }, { wch: 8 }, { wch: 10 },
     ];
 
-    // Tambahkan sheet petunjuk
     const petunjuk = [
       { Petunjuk: '=== PETUNJUK PENGISIAN TEMPLATE NILAI ===' },
       { Petunjuk: '' },
       { Petunjuk: '1. Kolom "No", "Nama", "NISN" — jangan diubah, digunakan untuk pencocokan data siswa.' },
       { Petunjuk: '2. Kolom "Mata Pelajaran" — isi nama mata pelajaran (harus sama untuk semua baris).' },
-      { Petunjuk: '3. Kolom TP1, TP2, TP3 — nilai Tujuan Pembelajaran (0-100). Guru bisa menambah kolom TP4, TP5, dst.' },
-      { Petunjuk: '4. Kolom Praktek, Proyek, Portofolio — nilai keterampilan (0-100).' },
-      { Petunjuk: '5. NA Akhir, Predikat dihitung otomatis saat import.' },
+      { Petunjuk: '3. Kolom TP1, TP2, TP3 — nilai Tujuan Pembelajaran (0-100). Bisa tambah TP4, TP5, dst.' },
+      { Petunjuk: '4. Kolom PTS — Penilaian Tengah Semester (0-100). Kosongkan jika tidak ada.' },
+      { Petunjuk: '5. Kolom PAS — Penilaian Akhir Semester (0-100). Kosongkan jika tidak ada.' },
+      { Petunjuk: '6. Kolom Praktek, Proyek, Portofolio — nilai keterampilan (0-100).' },
+      { Petunjuk: '7. NA Akhir, Predikat dihitung otomatis saat import.' },
       { Petunjuk: '6. Kolom TP bersifat dinamis: tambahkan TP4, TP5, ... sesuai kebutuhan.' },
       { Petunjuk: '7. Simpan file tetap dalam format .xlsx atau .xls sebelum diupload.' },
       { Petunjuk: '' },
@@ -369,13 +401,13 @@ exports.importNilai = async (req, res) => {
         mataPelajaran: mapel,
         tpList:        JSON.stringify(tpList),
         nilaiAkhir,
-        // Fallback UH/PTS/PAS jika tidak ada kolom TP
-        uh:            tpKeys.length > 0 ? null : clamp(row['UH']),
-        pts:           tpKeys.length > 0 ? null : clamp(row['PTS']),
-        pas:           tpKeys.length > 0 ? null : clamp(row['PAS']),
-        praktek:       clamp(row['Praktek']),
-        proyek:        clamp(row['Proyek']),
-        portofolio:    clamp(row['Portofolio']),
+        // PTS dan PAS selalu dibaca jika ada di file
+        uh:            tpKeys.length > 0 ? null : clamp(row['UH'] || row['uh'] || 0),
+        pts:           clamp(row['PTS'] || row['pts'] || 0),
+        pas:           clamp(row['PAS'] || row['pas'] || 0),
+        praktek:       clamp(row['Praktek'] || row['praktek'] || 0),
+        proyek:        clamp(row['Proyek']  || row['proyek']  || 0),
+        portofolio:    clamp(row['Portofolio'] || row['portofolio'] || 0),
       };
 
       // Hitung nilai akhir
