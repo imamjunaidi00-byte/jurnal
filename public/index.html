@@ -5036,7 +5036,7 @@
                 const rataColor = rata==='SB'?'bg-green-100 text-green-700':rata==='B'?'bg-blue-100 text-blue-700':rata==='C'?'bg-yellow-100 text-yellow-700':rata?'bg-red-100 text-red-700':'bg-gray-100 text-gray-400';
                 const avatarColor = s.jenisKelamin==='L'?'bg-gradient-to-br from-blue-400 to-blue-600':'bg-gradient-to-br from-pink-400 to-pink-600';
                 const aspekRows = aspek.map(a => {
-                    const val = sikapData[`${s.id}-${a.kode}`] || null;
+                    const val = sikapData[`${String(s.id)}-${a.kode}`] || null;
                     const btns = ['SB','B','C','K'].map(g => {
                         const isActive = val === g;
                         const ac = g==='SB'?'bg-green-500 text-white shadow-md scale-110':g==='B'?'bg-blue-500 text-white shadow-md scale-110':g==='C'?'bg-yellow-500 text-white shadow-md scale-110':'bg-red-500 text-white shadow-md scale-110';
@@ -5106,24 +5106,26 @@
         }
 
         function setSikap(siswaId, aspek, nilai) {
-            sikapData[`${siswaId}-${aspek}`] = nilai;
+            sikapData[`${String(siswaId)}-${aspek}`] = nilai;
             renderSikapTable(document.getElementById('sikap-kelas').value);
         }
 
         function resetSikap(siswaId) {
             if (!confirm('Reset semua penilaian sikap siswa ini?')) return;
             const aspekList = ['berdoa','toleransi','bersyukur','jujur','disiplin','tanggungJawab','santun','peduli','percayaDiri'];
-            aspekList.forEach(k => delete sikapData[`${siswaId}-${k}`]);
+            const sid = String(siswaId);
+            aspekList.forEach(k => delete sikapData[`${sid}-${k}`]);
             renderSikapTable(document.getElementById('sikap-kelas').value);
             showToast('Penilaian sikap direset');
         }
 
         function hitungRataSikap(id) {
-            const nilais = Object.keys(sikapData).filter(k=>k.startsWith(id+'-')).map(k=>sikapData[k]);
+            const sid = String(id);
+            const nilais = Object.keys(sikapData).filter(k => k.startsWith(sid + '-')).map(k => sikapData[k]);
             if (!nilais.length) return null;
             const map = {'SB':4,'B':3,'C':2,'K':1};
-            const avg = nilais.reduce((a,b)=>a+(map[b]||0),0)/nilais.length;
-            return {4:'SB',3:'B',2:'C',1:'K'}[Math.round(avg)]||'B';
+            const avg = nilais.reduce((a,b) => a + (map[b] || 0), 0) / nilais.length;
+            return {4:'SB',3:'B',2:'C',1:'K'}[Math.round(avg)] || 'B';
         }
 
         async function simpanSikap() {
@@ -5511,7 +5513,9 @@
                 if (resSikap.success && resSikap.data) {
                     const aspekList = ['berdoa','toleransi','bersyukur','jujur','disiplin','tanggungJawab','santun','peduli','percayaDiri'];
                     resSikap.data.forEach(item => {
-                        const id = item.siswaRef?.id || item.siswaId || item.siswa;
+                        // Normalisasi id ke string agar konsisten dengan hitungRataSikap
+                        const id = String(item.siswaRef?.id || item.siswaId || item.siswa || '');
+                        if (!id) return;
                         aspekList.forEach(k => { if (item[k]) sikapData[`${id}-${k}`] = item[k]; });
                     });
                 }
