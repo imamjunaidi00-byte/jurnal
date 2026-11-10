@@ -9,24 +9,29 @@ const { Op, fn, col } = require('sequelize');
 
 // Fungsi helper hitung nilai akhir (sama dengan model hook)
 function hitungNilaiRow(row) {
-  let nilaiAkhir = 0;
+  let rataTP = 0;
 
   // Coba parse tpList — sistem TP baru
   try {
     const tpList = typeof row.tpList === 'string' ? JSON.parse(row.tpList) : (row.tpList || []);
     if (Array.isArray(tpList) && tpList.length > 0) {
       const totalTP = tpList.reduce((sum, tp) => sum + (Number(tp.nilai) || 0), 0);
-      nilaiAkhir = Math.round(totalTP / tpList.length);
+      rataTP = Math.round(totalTP / tpList.length);
     }
   } catch(e) {}
 
-  // Fallback ke UH/PTS/PAS jika tidak ada TP
-  if (nilaiAkhir === 0) {
-    const uh  = Math.min(100, Math.max(0, Number(row.uh  || 0)));
-    const pts = Math.min(100, Math.max(0, Number(row.pts || 0)));
-    const pas = Math.min(100, Math.max(0, Number(row.pas || 0)));
-    nilaiAkhir = Math.round((uh * 0.2) + (pts * 0.3) + (pas * 0.5));
+  // Fallback ke UH jika tidak ada TP
+  if (rataTP === 0 && (row.uh || 0) > 0) {
+    rataTP = Math.min(100, Math.max(0, Number(row.uh || 0)));
   }
+
+  // Nilai pengetahuan: jika ada PTS/PAS ikutkan dalam formula
+  const pts = Math.min(100, Math.max(0, Number(row.pts || 0)));
+  const pas = Math.min(100, Math.max(0, Number(row.pas || 0)));
+  const hasPtsPas = pts > 0 || pas > 0;
+  const nilaiAkhir = hasPtsPas
+    ? Math.round(rataTP * 0.6 + pts * 0.2 + pas * 0.2)
+    : rataTP;
 
   const praktek    = Math.min(100, Math.max(0, Number(row.praktek    || 0)));
   const proyek     = Math.min(100, Math.max(0, Number(row.proyek     || 0)));
@@ -42,7 +47,7 @@ function hitungNilaiRow(row) {
   else if (naAkhir >= 60) predikat = 'D';
   else                    predikat = 'E';
 
-  return { ...row, praktek, proyek, portofolio, nilaiAkhir, naPengetahuan: nilaiAkhir, naKeterampilan, naAkhir, predikat };
+  return { ...row, pts, pas, praktek, proyek, portofolio, nilaiAkhir, naPengetahuan: nilaiAkhir, naKeterampilan, naAkhir, predikat };
 }
 
 exports.list = async (req, res) => {

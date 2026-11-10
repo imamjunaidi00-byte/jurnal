@@ -642,18 +642,20 @@
                                 <tr>
                                     <th class="px-3 py-3 text-left font-semibold w-8" rowspan="2">No</th>
                                     <th class="px-3 py-3 text-left font-semibold w-36" rowspan="2">Nama</th>
-                                    <th class="px-3 py-3 text-center font-semibold border-b border-gray-200" colspan="1">Pengetahuan</th>
+                                    <th class="px-3 py-3 text-center font-semibold border-b border-gray-200 bg-blue-50 text-blue-700" colspan="3">Pengetahuan</th>
                                     <th class="px-3 py-3 text-center font-semibold border-b border-gray-200" colspan="3">Keterampilan</th>
-                                    <th class="px-3 py-3 text-center font-semibold w-12" rowspan="2">NA</th>
-                                    <th class="px-3 py-3 text-center font-semibold w-16" rowspan="2">Predikat</th>
                                     <th class="px-3 py-3 text-center font-semibold border-l border-gray-200 w-20" rowspan="2">Kehadiran</th>
                                     <th class="px-3 py-3 text-center font-semibold border-l border-gray-200 w-14" rowspan="2">Sikap</th>
+                                    <th class="px-3 py-3 text-center font-semibold w-12" rowspan="2">NA</th>
+                                    <th class="px-3 py-3 text-center font-semibold w-16" rowspan="2">Predikat</th>
                                     <th class="px-3 py-3 text-center font-semibold border-l border-gray-200 w-20" rowspan="2">
                                         <i class="fas fa-eye text-xs"></i><br>Publish
                                     </th>
                                 </tr>
                                 <tr class="border-b border-gray-200">
                                     <th class="px-2 py-2 text-xs font-medium w-16 text-blue-700 bg-blue-50">Rata TP</th>
+                                    <th class="px-2 py-2 text-xs font-medium w-14 text-blue-600 bg-blue-50">PTS</th>
+                                    <th class="px-2 py-2 text-xs font-medium w-14 text-blue-600 bg-blue-50">PAS</th>
                                     <th class="px-2 py-2 text-xs font-medium w-14">Praktek</th>
                                     <th class="px-2 py-2 text-xs font-medium w-14">Proyek</th>
                                     <th class="px-2 py-2 text-xs font-medium w-16">Portofolio</th>
@@ -753,12 +755,6 @@
                                     <th class="px-3 py-3 text-left font-semibold sticky left-0 bg-gray-50">No</th>
                                     <th class="px-3 py-3 text-left font-semibold sticky left-8 bg-gray-50">Nama Siswa</th>
                                     <!-- TP columns dynamic -->
-                                    <th class="px-3 py-3 text-center font-semibold bg-blue-50 text-blue-700">Rata-rata TP</th>
-                                    <th class="px-3 py-3 text-center font-semibold bg-green-50 text-green-700">Praktek</th>
-                                    <th class="px-3 py-3 text-center font-semibold bg-purple-50 text-purple-700">Proyek</th>
-                                    <th class="px-3 py-3 text-center font-semibold bg-pink-50 text-pink-700">Portofolio</th>
-                                    <th class="px-3 py-3 text-center font-semibold bg-gray-100 text-gray-700">NA Akhir</th>
-                                    <th class="px-3 py-3 text-center font-semibold bg-gray-100 text-gray-700">Predikat</th>
                                 </tr>
                             </thead>
                             <tbody id="detail-nilai-tbody" class="divide-y divide-gray-100">
@@ -3386,20 +3382,13 @@
                 <th class="px-3 py-3 text-left font-semibold sticky left-0 bg-gray-50 text-xs">No</th>
                 <th class="px-3 py-3 text-left font-semibold sticky left-8 bg-gray-50 whitespace-nowrap text-xs">Nama Siswa</th>
                 ${tpHeaders}
-                <th class="px-2 py-3 text-center font-semibold bg-blue-100 text-blue-800 text-xs">Rata TP</th>
                 ${praktekHeaders}
-                <th class="px-2 py-3 text-center font-semibold bg-green-100 text-green-800 text-xs">Rata Praktek</th>
                 ${proyekHeaders}
-                <th class="px-2 py-3 text-center font-semibold bg-purple-100 text-purple-800 text-xs">Rata Proyek</th>
-                ${portoHeaders}
-                <th class="px-2 py-3 text-center font-semibold bg-pink-100 text-pink-800 text-xs">Rata Porto</th>
-                <th class="px-2 py-3 text-center font-semibold bg-gray-100 text-gray-700 text-xs">NA Akhir</th>
-                <th class="px-2 py-3 text-center font-semibold bg-gray-100 text-gray-700 text-xs">Predikat</th>`;
+                ${portoHeaders}`;
 
             tbody.innerHTML = siswaKelas.map((s, i) => {
                 const d = detailNilaiData[s.id] || {};
-                const { rataTP, praktek, proyek, portofolio, naAkhir } = hitungNilaiDetailRow(s.id);
-                const { predikat, color } = getNaAkhirPredikat(naAkhir);
+                // hitungNilaiDetailRow still runs (syncs nilaiData in background via updateNilaiDetailLive)
 
                 const tpCells = tpColumns.map(tp => {
                     const val = Number(d['tp_' + tp.id] || 0);
@@ -3441,27 +3430,9 @@
                     <td class="px-3 py-2 text-xs text-gray-500 sticky left-0 bg-white">${i+1}</td>
                     <td class="px-3 py-2 text-sm font-semibold text-gray-900 sticky left-8 bg-white whitespace-nowrap">${s.nama}</td>
                     ${tpCells}
-                    <td class="px-2 py-2 text-center bg-blue-100">
-                        <span id="rata-tp-${s.id}" class="font-bold text-blue-800 text-xs">${rataTP}</span>
-                    </td>
                     ${praktekCells}
-                    <td class="px-2 py-2 text-center bg-green-100">
-                        <span id="rata-praktek-${s.id}" class="font-bold text-green-800 text-xs">${praktek}</span>
-                    </td>
                     ${proyekCells}
-                    <td class="px-2 py-2 text-center bg-purple-100">
-                        <span id="rata-proyek-${s.id}" class="font-bold text-purple-800 text-xs">${proyek}</span>
-                    </td>
                     ${portoCells}
-                    <td class="px-2 py-2 text-center bg-pink-100">
-                        <span id="rata-porto-${s.id}" class="font-bold text-pink-800 text-xs">${portofolio}</span>
-                    </td>
-                    <td class="px-2 py-2 text-center bg-gray-100">
-                        <span id="na-akhir-${s.id}" class="font-bold text-gray-800 text-xs">${naAkhir}</span>
-                    </td>
-                    <td class="px-2 py-2 text-center bg-gray-100">
-                        <span id="predikat-${s.id}" class="font-bold text-xs ${color}">${predikat}</span>
-                    </td>
                 </tr>`;
             }).join('');
         }
@@ -5511,7 +5482,7 @@
             try {
                 const [resNilai, resAbsen, resSikap] = await Promise.all([
                     api.get(`/api/nilai?kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`),
-                    api.get(`/api/absensi?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`),
+                    api.get(`/api/absensi/rekap?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`),
                     api.get(`/api/sikap?kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`)
                 ]);
                 if (resNilai.success) {
@@ -5524,9 +5495,16 @@
                 absensiRekap = {};
                 if (resAbsen.success && resAbsen.data) {
                     resAbsen.data.forEach(a => {
-                        const sid = (a.siswa?.id || a.siswa || '').toString();
-                        if (!absensiRekap[sid]) absensiRekap[sid] = { hadir:0, sakit:0, izin:0, alpha:0, dispensasi:0, pulang_cepat:0 };
-                        absensiRekap[sid][a.status] = (absensiRekap[sid][a.status] || 0) + 1;
+                        const sid = (a.siswaRef?.id || a.siswaId || a.siswa?.id || '').toString();
+                        if (!sid) return;
+                        absensiRekap[sid] = {
+                            hadir:       Number(a.hadir)       || 0,
+                            sakit:       Number(a.sakit)       || 0,
+                            izin:        Number(a.izin)        || 0,
+                            alpha:       Number(a.alpha)       || 0,
+                            dispensasi:  Number(a.dispensasi)  || 0,
+                            pulang_cepat:Number(a.pulang_cepat)|| 0,
+                        };
                     });
                 }
                 // Load sikap ke sikapData
@@ -5569,18 +5547,26 @@
         function renderNilaiTable(kelas) {
             const tbody = document.querySelector('#nilai-table tbody');
             const siswaKelas = dataSiswa.filter(s => s.kelas === kelas);
-            if (!siswaKelas.length) { tbody.innerHTML = '<tr><td colspan="13" class="text-center py-8 text-gray-400">Belum ada siswa di kelas ini</td></tr>'; return; }
+            if (!siswaKelas.length) { tbody.innerHTML = '<tr><td colspan="14" class="text-center py-8 text-gray-400">Belum ada siswa di kelas ini</td></tr>'; return; }
             const bp = (CONFIG.bobotNilai?.pengetahuan ?? 60) / 100;
             const bk = (CONFIG.bobotNilai?.keterampilan ?? 40) / 100;
             const bh = (CONFIG.bobotNilai?.kehadiran ?? 0) / 100;
-            const inp = (id, field, val) => `<input type="number" value="${val}" min="0" max="100" class="w-12 px-1 py-1.5 text-center border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none bg-gray-50 focus:bg-white" onchange="updateNilaiLocal('${id}','${field}',this.value)">`;
+            const inp = (id, field, val, bgCls) => `<input type="number" value="${val}" min="0" max="100" class="w-12 px-1 py-1.5 text-center border ${bgCls||'border-gray-200 bg-gray-50'} rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none focus:bg-white" onchange="updateNilaiLocal('${id}','${field}',this.value)">`;
             tbody.innerHTML = siswaKelas.map((s, i) => {
                 const n = nilaiData[s.id] || {};
-                // Gunakan nilaiAkhir dari TP jika tersedia, fallback ke naPengetahuan lama
-                const nilaiAkhirTP = n.nilaiAkhir || n.naPengetahuan || Math.round((n.uh||0)*0.2+(n.pts||0)*0.3+(n.pas||0)*0.5);
+                // Rata TP dari nilaiAkhir (dihitung dari tpList), readonly di tabel ini
+                const rataTP = n.nilaiAkhir || n.naPengetahuan || 0;
+                const pts = n.pts || 0;
+                const pas = n.pas || 0;
                 const praktek=n.praktek||0, proyek=n.proyek||0, portofolio=n.portofolio||0;
                 const tampilkan = n.tampilkan || false;
                 const naKeter = Math.round((praktek+proyek+portofolio)/3);
+
+                // Pengetahuan: jika ada pts/pas ikutkan, jika tidak gunakan rataTP saja
+                const hasPtsPas = pts > 0 || pas > 0;
+                const naPengetahuan = hasPtsPas
+                    ? Math.round(rataTP * 0.6 + pts * 0.2 + pas * 0.2)
+                    : rataTP;
 
                 // Kehadiran
                 const absen = absensiRekap[s.id.toString()] || { hadir:0, sakit:0, izin:0, alpha:0, dispensasi:0, pulang_cepat:0 };
@@ -5590,7 +5576,7 @@
                     ? Math.round(((absen.hadir*100) + (absen.sakit*75) + (absen.izin*75) + ((absen.dispensasi||0)*75) + ((absen.pulang_cepat||0)*50)) / totalAbsen)
                     : 0;
 
-                const naAkhir = Math.round(nilaiAkhirTP*bp + naKeter*bk + nilaiKehadiran*bh);
+                const naAkhir = Math.round(naPengetahuan*bp + naKeter*bk + nilaiKehadiran*bh);
                 const predikat = naAkhir>=90?'A':naAkhir>=80?'B':naAkhir>=70?'C':naAkhir>=60?'D':'E';
                 const predColor = naAkhir>=90?'text-green-600 bg-green-50':naAkhir>=80?'text-blue-600 bg-blue-50':naAkhir>=70?'text-yellow-600 bg-yellow-50':naAkhir>=60?'text-orange-600 bg-orange-50':'text-red-600 bg-red-50';
                 const hadirColor = pctHadir>=80?'text-green-600 bg-green-50':pctHadir>=60?'text-yellow-600 bg-yellow-50':totalAbsen===0?'text-gray-400 bg-gray-50':'text-red-600 bg-red-50';
@@ -5608,17 +5594,17 @@
                     </td>
                     <td class="px-2 py-2 text-center bg-blue-50">
                         <div class="flex flex-col items-center">
-                            <span class="font-bold text-blue-700 text-sm">${nilaiAkhirTP}</span>
+                            <span class="font-bold text-blue-700 text-sm">${rataTP}</span>
                             <a href="#" onclick="event.preventDefault();switchNilaiTab('detail');document.getElementById('detail-kelas').value='${s.kelas}';loadDetailNilai();" class="text-xs text-blue-500 hover:underline" title="Edit di tab Input Detail">
                                 <i class="fas fa-edit"></i> Edit
                             </a>
                         </div>
                     </td>
+                    <td class="px-1 py-2 text-center bg-blue-50">${inp(s.id,'pts',pts,'border-blue-200 bg-blue-50')}</td>
+                    <td class="px-1 py-2 text-center bg-blue-50">${inp(s.id,'pas',pas,'border-blue-200 bg-blue-50')}</td>
                     <td class="px-1 py-2 text-center">${inp(s.id,'praktek',praktek)}</td>
                     <td class="px-1 py-2 text-center">${inp(s.id,'proyek',proyek)}</td>
                     <td class="px-1 py-2 text-center">${inp(s.id,'portofolio',portofolio)}</td>
-                    <td class="px-2 py-2 text-center font-bold text-base ${naAkhir>=75?'text-green-600':'text-red-600'}">${naAkhir}</td>
-                    <td class="px-2 py-2 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${predColor}">${predikat}</span></td>
                     <td class="px-2 py-2 text-center border-l border-gray-100">
                         <span class="px-1.5 py-0.5 rounded text-xs font-bold ${hadirColor}">${hadirLabel}</span>
                         ${totalAbsen>0 ? `<p class="text-xs text-gray-400 leading-tight">${absen.hadir}H ${absen.sakit}S ${absen.izin}I ${absen.alpha}A${(absen.dispensasi||0)>0?' '+(absen.dispensasi)+'D':''}${(absen.pulang_cepat||0)>0?' '+(absen.pulang_cepat)+'P':''}</p>` : '<p class="text-xs text-gray-300">-</p>'}
@@ -5626,6 +5612,8 @@
                     <td class="px-2 py-2 text-center border-l border-gray-100">
                         <span class="px-2 py-0.5 rounded-full text-xs font-bold ${sikapColor}">${sikapLabel}</span>
                     </td>
+                    <td class="px-2 py-2 text-center font-bold text-base ${naAkhir>=75?'text-green-600':'text-red-600'}">${naAkhir}</td>
+                    <td class="px-2 py-2 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${predColor}">${predikat}</span></td>
                     <td class="px-2 py-2 text-center border-l border-gray-100">
                         <label class="relative inline-flex items-center cursor-pointer justify-center">
                             <input type="checkbox" ${tampilkan ? 'checked' : ''} class="sr-only peer" onchange="toggleTampilkanNilai('${s.id}', this.checked)">
@@ -5716,6 +5704,8 @@
                     tahunAjaran: CONFIG.tahunAjaran, 
                     mataPelajaran: mapel, 
                     guru: CONFIG.guru.nama, 
+                    pts: n.pts||0,
+                    pas: n.pas||0,
                     praktek: n.praktek||0, 
                     proyek: n.proyek||0, 
                     portofolio: n.portofolio||0,
