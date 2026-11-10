@@ -3331,32 +3331,46 @@
                         }
 
                         // Fallback: konversi uhDetail lama ke TP jika belum ada tpList
-                        // uhDetail format lama: JSON {"UH1":"85","UH2":"90",...} atau {"UH1":85,...}
                         if (!loadedFromTP && n.uhDetail) {
                             try {
                                 const uhObj = typeof n.uhDetail === 'string' ? JSON.parse(n.uhDetail) : n.uhDetail;
-                                const uhKeys = Object.keys(uhObj || {}).filter(k => /^UH\d+$/i.test(k));
+                                // Cocokkan berbagai format key: UH1, UH 1, uh1, Uh1, UH-1
+                                const uhKeys = Object.keys(uhObj || {}).filter(k => /^uh[\s\-_]?\d+$/i.test(k.trim()));
+                                console.log('[migrate] uhDetail keys:', Object.keys(uhObj||{}), '→ matched:', uhKeys);
                                 if (uhKeys.length > 0) {
                                     uhKeys.sort((a,b) => parseInt(a.replace(/\D/g,'')) - parseInt(b.replace(/\D/g,''))).forEach((k, idx) => {
                                         const tpNum = idx + 1;
                                         const rawVal = uhObj[k];
-                                        // Nilai bisa berupa angka atau huruf (A/B+/C dll dari sistem lama)
                                         let val = 0;
                                         if (typeof rawVal === 'number') {
                                             val = rawVal;
+                                        } else if (typeof rawVal === 'string' && /^\d+$/.test(rawVal.trim())) {
+                                            val = parseInt(rawVal.trim());
                                         } else {
-                                            // Konversi huruf ke angka (A=90, B+=85, B=80, C+=75, C=70, D=60, E=50)
                                             const gradeMap = {'A':95,'A-':90,'B+':87,'B':83,'B-':80,'C+':77,'C':73,'C-':70,'D':65,'E':50};
-                                            val = gradeMap[String(rawVal).trim().toUpperCase()] || (parseInt(rawVal) || 0);
+                                            val = gradeMap[String(rawVal).trim().toUpperCase()] || 0;
                                         }
                                         val = Math.min(100, Math.max(0, val));
                                         detailNilaiData[sid]['tp_' + tpNum] = val;
                                         if (tpNum > maxTPId) maxTPId = tpNum;
                                     });
-                                    console.log(`[migrate] ${n.siswaRef?.nama||sid}: uhDetail → ${uhKeys.length} TP`);
+                                    console.log(`[migrate] ${n.siswaRef?.nama||sid}: ${uhKeys.length} UH → TP, maxTPId=${maxTPId}`);
+                                } else {
+                                    // Format tidak dikenal — coba baca semua key yang ada nilai angka
+                                    const allKeys = Object.keys(uhObj||{}).filter(k => {
+                                        const v = uhObj[k];
+                                        return (typeof v === 'number' || (typeof v === 'string' && /^\d+$/.test(v.trim())));
+                                    });
+                                    console.log('[migrate] fallback all numeric keys:', allKeys);
+                                    allKeys.sort().forEach((k, idx) => {
+                                        const tpNum = idx + 1;
+                                        const val = Math.min(100, Math.max(0, Number(uhObj[k]) || 0));
+                                        detailNilaiData[sid]['tp_' + tpNum] = val;
+                                        if (tpNum > maxTPId) maxTPId = tpNum;
+                                    });
                                 }
                             } catch(e) {
-                                console.warn('[migrate] uhDetail parse error:', e.message);
+                                console.warn('[migrate] uhDetail parse error:', e.message, 'raw:', n.uhDetail?.slice?.(0,100));
                             }
                         }
 
