@@ -642,7 +642,7 @@
                                 <tr>
                                     <th class="px-3 py-3 text-left font-semibold w-8" rowspan="2">No</th>
                                     <th class="px-3 py-3 text-left font-semibold w-36" rowspan="2">Nama</th>
-                                    <th class="px-3 py-3 text-center font-semibold border-b border-gray-200" colspan="3">Pengetahuan</th>
+                                    <th class="px-3 py-3 text-center font-semibold border-b border-gray-200" colspan="1">Pengetahuan</th>
                                     <th class="px-3 py-3 text-center font-semibold border-b border-gray-200" colspan="3">Keterampilan</th>
                                     <th class="px-3 py-3 text-center font-semibold w-12" rowspan="2">NA</th>
                                     <th class="px-3 py-3 text-center font-semibold w-16" rowspan="2">Predikat</th>
@@ -653,9 +653,7 @@
                                     </th>
                                 </tr>
                                 <tr class="border-b border-gray-200">
-                                    <th class="px-2 py-2 text-xs font-medium w-14">UH</th>
-                                    <th class="px-2 py-2 text-xs font-medium w-14">PTS</th>
-                                    <th class="px-2 py-2 text-xs font-medium w-14">PAS</th>
+                                    <th class="px-2 py-2 text-xs font-medium w-16 text-blue-700 bg-blue-50">Rata TP</th>
                                     <th class="px-2 py-2 text-xs font-medium w-14">Praktek</th>
                                     <th class="px-2 py-2 text-xs font-medium w-14">Proyek</th>
                                     <th class="px-2 py-2 text-xs font-medium w-16">Portofolio</th>
@@ -691,7 +689,7 @@
                     <div class="p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                         <div>
                             <h3 class="font-bold text-xl text-gray-900">Input Detail Nilai</h3>
-                            <p class="text-sm text-gray-500 mt-1">Input UH multiple, Praktek, Proyek, Portofolio dengan nilai huruf</p>
+                            <p class="text-sm text-gray-500 mt-1">Input Tujuan Pembelajaran (TP), Praktek, Proyek, Portofolio dengan nilai angka (0-100)</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <select id="detail-kelas" onchange="loadDetailNilai()" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 text-sm shadow-sm"></select>
@@ -701,48 +699,34 @@
                         </div>
                     </div>
 
-                    <!-- UH Management -->
+                    <!-- TP Management Section -->
                     <div class="px-6 pt-5 pb-3 border-b border-gray-100">
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                            <!-- UH -->
-                            <div class="bg-orange-50 rounded-xl p-3 border border-orange-100">
+                        <div class="mb-4">
+                            <div class="bg-blue-50 rounded-xl p-3 border border-blue-100">
                                 <div class="flex items-center justify-between mb-2">
-                                    <h4 class="font-semibold text-orange-800 text-xs uppercase tracking-wide">Ulangan Harian</h4>
-                                    <button onclick="tambahKolom('uh')" class="px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs font-semibold hover:bg-orange-200 transition-colors">
-                                        <i class="fas fa-plus mr-1"></i>Tambah
+                                    <h4 class="font-semibold text-blue-800 text-xs uppercase tracking-wide">Tujuan Pembelajaran (TP)</h4>
+                                    <button onclick="tambahTP()" class="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold hover:bg-blue-200 transition-colors">
+                                        <i class="fas fa-plus mr-1"></i>Tambah TP
                                     </button>
                                 </div>
-                                <div id="uh-list" class="flex flex-wrap gap-1.5"></div>
+                                <div id="tp-columns-list" class="flex flex-wrap gap-1.5"></div>
                             </div>
+                        </div>
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             <!-- Praktek -->
                             <div class="bg-green-50 rounded-xl p-3 border border-green-100">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h4 class="font-semibold text-green-800 text-xs uppercase tracking-wide">Praktek</h4>
-                                    <button onclick="tambahKolom('praktek')" class="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-semibold hover:bg-green-200 transition-colors">
-                                        <i class="fas fa-plus mr-1"></i>Tambah
-                                    </button>
-                                </div>
-                                <div id="praktek-list" class="flex flex-wrap gap-1.5"></div>
+                                <h4 class="font-semibold text-green-800 text-xs uppercase tracking-wide mb-2">Praktek</h4>
+                                <p class="text-xs text-green-600">Input nilai 0-100 di tabel bawah</p>
                             </div>
                             <!-- Proyek -->
                             <div class="bg-purple-50 rounded-xl p-3 border border-purple-100">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h4 class="font-semibold text-purple-800 text-xs uppercase tracking-wide">Proyek</h4>
-                                    <button onclick="tambahKolom('proyek')" class="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-semibold hover:bg-purple-200 transition-colors">
-                                        <i class="fas fa-plus mr-1"></i>Tambah
-                                    </button>
-                                </div>
-                                <div id="proyek-list" class="flex flex-wrap gap-1.5"></div>
+                                <h4 class="font-semibold text-purple-800 text-xs uppercase tracking-wide mb-2">Proyek</h4>
+                                <p class="text-xs text-purple-600">Input nilai 0-100 di tabel bawah</p>
                             </div>
                             <!-- Portofolio -->
                             <div class="bg-pink-50 rounded-xl p-3 border border-pink-100">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h4 class="font-semibold text-pink-800 text-xs uppercase tracking-wide">Portofolio</h4>
-                                    <button onclick="tambahKolom('portofolio')" class="px-2 py-1 bg-pink-100 text-pink-700 rounded-lg text-xs font-semibold hover:bg-pink-200 transition-colors">
-                                        <i class="fas fa-plus mr-1"></i>Tambah
-                                    </button>
-                                </div>
-                                <div id="portofolio-list" class="flex flex-wrap gap-1.5"></div>
+                                <h4 class="font-semibold text-pink-800 text-xs uppercase tracking-wide mb-2">Portofolio</h4>
+                                <p class="text-xs text-pink-600">Input nilai 0-100 di tabel bawah</p>
                             </div>
                         </div>
                     </div>
@@ -753,11 +737,13 @@
                                 <tr id="detail-nilai-header">
                                     <th class="px-3 py-3 text-left font-semibold sticky left-0 bg-gray-50">No</th>
                                     <th class="px-3 py-3 text-left font-semibold sticky left-8 bg-gray-50">Nama Siswa</th>
-                                    <!-- UH columns dynamic -->
-                                    <th class="px-3 py-3 text-center font-semibold bg-blue-50 text-blue-700">Rata UH</th>
-                                    <th class="px-3 py-3 text-center font-semibold">Praktek</th>
-                                    <th class="px-3 py-3 text-center font-semibold">Proyek</th>
-                                    <th class="px-3 py-3 text-center font-semibold">Portofolio</th>
+                                    <!-- TP columns dynamic -->
+                                    <th class="px-3 py-3 text-center font-semibold bg-blue-50 text-blue-700">Rata-rata TP</th>
+                                    <th class="px-3 py-3 text-center font-semibold bg-green-50 text-green-700">Praktek</th>
+                                    <th class="px-3 py-3 text-center font-semibold bg-purple-50 text-purple-700">Proyek</th>
+                                    <th class="px-3 py-3 text-center font-semibold bg-pink-50 text-pink-700">Portofolio</th>
+                                    <th class="px-3 py-3 text-center font-semibold bg-gray-100 text-gray-700">NA Akhir</th>
+                                    <th class="px-3 py-3 text-center font-semibold bg-gray-100 text-gray-700">Predikat</th>
                                 </tr>
                             </thead>
                             <tbody id="detail-nilai-tbody" class="divide-y divide-gray-100">
@@ -3096,178 +3082,185 @@
         const GRADE_MAP = {'A+':100,'A':95,'A-':90,'B+':85,'B':80,'B-':75,'C+':70,'C':65,'C-':60,'D+':55,'D':50,'D-':45};
         const GRADES = ['A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-'];
 
-        // Daftar kolom per tipe — di-restore dari config server / data tersimpan saat load
-        let kolomList = { uh: ['UH 1'], praktek: ['Praktek 1'], proyek: ['Proyek 1'], portofolio: ['Porto 1'] };
+        // ── State Tujuan Pembelajaran (TP) ──────────────────────────────────────
+        // Array TP columns: [{id, kode, deskripsi}]
+        let tpColumns = [{ id: 1, kode: 'TP1', deskripsi: 'Tujuan Pembelajaran 1' }];
         let detailNilaiData = {};
+        let _tpIdCounter = 1; // counter untuk ID unik TP
 
-        const KOLOM_CONFIG = {
-            uh:         { label:'UH',         prefix:'UH',       color:'orange', bgClass:'bg-orange-50',  textClass:'text-orange-700',  tagClass:'bg-orange-100 text-orange-800' },
-            praktek:    { label:'Praktek',     prefix:'Praktek',  color:'green',  bgClass:'bg-green-50',   textClass:'text-green-700',   tagClass:'bg-green-100 text-green-800' },
-            proyek:     { label:'Proyek',      prefix:'Proyek',   color:'purple', bgClass:'bg-purple-50',  textClass:'text-purple-700',  tagClass:'bg-purple-100 text-purple-800' },
-            portofolio: { label:'Portofolio',  prefix:'Porto',    color:'pink',   bgClass:'bg-pink-50',    textClass:'text-pink-700',    tagClass:'bg-pink-100 text-pink-800' }
-        };
-
-        function gradeSelect(id, field, val) {
-            const safeField = field.replace(/'/g, "\\'");
-            return `<select onchange="setDetailNilai('${id}','${safeField}',this.value)"
-                class="px-1 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-primary-500 outline-none bg-white w-16">
-                <option value="">-</option>
-                ${GRADES.map(g => `<option value="${g}" ${val===g?'selected':''}>${g}</option>`).join('')}
-            </select>`;
-        }
-
-        function gradeToNum(g) { return GRADE_MAP[g] || 0; }
-
-        function tambahKolom(tipe) {
-            const cfg = KOLOM_CONFIG[tipe];
-            const n = kolomList[tipe].length + 1;
-            kolomList[tipe].push(`${cfg.prefix} ${n}`);
-            simpanKolomKeServer();
-            renderKolomList(tipe);
+        function tambahTP() {
+            _tpIdCounter++;
+            const kode = 'TP' + _tpIdCounter;
+            tpColumns.push({ id: _tpIdCounter, kode, deskripsi: 'Tujuan Pembelajaran ' + _tpIdCounter });
+            renderTPColumnsList();
             renderDetailNilaiTable(document.getElementById('detail-kelas').value);
         }
 
-        function hapusKolom(tipe, idx) {
-            if (kolomList[tipe].length <= 1) return showToast(`Minimal 1 ${KOLOM_CONFIG[tipe].label}`, 'error');
-            const removed = kolomList[tipe][idx];
-            kolomList[tipe].splice(idx, 1);
-            kolomList[tipe] = kolomList[tipe].map((_, i) => `${KOLOM_CONFIG[tipe].prefix} ${i+1}`);
-            // Bersihkan data kolom terhapus & remap nilai ke nama kolom baru agar tidak muncul sebagai "kolom hantu"
+        function hapusTP(tpId) {
+            if (tpColumns.length <= 1) return showToast('Minimal 1 TP harus ada', 'error');
+            tpColumns = tpColumns.filter(tp => tp.id !== tpId);
+            // Bersihkan data TP yang dihapus dari detailNilaiData
             Object.keys(detailNilaiData).forEach(sid => {
                 const d = detailNilaiData[sid];
-                if (d && d[removed] !== undefined) delete d[removed];
-                kolomList[tipe].forEach((nk, i) => {
-                    const oldKey = `${KOLOM_CONFIG[tipe].prefix} ${i+2}`;
-                    if (oldKey !== nk && d[oldKey] !== undefined && d[nk] === undefined) { d[nk] = d[oldKey]; delete d[oldKey]; }
-                });
+                if (d) delete d['tp_' + tpId];
             });
-            simpanKolomKeServer();
-            renderKolomList(tipe);
+            renderTPColumnsList();
             renderDetailNilaiTable(document.getElementById('detail-kelas').value);
         }
 
-        // ── Persist kolom nilai detail ke server (CONFIG.app.nilaiKolom) ──
-        function simpanKolomKeServer() {
-            try {
-                CONFIG.app = CONFIG.app || {};
-                CONFIG.app.nilaiKolom = JSON.parse(JSON.stringify(kolomList));
-                saveConfigToStorage();
-            } catch(e) {}
-        }
-
-        function renderKolomList(tipe) {
-            const cfg = KOLOM_CONFIG[tipe];
-            const el = document.getElementById(`${tipe}-list`);
+        function renderTPColumnsList() {
+            const el = document.getElementById('tp-columns-list');
             if (!el) return;
-            el.innerHTML = kolomList[tipe].map((k, i) =>
-                `<span class="inline-flex items-center gap-1 px-2 py-1 ${cfg.tagClass} rounded-lg text-xs font-medium">
-                    ${k}
-                    <button onclick="hapusKolom('${tipe}',${i})" class="hover:text-red-500 transition-colors">
+            el.innerHTML = tpColumns.map(tp =>
+                `<span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-medium">
+                    ${tp.kode}
+                    <button onclick="hapusTP(${tp.id})" ${tpColumns.length <= 1 ? 'disabled class="opacity-30 cursor-not-allowed"' : 'class="hover:text-red-500 transition-colors"'}>
                         <i class="fas fa-times text-xs"></i>
                     </button>
                 </span>`
             ).join('');
         }
 
-        function renderSemuaKolomList() {
-            Object.keys(KOLOM_CONFIG).forEach(t => renderKolomList(t));
+        function setTPNilai(siswaId, tpId, val) {
+            if (!detailNilaiData[siswaId]) detailNilaiData[siswaId] = {};
+            const clampedVal = Math.min(100, Math.max(0, Number(val) || 0));
+            detailNilaiData[siswaId]['tp_' + tpId] = clampedVal;
+
+            // Update nilaiData real-time agar Kelola Nilai ikut update
+            hitungNilaiDetailRow(siswaId);
+            updateNilaiDetailLive(siswaId);
+        }
+
+        function setSkillNilai(siswaId, field, val) {
+            if (!detailNilaiData[siswaId]) detailNilaiData[siswaId] = {};
+            const clampedVal = Math.min(100, Math.max(0, Number(val) || 0));
+            detailNilaiData[siswaId][field] = clampedVal;
+
+            // Update nilaiData real-time
+            hitungNilaiDetailRow(siswaId);
+            updateNilaiDetailLive(siswaId);
+        }
+
+        function hitungNilaiDetailRow(siswaId) {
+            const d = detailNilaiData[siswaId] || {};
+            // Hitung rata-rata TP
+            const tpVals = tpColumns.map(tp => Number(d['tp_' + tp.id] || 0));
+            const rataTP = tpVals.length > 0
+                ? Math.round(tpVals.reduce((a, b) => a + b, 0) / tpVals.length)
+                : 0;
+            // Keterampilan
+            const praktek = Number(d.praktek || 0);
+            const proyek = Number(d.proyek || 0);
+            const portofolio = Number(d.portofolio || 0);
+            const naKeter = Math.round((praktek + proyek + portofolio) / 3);
+            const naAkhir = Math.round(rataTP * 0.6 + naKeter * 0.4);
+            return { rataTP, naKeter, naAkhir };
+        }
+
+        function getNaAkhirPredikat(naAkhir) {
+            if (naAkhir >= 90) return { predikat: 'A', color: 'text-green-700' };
+            if (naAkhir >= 80) return { predikat: 'B', color: 'text-blue-700' };
+            if (naAkhir >= 70) return { predikat: 'C', color: 'text-yellow-700' };
+            if (naAkhir >= 60) return { predikat: 'D', color: 'text-orange-700' };
+            return { predikat: 'E', color: 'text-red-700' };
+        }
+
+        function updateNilaiDetailLive(siswaId) {
+            const { rataTP, naAkhir } = hitungNilaiDetailRow(siswaId);
+            const { predikat, color } = getNaAkhirPredikat(naAkhir);
+
+            // Update rata TP cell
+            const rataTPEl = document.getElementById(`rata-tp-${siswaId}`);
+            if (rataTPEl) rataTPEl.textContent = rataTP;
+
+            // Update NA Akhir cell
+            const naAkhirEl = document.getElementById(`na-akhir-${siswaId}`);
+            if (naAkhirEl) naAkhirEl.textContent = naAkhir;
+
+            // Update Predikat cell
+            const predEl = document.getElementById(`predikat-${siswaId}`);
+            if (predEl) {
+                predEl.textContent = predikat;
+                predEl.className = `font-bold text-xs ${color}`;
+            }
+
+            // Sync ke nilaiData untuk tab Kelola Nilai
+            if (!nilaiData[siswaId]) nilaiData[siswaId] = {};
+            const d = detailNilaiData[siswaId] || {};
+            nilaiData[siswaId].nilaiAkhir = rataTP;
+            nilaiData[siswaId].praktek = Number(d.praktek || 0);
+            nilaiData[siswaId].proyek = Number(d.proyek || 0);
+            nilaiData[siswaId].portofolio = Number(d.portofolio || 0);
         }
 
         function initDetailNilai() {
-            const kl   = getKelasList();
+            const kl = getKelasList();
             const kelasopts = kl.map(k => `<option value="${k}">${k}</option>`).join('');
             const sel = document.getElementById('detail-kelas');
             if (!sel) return;
             sel.innerHTML = kelasopts || '<option value="">-- Belum ada kelas --</option>';
-            // Kembalikan pilihan ke kelas terakhir yang dipakai (persisten antar refresh)
+            // Kembalikan pilihan ke kelas terakhir
             try {
                 const lastKelas = localStorage.getItem('ejournal_detail_kelas');
                 if (lastKelas && [...sel.options].some(o => o.value === lastKelas)) sel.value = lastKelas;
             } catch(e) {}
-            // Restore daftar kolom (UH 2, dst.) dari config server — agar tidak hilang setelah reload
-            const savedKolom = CONFIG.app?.nilaiKolom;
-            if (savedKolom && typeof savedKolom === 'object') {
-                ['uh','praktek','proyek','portofolio'].forEach(t => {
-                    if (Array.isArray(savedKolom[t]) && savedKolom[t].length) kolomList[t] = [...savedKolom[t]];
-                });
-            }
-            renderSemuaKolomList();
+            renderTPColumnsList();
             if (kl.length) {
                 loadDetailNilai();
             } else {
                 const tb = document.getElementById('detail-nilai-tbody');
                 if (tb) tb.innerHTML =
-                    '<tr><td colspan="6" class="text-center py-8 text-gray-400">Tambahkan kelas di Mapel &amp; Kelas terlebih dahulu</td></tr>';
+                    '<tr><td colspan="8" class="text-center py-8 text-gray-400">Tambahkan kelas di Mapel &amp; Kelas terlebih dahulu</td></tr>';
             }
         }
 
         async function loadDetailNilai() {
             const kelas = document.getElementById('detail-kelas').value;
             if (!kelas) return;
-            // Ingat kelas terakhir yang dipilih agar setelah refresh tetap di kelas yang sama
             try { localStorage.setItem('ejournal_detail_kelas', kelas); } catch(e) {}
             try {
                 const res = await api.get(`/api/nilai?kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`);
                 if (res.success) {
                     detailNilaiData = {};
-                    const maxKolom = { uh: 1, praktek: 1, proyek: 1, portofolio: 1 };
-                    const TIPE_PREFIX = { uh: 'UH', praktek: 'Praktek', proyek: 'Proyek', portofolio: 'Porto' };
+                    let maxTPId = 1;
+
                     res.data.forEach(n => {
                         const sid = n.siswaRef?.id || n.siswaId;
                         detailNilaiData[sid] = detailNilaiData[sid] || {};
-                        // Load detail dari uhDetail JSON
-                        if (n.uhDetail) {
+
+                        // Load tpList dari data yang tersimpan
+                        if (n.tpList) {
                             try {
-                                const d = JSON.parse(n.uhDetail);
-                                Object.keys(d).forEach(k => {
-                                    detailNilaiData[sid][k] = d[k];
-                                    // Deteksi kolom dari data tersimpan: "UH 2" → uh index 2
-                                    Object.keys(TIPE_PREFIX).forEach(t => {
-                                        const m = k.match(new RegExp(`^${TIPE_PREFIX[t]} (\\d+)$`));
-                                        if (m) maxKolom[t] = Math.max(maxKolom[t], parseInt(m[1], 10));
+                                const tpArr = JSON.parse(n.tpList);
+                                if (Array.isArray(tpArr) && tpArr.length > 0) {
+                                    tpArr.forEach((tp, idx) => {
+                                        // Cari TP berdasarkan kode
+                                        const tpNum = parseInt((tp.kode || '').replace(/^TP/i, ''), 10) || (idx + 1);
+                                        detailNilaiData[sid]['tp_' + tpNum] = Number(tp.nilai || 0);
+                                        if (tpNum > maxTPId) maxTPId = tpNum;
                                     });
-                                });
+                                }
                             } catch(e) {}
                         }
+
+                        // Load keterampilan
+                        detailNilaiData[sid].praktek    = n.praktek    || 0;
+                        detailNilaiData[sid].proyek     = n.proyek     || 0;
+                        detailNilaiData[sid].portofolio = n.portofolio || 0;
                     });
-                    // Restore daftar kolom dari data tersimpan (mis. UH 2 ada nilainya → kolom UH 2 muncul lagi)
-                    let kolomBerubah = false;
-                    Object.keys(maxKolom).forEach(t => {
-                        while (kolomList[t].length < maxKolom[t]) {
-                            kolomList[t].push(`${KOLOM_CONFIG[t].prefix} ${kolomList[t].length + 1}`);
-                            kolomBerubah = true;
+
+                    // Rebuild tpColumns dari data tersimpan jika lebih banyak dari default
+                    if (maxTPId > tpColumns.length) {
+                        tpColumns = [];
+                        for (let i = 1; i <= maxTPId; i++) {
+                            tpColumns.push({ id: i, kode: 'TP' + i, deskripsi: 'Tujuan Pembelajaran ' + i });
                         }
-                    });
-                    if (kolomBerubah) { simpanKolomKeServer(); renderSemuaKolomList(); }
+                        _tpIdCounter = maxTPId;
+                    }
+                    renderTPColumnsList();
                 }
             } catch(e) {}
             renderDetailNilaiTable(kelas);
-        }
-
-        function setDetailNilai(siswaId, field, val) {
-            if (!detailNilaiData[siswaId]) detailNilaiData[siswaId] = {};
-            detailNilaiData[siswaId][field] = val;
-
-            // Update nilaiData real-time agar Kelola Nilai langsung reflect
-            const d = detailNilaiData[siswaId];
-            const rataOf = (keys) => {
-                const vals = keys.map(k => gradeToNum(d[k]||'')).filter(v=>v>0);
-                return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
-            };
-            if (!nilaiData[siswaId]) nilaiData[siswaId] = {};
-            nilaiData[siswaId].uh = rataOf(kolomList.uh);
-            nilaiData[siswaId].praktek = rataOf(kolomList.praktek);
-            nilaiData[siswaId].proyek = rataOf(kolomList.proyek);
-            nilaiData[siswaId].portofolio = rataOf(kolomList.portofolio);
-
-            renderDetailNilaiTable(document.getElementById('detail-kelas').value);
-        }
-
-        function numToGrade(n) {
-            if (n>=98) return 'A+'; if (n>=93) return 'A'; if (n>=88) return 'A-';
-            if (n>=83) return 'B+'; if (n>=78) return 'B'; if (n>=73) return 'B-';
-            if (n>=68) return 'C+'; if (n>=63) return 'C'; if (n>=58) return 'C-';
-            if (n>=53) return 'D+'; if (n>=48) return 'D'; return 'D-';
         }
 
         function renderDetailNilaiTable(kelas) {
@@ -3276,63 +3269,71 @@
             const header = document.getElementById('detail-nilai-header');
 
             if (!siswaKelas.length) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-400">Belum ada siswa di kelas ini</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-400">Belum ada siswa di kelas ini</td></tr>';
                 return;
             }
 
-            // Build header dinamis
-            const uhHeaders    = kolomList.uh.map(u => `<th class="px-2 py-3 text-center font-semibold bg-orange-50 text-orange-700 text-xs">${u}</th>`).join('');
-            const ptHeaders    = kolomList.praktek.map(u => `<th class="px-2 py-3 text-center font-semibold bg-green-50 text-green-700 text-xs">${u}</th>`).join('');
-            const prHeaders    = kolomList.proyek.map(u => `<th class="px-2 py-3 text-center font-semibold bg-purple-50 text-purple-700 text-xs">${u}</th>`).join('');
-            const poHeaders    = kolomList.portofolio.map(u => `<th class="px-2 py-3 text-center font-semibold bg-pink-50 text-pink-700 text-xs">${u}</th>`).join('');
+            // Build header dinamis untuk kolom TP
+            const tpHeaders = tpColumns.map(tp =>
+                `<th class="px-2 py-3 text-center font-semibold bg-blue-50 text-blue-700 text-xs">${tp.kode}</th>`
+            ).join('');
 
             header.innerHTML = `
                 <th class="px-3 py-3 text-left font-semibold sticky left-0 bg-gray-50 text-xs">No</th>
                 <th class="px-3 py-3 text-left font-semibold sticky left-8 bg-gray-50 whitespace-nowrap text-xs">Nama Siswa</th>
-                ${uhHeaders}
-                <th class="px-2 py-3 text-center font-semibold bg-orange-100 text-orange-800 text-xs">Rata UH</th>
-                ${ptHeaders}
-                <th class="px-2 py-3 text-center font-semibold bg-green-100 text-green-800 text-xs">Rata PT</th>
-                ${prHeaders}
-                <th class="px-2 py-3 text-center font-semibold bg-purple-100 text-purple-800 text-xs">Rata PR</th>
-                ${poHeaders}
-                <th class="px-2 py-3 text-center font-semibold bg-pink-100 text-pink-800 text-xs">Rata PO</th>`;
+                ${tpHeaders}
+                <th class="px-2 py-3 text-center font-semibold bg-blue-100 text-blue-800 text-xs">Rata-rata TP</th>
+                <th class="px-2 py-3 text-center font-semibold bg-green-50 text-green-700 text-xs">Praktek</th>
+                <th class="px-2 py-3 text-center font-semibold bg-purple-50 text-purple-700 text-xs">Proyek</th>
+                <th class="px-2 py-3 text-center font-semibold bg-pink-50 text-pink-700 text-xs">Portofolio</th>
+                <th class="px-2 py-3 text-center font-semibold bg-gray-100 text-gray-700 text-xs">NA Akhir</th>
+                <th class="px-2 py-3 text-center font-semibold bg-gray-100 text-gray-700 text-xs">Predikat</th>`;
 
             tbody.innerHTML = siswaKelas.map((s, i) => {
-                const data = detailNilaiData[s.id] || {};
+                const d = detailNilaiData[s.id] || {};
+                const { rataTP, naAkhir } = hitungNilaiDetailRow(s.id);
+                const { predikat, color } = getNaAkhirPredikat(naAkhir);
 
-                const rataOf = (keys) => {
-                    const vals = keys.map(k => gradeToNum(data[k]||'')).filter(v=>v>0);
-                    return vals.length ? numToGrade(Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)) : '-';
-                };
+                const tpCells = tpColumns.map(tp => {
+                    const val = Number(d['tp_' + tp.id] || 0);
+                    return `<td class="px-1 py-2 text-center bg-blue-50">
+                        <input type="number" value="${val}" min="0" max="100"
+                            class="w-14 px-1 py-1.5 text-center border border-blue-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-400 outline-none bg-white tp-input"
+                            oninput="setTPNilai('${s.id}',${tp.id},this.value)">
+                    </td>`;
+                }).join('');
 
-                const uhCells = kolomList.uh.map(u =>
-                    `<td class="px-1 py-3 text-center bg-orange-50">${gradeSelect(s.id, u, data[u]||'')}</td>`).join('');
-                const ptCells = kolomList.praktek.map(u =>
-                    `<td class="px-1 py-3 text-center bg-green-50">${gradeSelect(s.id, u, data[u]||'')}</td>`).join('');
-                const prCells = kolomList.proyek.map(u =>
-                    `<td class="px-1 py-3 text-center bg-purple-50">${gradeSelect(s.id, u, data[u]||'')}</td>`).join('');
-                const poCells = kolomList.portofolio.map(u =>
-                    `<td class="px-1 py-3 text-center bg-pink-50">${gradeSelect(s.id, u, data[u]||'')}</td>`).join('');
+                const praktek    = Number(d.praktek    || 0);
+                const proyek     = Number(d.proyek     || 0);
+                const portofolio = Number(d.portofolio || 0);
 
                 return `<tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
-                    <td class="px-3 py-3 text-xs text-gray-500 sticky left-0 bg-white">${i+1}</td>
-                    <td class="px-3 py-3 text-sm font-semibold text-gray-900 sticky left-8 bg-white whitespace-nowrap">${s.nama}</td>
-                    ${uhCells}
-                    <td class="px-2 py-3 text-center bg-orange-100">
-                        <span class="font-bold text-orange-800 text-xs">${rataOf(kolomList.uh)}</span>
+                    <td class="px-3 py-2 text-xs text-gray-500 sticky left-0 bg-white">${i+1}</td>
+                    <td class="px-3 py-2 text-sm font-semibold text-gray-900 sticky left-8 bg-white whitespace-nowrap">${s.nama}</td>
+                    ${tpCells}
+                    <td class="px-2 py-2 text-center bg-blue-100">
+                        <span id="rata-tp-${s.id}" class="font-bold text-blue-800 text-xs">${rataTP}</span>
                     </td>
-                    ${ptCells}
-                    <td class="px-2 py-3 text-center bg-green-100">
-                        <span class="font-bold text-green-800 text-xs">${rataOf(kolomList.praktek)}</span>
+                    <td class="px-1 py-2 text-center bg-green-50">
+                        <input type="number" value="${praktek}" min="0" max="100"
+                            class="w-14 px-1 py-1.5 text-center border border-green-200 rounded-lg text-xs focus:ring-2 focus:ring-green-400 outline-none bg-white"
+                            oninput="setSkillNilai('${s.id}','praktek',this.value)">
                     </td>
-                    ${prCells}
-                    <td class="px-2 py-3 text-center bg-purple-100">
-                        <span class="font-bold text-purple-800 text-xs">${rataOf(kolomList.proyek)}</span>
+                    <td class="px-1 py-2 text-center bg-purple-50">
+                        <input type="number" value="${proyek}" min="0" max="100"
+                            class="w-14 px-1 py-1.5 text-center border border-purple-200 rounded-lg text-xs focus:ring-2 focus:ring-purple-400 outline-none bg-white"
+                            oninput="setSkillNilai('${s.id}','proyek',this.value)">
                     </td>
-                    ${poCells}
-                    <td class="px-2 py-3 text-center bg-pink-100">
-                        <span class="font-bold text-pink-800 text-xs">${rataOf(kolomList.portofolio)}</span>
+                    <td class="px-1 py-2 text-center bg-pink-50">
+                        <input type="number" value="${portofolio}" min="0" max="100"
+                            class="w-14 px-1 py-1.5 text-center border border-pink-200 rounded-lg text-xs focus:ring-2 focus:ring-pink-400 outline-none bg-white"
+                            oninput="setSkillNilai('${s.id}','portofolio',this.value)">
+                    </td>
+                    <td class="px-2 py-2 text-center bg-gray-100">
+                        <span id="na-akhir-${s.id}" class="font-bold text-gray-800 text-xs">${naAkhir}</span>
+                    </td>
+                    <td class="px-2 py-2 text-center bg-gray-100">
+                        <span id="predikat-${s.id}" class="font-bold text-xs ${color}">${predikat}</span>
                     </td>
                 </tr>`;
             }).join('');
@@ -3345,42 +3346,44 @@
             const mapelArr = Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel : [];
             const mapel = mapelArr.length ? mapelArr[0] : '';
 
-            const rataOf = (keys, d) => {
-                const vals = keys.map(k => gradeToNum(d[k]||'')).filter(v=>v>0);
-                return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
-            };
-
             const data = siswaKelas.map(s => {
                 const d = detailNilaiData[s.id] || {};
-                const rataUH = rataOf(kolomList.uh, d);
-                const rataPT = rataOf(kolomList.praktek, d);
-                const rataPR = rataOf(kolomList.proyek, d);
-                const rataPO = rataOf(kolomList.portofolio, d);
 
-                // Simpan semua detail sebagai JSON — SEMUA key dikirim ke server
-                const allDetail = {};
-                Object.keys(d).forEach(k => { if (d[k]) allDetail[k] = d[k]; });
+                // Bangun tpList dari tpColumns
+                const tpList = tpColumns.map(tp => ({
+                    kode: tp.kode,
+                    deskripsi: tp.deskripsi,
+                    nilai: Math.min(100, Math.max(0, Number(d['tp_' + tp.id] || 0))),
+                }));
+
+                const tpVals = tpList.map(tp => tp.nilai);
+                const nilaiAkhir = tpVals.length > 0
+                    ? Math.round(tpVals.reduce((a, b) => a + b, 0) / tpVals.length)
+                    : 0;
+
+                const praktek    = Math.min(100, Math.max(0, Number(d.praktek    || 0)));
+                const proyek     = Math.min(100, Math.max(0, Number(d.proyek     || 0)));
+                const portofolio = Math.min(100, Math.max(0, Number(d.portofolio || 0)));
 
                 return {
                     siswaId: s.id, kelas,
                     semester: CONFIG.semester, tahunAjaran: CONFIG.tahunAjaran,
                     mataPelajaran: mapel, guru: CONFIG.guru.nama,
-                    uh: rataUH, pts: 0, pas: 0,
-                    praktek: rataPT, proyek: rataPR, portofolio: rataPO,
-                    uhDetail: JSON.stringify(allDetail)
+                    tpList: JSON.stringify(tpList),
+                    nilaiAkhir,
+                    praktek, proyek, portofolio,
                 };
             });
 
             try {
                 const res = await api.post('/api/nilai/bulk', { items: data });
                 if (res.success) {
-                    showToast('✅ Nilai detail berhasil disimpan!');
+                    showToast('✅ Nilai TP berhasil disimpan!');
                     // Sync kelas ke tab Kelola Nilai lalu reload
                     const nilaiKelasEl = document.getElementById('nilai-kelas');
                     if (nilaiKelasEl) nilaiKelasEl.value = kelas;
                     await loadNilai();
-                    // Tampilkan notif dengan info rata-rata
-                    showToast(`✅ Tersimpan! UH rata-rata sudah masuk ke Kelola Nilai.`);
+                    showToast(`✅ Tersimpan! Rata-rata TP sudah masuk ke Kelola Nilai.`);
                 } else showToast(res.message || 'Gagal menyimpan', 'error');
             } catch(e) { showToast('Gagal terhubung ke server', 'error'); }
         }
@@ -5446,9 +5449,10 @@
             const inp = (id, field, val) => `<input type="number" value="${val}" min="0" max="100" class="w-12 px-1 py-1.5 text-center border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none bg-gray-50 focus:bg-white" onchange="updateNilaiLocal('${id}','${field}',this.value)">`;
             tbody.innerHTML = siswaKelas.map((s, i) => {
                 const n = nilaiData[s.id] || {};
-                const uh=n.uh||0, pts=n.pts||0, pas=n.pas||0, praktek=n.praktek||0, proyek=n.proyek||0, portofolio=n.portofolio||0;
+                // Gunakan nilaiAkhir dari TP jika tersedia, fallback ke naPengetahuan lama
+                const nilaiAkhirTP = n.nilaiAkhir || n.naPengetahuan || Math.round((n.uh||0)*0.2+(n.pts||0)*0.3+(n.pas||0)*0.5);
+                const praktek=n.praktek||0, proyek=n.proyek||0, portofolio=n.portofolio||0;
                 const tampilkan = n.tampilkan || false;
-                const naPenget = Math.round(uh*0.2+pts*0.3+pas*0.5);
                 const naKeter = Math.round((praktek+proyek+portofolio)/3);
 
                 // Kehadiran
@@ -5459,9 +5463,9 @@
                     ? Math.round(((absen.hadir*100) + (absen.sakit*75) + (absen.izin*75) + ((absen.dispensasi||0)*75) + ((absen.pulang_cepat||0)*50)) / totalAbsen)
                     : 0;
 
-                const naAkhir = Math.round(naPenget*bp + naKeter*bk + nilaiKehadiran*bh);
-                const predikat = naAkhir>=85?'A':naAkhir>=75?'B':naAkhir>=65?'C':'D';
-                const predColor = naAkhir>=85?'text-green-600 bg-green-50':naAkhir>=75?'text-blue-600 bg-blue-50':naAkhir>=65?'text-yellow-600 bg-yellow-50':'text-red-600 bg-red-50';
+                const naAkhir = Math.round(nilaiAkhirTP*bp + naKeter*bk + nilaiKehadiran*bh);
+                const predikat = naAkhir>=90?'A':naAkhir>=80?'B':naAkhir>=70?'C':naAkhir>=60?'D':'E';
+                const predColor = naAkhir>=90?'text-green-600 bg-green-50':naAkhir>=80?'text-blue-600 bg-blue-50':naAkhir>=70?'text-yellow-600 bg-yellow-50':naAkhir>=60?'text-orange-600 bg-orange-50':'text-red-600 bg-red-50';
                 const hadirColor = pctHadir>=80?'text-green-600 bg-green-50':pctHadir>=60?'text-yellow-600 bg-yellow-50':totalAbsen===0?'text-gray-400 bg-gray-50':'text-red-600 bg-red-50';
                 const hadirLabel = totalAbsen===0 ? '-' : `${pctHadir}%`;
 
@@ -5475,9 +5479,14 @@
                     <td class="px-3 py-2 font-medium text-gray-900 text-sm max-w-[140px]">
                         <div class="truncate" title="${s.nama}">${s.nama}</div>
                     </td>
-                    <td class="px-1 py-2 text-center">${inp(s.id,'uh',uh)}</td>
-                    <td class="px-1 py-2 text-center">${inp(s.id,'pts',pts)}</td>
-                    <td class="px-1 py-2 text-center">${inp(s.id,'pas',pas)}</td>
+                    <td class="px-2 py-2 text-center bg-blue-50">
+                        <div class="flex flex-col items-center">
+                            <span class="font-bold text-blue-700 text-sm">${nilaiAkhirTP}</span>
+                            <a href="#" onclick="event.preventDefault();switchNilaiTab('detail');document.getElementById('detail-kelas').value='${s.kelas}';loadDetailNilai();" class="text-xs text-blue-500 hover:underline" title="Edit di tab Input Detail">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                        </div>
+                    </td>
                     <td class="px-1 py-2 text-center">${inp(s.id,'praktek',praktek)}</td>
                     <td class="px-1 py-2 text-center">${inp(s.id,'proyek',proyek)}</td>
                     <td class="px-1 py-2 text-center">${inp(s.id,'portofolio',portofolio)}</td>
@@ -5538,7 +5547,6 @@
                     siswaId: s.id, kelas,
                     semester: CONFIG.semester, tahunAjaran: CONFIG.tahunAjaran,
                     mataPelajaran: mapel, guru: CONFIG.guru.nama,
-                    uh: n.uh||0, pts: n.pts||0, pas: n.pas||0,
                     praktek: n.praktek||0, proyek: n.proyek||0, portofolio: n.portofolio||0,
                     tampilkan: status
                 };
@@ -5581,9 +5589,6 @@
                     tahunAjaran: CONFIG.tahunAjaran, 
                     mataPelajaran: mapel, 
                     guru: CONFIG.guru.nama, 
-                    uh: n.uh||0, 
-                    pts: n.pts||0, 
-                    pas: n.pas||0, 
                     praktek: n.praktek||0, 
                     proyek: n.proyek||0, 
                     portofolio: n.portofolio||0,
@@ -5613,14 +5618,14 @@
 
             const rows = siswaKelas.map((s, i) => {
                 const n = nilaiData[s.id] || {};
-                const uh=n.uh||0, pts=n.pts||0, pas=n.pas||0, praktek=n.praktek||0, proyek=n.proyek||0, portofolio=n.portofolio||0;
-                const naPenget = Math.round(uh*0.2+pts*0.3+pas*0.5);
+                const nilaiAkhirTP = n.nilaiAkhir || n.naPengetahuan || Math.round((n.uh||0)*0.2+(n.pts||0)*0.3+(n.pas||0)*0.5);
+                const praktek=n.praktek||0, proyek=n.proyek||0, portofolio=n.portofolio||0;
                 const naKeter = Math.round((praktek+proyek+portofolio)/3);
                 const absen = absensiRekap[s.id.toString()] || {hadir:0,sakit:0,izin:0,alpha:0,dispensasi:0,pulang_cepat:0};
                 const totalAbsen = absen.hadir+absen.sakit+absen.izin+absen.alpha+(absen.dispensasi||0)+(absen.pulang_cepat||0);
                 const nilaiHadir = totalAbsen ? Math.round(((absen.hadir*100)+(absen.sakit*75)+(absen.izin*75)+((absen.dispensasi||0)*75)+((absen.pulang_cepat||0)*50))/totalAbsen) : 0;
-                const naAkhir = Math.round(naPenget*bp + naKeter*bk + nilaiHadir*bh);
-                const predikat = naAkhir>=85?'A':naAkhir>=75?'B':naAkhir>=65?'C':'D';
+                const naAkhir = Math.round(nilaiAkhirTP*bp + naKeter*bk + nilaiHadir*bh);
+                const predikat = naAkhir>=90?'A':naAkhir>=80?'B':naAkhir>=70?'C':naAkhir>=60?'D':'E';
                 const pctHadir = totalAbsen ? Math.round(((absen.hadir*100)+(absen.sakit*75)+(absen.izin*75)+((absen.dispensasi||0)*75)+((absen.pulang_cepat||0)*50))/totalAbsen)+'%' : '-';
                 const sikap = hitungRataSikap(s.id) || '-';
                 const bg = i%2===0 ? '' : 'background:#f9fafb';
@@ -5628,10 +5633,7 @@
                     <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${i+1}</td>
                     <td style="padding:3px 5px;border:1px solid #ccc;font-weight:600">${s.nama}</td>
                     <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${s.nisn||'-'}</td>
-                    <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${uh}</td>
-                    <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${pts}</td>
-                    <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${pas}</td>
-                    <td style="text-align:center;padding:3px 4px;border:1px solid #ccc;background:#dcfce7;font-weight:bold">${naPenget}</td>
+                    <td style="text-align:center;padding:3px 4px;border:1px solid #ccc;background:#dbeafe;font-weight:bold">${nilaiAkhirTP}</td>
                     <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${praktek}</td>
                     <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${proyek}</td>
                     <td style="text-align:center;padding:3px 4px;border:1px solid #ccc">${portofolio}</td>
@@ -5675,8 +5677,8 @@
                             <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center;width:20px">No</th>
                             <th rowspan="2" style="padding:3px 5px;border:1px solid #93c5fd;text-align:left">Nama Siswa</th>
                             <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">NISN</th>
-                            <th colspan="3" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">Pengetahuan</th>
-                            <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center;background:#166534">NA-P</th>
+                            <th colspan="1" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">Pengetahuan</th>
+                            <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center;background:#166534">NA-K</th>
                             <th colspan="3" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">Keterampilan</th>
                             <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center;background:#166534">NA-K</th>
                             <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center;background:#6d28d9">NA</th>
@@ -5685,9 +5687,7 @@
                             <th rowspan="2" style="padding:3px 4px;border:1px solid #93c5fd;text-align:center">Sikap</th>
                         </tr>
                         <tr style="background:#2563eb;color:white">
-                            <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">UH</th>
-                            <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">PTS</th>
-                            <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">PAS</th>
+                            <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">Rata TP</th>
                             <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">Praktek</th>
                             <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">Proyek</th>
                             <th style="padding:2px 4px;border:1px solid #93c5fd;text-align:center">Porto</th>
@@ -5865,9 +5865,7 @@
                         tbody.innerHTML = d.preview.map(r =>
                             `<tr class="border-t border-gray-100 hover:bg-gray-50">
                                 <td class="px-3 py-2 font-medium text-gray-900">${r.nama}</td>
-                                <td class="px-2 py-2 text-center">${r.uh}</td>
-                                <td class="px-2 py-2 text-center">${r.pts}</td>
-                                <td class="px-2 py-2 text-center">${r.pas}</td>
+                                <td class="px-2 py-2 text-center font-bold text-blue-700">${r.nilaiAkhir || 0}</td>
                                 <td class="px-2 py-2 text-center">${r.praktek}</td>
                                 <td class="px-2 py-2 text-center">${r.proyek}</td>
                                 <td class="px-2 py-2 text-center">${r.portofolio}</td>
@@ -9793,9 +9791,7 @@ async function hapusGuruKelas(id) {
               <thead>
                 <tr class="bg-gray-50 text-gray-600">
                   <th class="px-3 py-2 text-left">Nama</th>
-                  <th class="px-2 py-2 text-center">UH</th>
-                  <th class="px-2 py-2 text-center">PTS</th>
-                  <th class="px-2 py-2 text-center">PAS</th>
+                  <th class="px-2 py-2 text-center text-blue-700">Rata TP</th>
                   <th class="px-2 py-2 text-center">Praktek</th>
                   <th class="px-2 py-2 text-center">Proyek</th>
                   <th class="px-2 py-2 text-center">Porto</th>

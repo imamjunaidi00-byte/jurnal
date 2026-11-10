@@ -9,27 +9,40 @@ const { Op, fn, col } = require('sequelize');
 
 // Fungsi helper hitung nilai akhir (sama dengan model hook)
 function hitungNilaiRow(row) {
-  const uh  = Math.min(100, Math.max(0, Number(row.uh  || 0)));
-  const pts = Math.min(100, Math.max(0, Number(row.pts || 0)));
-  const pas = Math.min(100, Math.max(0, Number(row.pas || 0)));
+  let nilaiAkhir = 0;
 
-  const naPengetahuan  = Math.round((uh * 0.2) + (pts * 0.3) + (pas * 0.5));
+  // Coba parse tpList — sistem TP baru
+  try {
+    const tpList = typeof row.tpList === 'string' ? JSON.parse(row.tpList) : (row.tpList || []);
+    if (Array.isArray(tpList) && tpList.length > 0) {
+      const totalTP = tpList.reduce((sum, tp) => sum + (Number(tp.nilai) || 0), 0);
+      nilaiAkhir = Math.round(totalTP / tpList.length);
+    }
+  } catch(e) {}
+
+  // Fallback ke UH/PTS/PAS jika tidak ada TP
+  if (nilaiAkhir === 0) {
+    const uh  = Math.min(100, Math.max(0, Number(row.uh  || 0)));
+    const pts = Math.min(100, Math.max(0, Number(row.pts || 0)));
+    const pas = Math.min(100, Math.max(0, Number(row.pas || 0)));
+    nilaiAkhir = Math.round((uh * 0.2) + (pts * 0.3) + (pas * 0.5));
+  }
 
   const praktek    = Math.min(100, Math.max(0, Number(row.praktek    || 0)));
   const proyek     = Math.min(100, Math.max(0, Number(row.proyek     || 0)));
   const portofolio = Math.min(100, Math.max(0, Number(row.portofolio || 0)));
   const naKeterampilan = Math.round((praktek + proyek + portofolio) / 3);
 
-  const naAkhir = Math.round((naPengetahuan * 0.6) + (naKeterampilan * 0.4));
+  const naAkhir = Math.round((nilaiAkhir * 0.6) + (naKeterampilan * 0.4));
 
   let predikat;
-  if      (naAkhir >= 85) predikat = 'A';
-  else if (naAkhir >= 75) predikat = 'B';
-  else if (naAkhir >= 65) predikat = 'C';
-  else if (naAkhir >= 50) predikat = 'D';
+  if      (naAkhir >= 90) predikat = 'A';
+  else if (naAkhir >= 80) predikat = 'B';
+  else if (naAkhir >= 70) predikat = 'C';
+  else if (naAkhir >= 60) predikat = 'D';
   else                    predikat = 'E';
 
-  return { ...row, uh, pts, pas, praktek, proyek, portofolio, naPengetahuan, naKeterampilan, naAkhir, predikat };
+  return { ...row, praktek, proyek, portofolio, nilaiAkhir, naPengetahuan: nilaiAkhir, naKeterampilan, naAkhir, predikat };
 }
 
 exports.list = async (req, res) => {
@@ -91,7 +104,7 @@ exports.bulkSave = async (req, res) => {
     // Penting: uhDetail & tampilkan tidak boleh ditimpa kalau item tidak membawanya
     // (mis. simpanNilai/publishSemuaNilai dari tab Kelola Nilai), agar detail nilai
     // dari tab Input Detail tidak hilang.
-    const baseFields = ['uh','pts','pas','praktek','proyek','portofolio',
+    const baseFields = ['uh','pts','pas','tpList','nilaiAkhir','praktek','proyek','portofolio',
                         'naPengetahuan','naKeterampilan','naAkhir','predikat'];
     const optionalFields = ['deskripsi','uhDetail','praktekGrade','proyekGrade',
                             'portofolioGrade','tampilkan','guru'];
@@ -152,7 +165,8 @@ exports.download = async (req, res) => {
       No: i + 1,
       Nama: n.siswaRef.nama, NISN: n.siswaRef.nisn,
       'Mata Pelajaran': n.mataPelajaran, Kelas: n.kelas,
-      'UH': n.uh, 'PTS': n.pts, 'PAS': n.pas,
+      'Nilai TP (Rata-rata)': n.nilaiAkhir || n.naPengetahuan,
+      'Detail TP': n.tpList || '[]',
       'Praktek': n.praktek, 'Proyek': n.proyek, 'Portofolio': n.portofolio,
       'NA Pengetahuan': n.naPengetahuan, 'NA Keterampilan': n.naKeterampilan,
       'NA Akhir': n.naAkhir, 'Predikat': n.predikat,
@@ -187,9 +201,9 @@ exports.downloadTemplate = async (req, res) => {
       'Nama':          s.nama,
       'NISN':          s.nisn || '',
       'Mata Pelajaran': '',       // harus diisi user
-      'UH':            0,
-      'PTS':           0,
-      'PAS':           0,
+      'TP1':           0,
+      'TP2':           0,
+      'TP3':           0,
       'Praktek':       0,
       'Proyek':        0,
       'Portofolio':    0,
@@ -199,7 +213,8 @@ exports.downloadTemplate = async (req, res) => {
     if (!data.length) {
       data.push({
         'No': 1, 'Nama': 'Contoh Siswa', 'NISN': '0012345678',
-        'Mata Pelajaran': 'Nama Mapel', 'UH': 80, 'PTS': 75, 'PAS': 85,
+        'Mata Pelajaran': 'Nama Mapel',
+        'TP1': 85, 'TP2': 80, 'TP3': 90,
         'Praktek': 80, 'Proyek': 75, 'Portofolio': 80,
       });
     }
@@ -221,10 +236,11 @@ exports.downloadTemplate = async (req, res) => {
       { Petunjuk: '' },
       { Petunjuk: '1. Kolom "No", "Nama", "NISN" — jangan diubah, digunakan untuk pencocokan data siswa.' },
       { Petunjuk: '2. Kolom "Mata Pelajaran" — isi nama mata pelajaran (harus sama untuk semua baris).' },
-      { Petunjuk: '3. Kolom UH, PTS, PAS — nilai pengetahuan (0-100).' },
+      { Petunjuk: '3. Kolom TP1, TP2, TP3 — nilai Tujuan Pembelajaran (0-100). Guru bisa menambah kolom TP4, TP5, dst.' },
       { Petunjuk: '4. Kolom Praktek, Proyek, Portofolio — nilai keterampilan (0-100).' },
-      { Petunjuk: '5. NA Pengetahuan, NA Keterampilan, NA Akhir, Predikat dihitung otomatis saat import.' },
-      { Petunjuk: '6. Simpan file tetap dalam format .xlsx atau .xls sebelum diupload.' },
+      { Petunjuk: '5. NA Akhir, Predikat dihitung otomatis saat import.' },
+      { Petunjuk: '6. Kolom TP bersifat dinamis: tambahkan TP4, TP5, ... sesuai kebutuhan.' },
+      { Petunjuk: '7. Simpan file tetap dalam format .xlsx atau .xls sebelum diupload.' },
       { Petunjuk: '' },
       { Petunjuk: `Kelas        : ${kelas}` },
       { Petunjuk: `Semester     : ${semester}` },
@@ -320,6 +336,23 @@ exports.importNilai = async (req, res) => {
 
       // Ambil nilai, clamp 0-100
       const clamp = (v) => Math.min(100, Math.max(0, Math.round(Number(v) || 0)));
+      
+      // Deteksi kolom TP dinamis (TP1, TP2, TP3, ...)
+      const tpKeys = Object.keys(row).filter(k => /^TP\d+$/i.test(k)).sort();
+      let tpList = [];
+      let nilaiAkhir = 0;
+      
+      if (tpKeys.length > 0) {
+        // Mode TP: buat array tpList dari kolom TP yang ditemukan
+        tpList = tpKeys.map(k => ({
+          kode: k.toUpperCase(),
+          deskripsi: k.toUpperCase(),
+          nilai: clamp(row[k]),
+        }));
+        const totalTP = tpList.reduce((sum, tp) => sum + tp.nilai, 0);
+        nilaiAkhir = tpList.length > 0 ? Math.round(totalTP / tpList.length) : 0;
+      }
+
       const rowData = {
         siswaId:       siswa.id,
         guruId:        req.guru.id,
@@ -328,9 +361,12 @@ exports.importNilai = async (req, res) => {
         semester,
         tahunAjaran,
         mataPelajaran: mapel,
-        uh:            clamp(row['UH']),
-        pts:           clamp(row['PTS']),
-        pas:           clamp(row['PAS']),
+        tpList:        JSON.stringify(tpList),
+        nilaiAkhir,
+        // Fallback UH/PTS/PAS jika tidak ada kolom TP
+        uh:            tpKeys.length > 0 ? null : clamp(row['UH']),
+        pts:           tpKeys.length > 0 ? null : clamp(row['PTS']),
+        pas:           tpKeys.length > 0 ? null : clamp(row['PAS']),
         praktek:       clamp(row['Praktek']),
         proyek:        clamp(row['Proyek']),
         portofolio:    clamp(row['Portofolio']),
@@ -349,7 +385,7 @@ exports.importNilai = async (req, res) => {
     // 4. Bulk upsert
     const insertRows = berhasil.map(({ _nama, ...r }) => r);
     const upsertFields = [
-      'uh','pts','pas','praktek','proyek','portofolio',
+      'uh','pts','pas','tpList','nilaiAkhir','praktek','proyek','portofolio',
       'naPengetahuan','naKeterampilan','naAkhir','predikat',
       'guru','updatedAt',
     ];
@@ -365,7 +401,7 @@ exports.importNilai = async (req, res) => {
       errorRows: gagal,
       preview:   berhasil.slice(0, 5).map(r => ({
         nama: r._nama || '-', mapel: r.mataPelajaran,
-        uh: r.uh, pts: r.pts, pas: r.pas,
+        tpList: r.tpList, nilaiAkhir: r.nilaiAkhir,
         praktek: r.praktek, proyek: r.proyek, portofolio: r.portofolio,
         naAkhir: r.naAkhir, predikat: r.predikat,
       })),
