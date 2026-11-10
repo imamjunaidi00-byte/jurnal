@@ -147,7 +147,32 @@ process.on('uncaughtException',  (err)    => console.error('⚠️  Uncaught Exc
 // ─── Start server ─────────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-connectDB().then(() => {
+connectDB().then(async () => {
+  // ─── Auto-migrate: tambah kolom baru jika belum ada (safe, tidak hapus data) ──
+  try {
+    const { sequelize: sq } = require('./src/config/database');
+    const qi = sq.getQueryInterface();
+    const tableDesc = await sq.query("DESCRIBE nilais", { type: sq.QueryTypes.SELECT }).catch(() => []);
+    const colNames = tableDesc.map(r => r.Field || r.field || '');
+
+    const addIfMissing = async (col, def) => {
+      if (!colNames.includes(col)) {
+        await qi.addColumn('nilais', col, def);
+        console.log(`✅ Auto-migrate: kolom '${col}' ditambahkan ke tabel nilais`);
+      }
+    };
+
+    const { DataTypes } = require('sequelize');
+    await addIfMissing('tpList',      { type: DataTypes.TEXT,            allowNull: true,  defaultValue: '[]' });
+    await addIfMissing('nilaiAkhir',  { type: DataTypes.TINYINT.UNSIGNED, allowNull: true, defaultValue: 0   });
+    await addIfMissing('uhDetail',    { type: DataTypes.TEXT,            allowNull: true,  defaultValue: null });
+    await addIfMissing('praktekGrade',    { type: DataTypes.STRING(10), allowNull: true, defaultValue: null });
+    await addIfMissing('proyekGrade',     { type: DataTypes.STRING(10), allowNull: true, defaultValue: null });
+    await addIfMissing('portofolioGrade', { type: DataTypes.STRING(10), allowNull: true, defaultValue: null });
+  } catch (migrateErr) {
+    console.warn('⚠️  Auto-migrate warning:', migrateErr.message);
+  }
+
   const server = app.listen(PORT, () => {
     console.log(`\n🚀 E-Journal SMK v2.0 berjalan di port ${PORT}`);
     console.log(`📱 Akses: http://localhost:${PORT}`);
