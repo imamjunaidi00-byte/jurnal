@@ -3315,18 +3315,54 @@
                         detailNilaiData[sid] = detailNilaiData[sid] || {};
 
                         // Load tpList dari data yang tersimpan
+                        let loadedFromTP = false;
                         if (n.tpList) {
                             try {
                                 const tpArr = JSON.parse(n.tpList);
                                 if (Array.isArray(tpArr) && tpArr.length > 0) {
                                     tpArr.forEach((tp, idx) => {
-                                        // Cari TP berdasarkan kode
                                         const tpNum = parseInt((tp.kode || '').replace(/^TP/i, ''), 10) || (idx + 1);
                                         detailNilaiData[sid]['tp_' + tpNum] = Number(tp.nilai || 0);
                                         if (tpNum > maxTPId) maxTPId = tpNum;
                                     });
+                                    loadedFromTP = true;
                                 }
                             } catch(e) {}
+                        }
+
+                        // Fallback: konversi uhDetail lama ke TP jika belum ada tpList
+                        // uhDetail format lama: JSON {"UH1":"85","UH2":"90",...} atau {"UH1":85,...}
+                        if (!loadedFromTP && n.uhDetail) {
+                            try {
+                                const uhObj = typeof n.uhDetail === 'string' ? JSON.parse(n.uhDetail) : n.uhDetail;
+                                const uhKeys = Object.keys(uhObj || {}).filter(k => /^UH\d+$/i.test(k));
+                                if (uhKeys.length > 0) {
+                                    uhKeys.sort((a,b) => parseInt(a.replace(/\D/g,'')) - parseInt(b.replace(/\D/g,''))).forEach((k, idx) => {
+                                        const tpNum = idx + 1;
+                                        const rawVal = uhObj[k];
+                                        // Nilai bisa berupa angka atau huruf (A/B+/C dll dari sistem lama)
+                                        let val = 0;
+                                        if (typeof rawVal === 'number') {
+                                            val = rawVal;
+                                        } else {
+                                            // Konversi huruf ke angka (A=90, B+=85, B=80, C+=75, C=70, D=60, E=50)
+                                            const gradeMap = {'A':95,'A-':90,'B+':87,'B':83,'B-':80,'C+':77,'C':73,'C-':70,'D':65,'E':50};
+                                            val = gradeMap[String(rawVal).trim().toUpperCase()] || (parseInt(rawVal) || 0);
+                                        }
+                                        val = Math.min(100, Math.max(0, val));
+                                        detailNilaiData[sid]['tp_' + tpNum] = val;
+                                        if (tpNum > maxTPId) maxTPId = tpNum;
+                                    });
+                                    console.log(`[migrate] ${n.siswaRef?.nama||sid}: uhDetail → ${uhKeys.length} TP`);
+                                }
+                            } catch(e) {
+                                console.warn('[migrate] uhDetail parse error:', e.message);
+                            }
+                        }
+
+                        // Fallback terakhir: jika ada nilai uh tunggal (kolom uh lama)
+                        if (!loadedFromTP && maxTPId === 1 && !detailNilaiData[sid]['tp_1'] && (n.uh || 0) > 0) {
+                            detailNilaiData[sid]['tp_1'] = Number(n.uh);
                         }
 
                         // Load keterampilan — assign ke kolom pertama (backward compat)
