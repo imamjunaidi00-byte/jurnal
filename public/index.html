@@ -72,93 +72,333 @@
         }
 
         /* ── Mind Map Visual Canvas ── */
-        #mm-canvas-container { cursor: grab; user-select: none; }
+        #mm-canvas-container {
+            cursor: grab;
+            user-select: none;
+        }
+        #mm-canvas-container.mm-theme-dark {
+            background: #0f172a;
+            background-image:
+                radial-gradient(ellipse at 20% 30%, rgba(139,92,246,0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(59,130,246,0.10) 0%, transparent 50%);
+        }
+        #mm-canvas-container.mm-theme-light {
+            background: #f8fafc;
+            background-image:
+                radial-gradient(ellipse at 20% 30%, rgba(139,92,246,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(59,130,246,0.05) 0%, transparent 50%);
+        }
+        #mm-canvas-container.mm-theme-dark::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        #mm-canvas-container.mm-theme-light::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+            background-size: 28px 28px;
+            pointer-events: none;
+            z-index: 0;
+        }
         #mm-canvas-container.panning { cursor: grabbing; }
         #mm-canvas-transform-wrapper { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
+
+        /* ── Node base ── */
         .mm-node {
             position: absolute;
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 10px 18px;
+            gap: 6px;
+            padding: 9px 18px;
             border-radius: 999px;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             color: white;
             cursor: pointer;
-            transition: box-shadow 0.15s, transform 0.1s;
             white-space: nowrap;
             min-width: 80px;
-            max-width: 220px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            max-width: 230px;
             user-select: none;
             z-index: 10;
+            border: 1.5px solid rgba(255,255,255,0.18);
+            backdrop-filter: blur(4px);
+            transition: box-shadow 0.2s ease, transform 0.15s ease, border-color 0.2s;
+            will-change: transform;
         }
+        /* Light theme node adjustments */
+        .mm-theme-light .mm-node {
+            border-color: rgba(0,0,0,0.12);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .mm-theme-light .mm-node:hover {
+            box-shadow: 0 6px 24px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.1);
+            transform: translateY(-2px) scale(1.03);
+        }
+        .mm-theme-light .mm-node.mm-node-selected {
+            border-color: rgba(0,0,0,0.3) !important;
+            box-shadow: 0 0 0 3px rgba(139,92,246,0.5), 0 8px 32px rgba(0,0,0,0.2) !important;
+        }
+        .mm-node::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 60%);
+            pointer-events: none;
+        }
+        .mm-node:hover {
+            transform: translateY(-2px) scale(1.03);
+            border-color: rgba(255,255,255,0.4);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.15), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+
+        /* ── Root node ── */
         .mm-node.mm-node-root {
-            padding: 16px 28px;
-            font-size: 17px;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 700;
+            border-radius: 22px;
+            border-width: 2px;
+            border-color: rgba(255,255,255,0.3);
             z-index: 11;
+            letter-spacing: -0.01em;
         }
+        .mm-node.mm-node-root::after {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 28px;
+            border: 1.5px solid rgba(255,255,255,0.08);
+            animation: mm-root-pulse 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes mm-root-pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.015); }
+        }
+
+        /* ── Level 1 nodes ── */
+        .mm-node.mm-node-l1 {
+            padding: 10px 20px;
+            font-size: 13.5px;
+            border-radius: 14px;
+        }
+
+        /* ── Level 2+ nodes ── */
+        .mm-node.mm-node-l2 {
+            padding: 7px 14px;
+            font-size: 12px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        .mm-node.mm-node-l3 {
+            padding: 6px 12px;
+            font-size: 11.5px;
+            border-radius: 8px;
+            font-weight: 500;
+            opacity: 0.92;
+        }
+
+        /* ── Selected state ── */
         .mm-node.mm-node-selected {
-            box-shadow: 0 0 0 3px white, 0 0 0 5px var(--node-color, #8b5cf6), 0 8px 24px rgba(0,0,0,0.4);
-            transform: scale(1.05);
+            border-color: white !important;
+            transform: scale(1.08) !important;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.9), 0 0 32px var(--node-color, #8b5cf6), 0 12px 40px rgba(0,0,0,0.6) !important;
+            z-index: 20;
         }
+        .mm-node.mm-node-selected::before {
+            background: linear-gradient(135deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.05) 60%);
+        }
+
+        /* ── Animate node appearance ── */
+        @keyframes mm-node-appear {
+            from { opacity: 0; transform: scale(0.6); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        .mm-node-new { animation: mm-node-appear 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+        /* ── Node text ── */
         .mm-node .mm-node-text {
             flex: 1;
             overflow: hidden;
             text-overflow: ellipsis;
             pointer-events: none;
+            line-height: 1.3;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
+
+        /* ── Node count badge ── */
+        .mm-node .mm-child-count {
+            font-size: 9px;
+            padding: 1px 5px;
+            border-radius: 999px;
+            background: rgba(0,0,0,0.3);
+            color: rgba(255,255,255,0.8);
+            pointer-events: none;
+            line-height: 1.6;
+            font-weight: 700;
+        }
+
+        /* ── Floating toolbar ── */
         .mm-node-toolbar {
             position: absolute;
-            top: -52px;
+            top: calc(-100% - 18px);
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 4px;
-            background: rgba(15,23,42,0.97);
-            border-radius: 12px;
-            padding: 6px 8px;
-            z-index: 100;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            gap: 3px;
+            background: rgba(10,15,30,0.96);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 5px 7px;
+            z-index: 200;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.05) inset;
             pointer-events: all;
             white-space: nowrap;
+            backdrop-filter: blur(16px);
+            animation: mm-toolbar-pop 0.15s cubic-bezier(0.34,1.56,0.64,1) forwards;
+        }
+        @keyframes mm-toolbar-pop {
+            from { opacity: 0; transform: translateX(-50%) scale(0.85) translateY(4px); }
+            to   { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
+        }
+        .mm-node-toolbar::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid rgba(10,15,30,0.96);
         }
         .mm-node-toolbar button {
-            width: 32px; height: 32px;
+            width: 30px; height: 30px;
             border-radius: 8px;
             border: none;
-            color: white;
+            color: rgba(255,255,255,0.8);
             font-size: 13px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.15s;
+            transition: background 0.12s, color 0.12s, transform 0.1s;
+            background: transparent;
         }
-        .mm-node-toolbar button:hover { background: rgba(255,255,255,0.15); }
+        .mm-node-toolbar button:hover {
+            background: rgba(255,255,255,0.12);
+            color: white;
+            transform: scale(1.1);
+        }
+        .mm-node-toolbar .mm-tb-sep {
+            width: 1px;
+            background: rgba(255,255,255,0.1);
+            margin: 4px 2px;
+        }
+        .mm-node-toolbar button.mm-tb-danger:hover { background: rgba(239,68,68,0.3); color: #fca5a5; }
+
+        /* ── Inline edit input ── */
         .mm-inline-edit {
-            background: rgba(255,255,255,0.15);
-            border: 2px solid white;
+            background: rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.6);
             border-radius: 999px;
             color: white;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             padding: 2px 10px;
             outline: none;
             min-width: 60px;
-            max-width: 180px;
+            max-width: 190px;
+            box-shadow: 0 0 0 4px rgba(255,255,255,0.08);
         }
-        #mm-canvas-container::before {
-            content: '';
+        .mm-inline-edit:focus {
+            border-color: white;
+            box-shadow: 0 0 0 4px rgba(255,255,255,0.15);
+        }
+
+        /* ── SVG edge glow ── */
+        .mm-edge-glow {
+            filter: drop-shadow(0 0 3px var(--edge-color));
+        }
+
+        /* ── Mini map (bottom right) ── */
+        #mm-minimap {
             position: absolute;
-            inset: 0;
-            background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
-            background-size: 28px 28px;
+            bottom: 16px;
+            right: 16px;
+            width: 160px;
+            height: 100px;
+            background: rgba(10,15,30,0.85);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            overflow: hidden;
+            z-index: 30;
+            backdrop-filter: blur(8px);
             pointer-events: none;
-            z-index: 0;
+        }
+
+        /* ── Bottom HUD ── */
+        #mm-hud {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            background: rgba(10,15,30,0.9);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 6px 10px;
+            z-index: 30;
+            backdrop-filter: blur(12px);
+            pointer-events: all;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+        }
+        #mm-hud button {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.7);
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.12s, color 0.12s;
+        }
+        #mm-hud button:hover { background: rgba(255,255,255,0.1); color: white; }
+        #mm-hud .mm-hud-sep { width: 1px; background: rgba(255,255,255,0.1); margin: 4px 2px; }
+        #mm-hud .mm-zoom-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            padding: 0 6px;
+            letter-spacing: 0.03em;
+        }
+
+        /* ── Keyboard shortcut hint ── */
+        #mm-hint {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+            pointer-events: none;
+            z-index: 30;
+            letter-spacing: 0.03em;
         }
     </style>
     <script>
@@ -1156,17 +1396,14 @@
                 <select id="mm-mapel" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none bg-white"></select>
                 <select id="mm-kelas" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none bg-white"></select>
                 <div class="flex-1"></div>
-                <button onclick="mmAddBranch()" class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl text-sm font-semibold hover:from-green-700 hover:to-green-800 flex items-center gap-2 shadow-md shadow-green-200">
-                    <i class="fas fa-plus"></i> Tambah Kategori Utama
-                </button>
-                <button onclick="mmResetLayout()" title="Reset Layout" class="px-3 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 shadow-md">
-                    <i class="fas fa-redo-alt text-xs"></i> Reset
-                </button>
-                <button onclick="mmZoomFit()" title="Zoom Fit" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 shadow-md">
-                    <i class="fas fa-compress-arrows-alt text-xs"></i> Fit
+                <button onclick="mmAddBranch()" class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-sm font-semibold hover:from-green-600 hover:to-emerald-700 flex items-center gap-2 shadow-md">
+                    <i class="fas fa-plus"></i> Tambah Cabang
                 </button>
                 <button id="mm-toggle-view-btn" onclick="mmToggleView()" title="Toggle View" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 shadow-md">
                     <i class="fas fa-list text-xs"></i> List
+                </button>
+                <button id="mm-toggle-theme-btn" onclick="mmToggleTheme()" title="Ganti tema" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 shadow-md">
+                    <i class="fas fa-sun text-xs"></i>
                 </button>
                 <div class="w-px h-6 bg-gray-200 ml-2"></div>
                 <button onclick="simpanMindMap()" class="px-5 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-sm font-semibold flex items-center gap-2 shadow-md shadow-purple-200">
@@ -1174,11 +1411,24 @@
                 </button>
             </div>
             <!-- Canvas -->
-            <div class="flex-1 relative overflow-hidden flex" id="mm-canvas-container" style="background:#0f172a">
+            <div class="flex-1 relative overflow-hidden flex" id="mm-canvas-container">
                 <!-- SVG layer untuk koneksi garis -->
                 <svg id="mm-svg-connections" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:1;"></svg>
                 <!-- HTML layer untuk node -->
                 <div id="mm-nodes-layer" style="position:absolute;top:0;left:0;width:0;height:0;z-index:2;"></div>
+                <!-- Keyboard hint -->
+                <div id="mm-hint">Klik node untuk memilih · Klik dua kali untuk edit · Scroll untuk zoom · Drag untuk memindahkan</div>
+                <!-- Bottom HUD -->
+                <div id="mm-hud">
+                    <button onclick="mmZoom(-0.15)" title="Zoom Out"><i class="fas fa-minus"></i></button>
+                    <span class="mm-zoom-label" id="mm-zoom-label">100%</span>
+                    <button onclick="mmZoom(0.15)" title="Zoom In"><i class="fas fa-plus"></i></button>
+                    <div class="mm-hud-sep"></div>
+                    <button onclick="mmZoomFit()" title="Fit to view"><i class="fas fa-compress-arrows-alt"></i></button>
+                    <button onclick="mmResetLayout()" title="Reset layout"><i class="fas fa-sync-alt"></i></button>
+                    <div class="mm-hud-sep"></div>
+                    <button onclick="mmAddBranch()" title="Tambah cabang"><i class="fas fa-plus-circle"></i></button>
+                </div>
                 <!-- Material Preview Panel -->
                 <div id="mm-material-preview" class="hidden" style="position:absolute;right:0;top:0;bottom:0;width:384px;background:white;border-left:1px solid #e5e7eb;overflow-y:auto;z-index:20;">
                     <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-blue-50 sticky top-0 z-10">
@@ -6852,7 +7102,11 @@
         let mindMapZoom = 1;
         let mindMapSelectedId = null;
 
-        const MM_COLORS = ['#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#ef4444','#06b6d4','#84cc16'];
+        const MM_COLORS = [
+            '#8b5cf6','#3b82f6','#06b6d4','#10b981',
+            '#f59e0b','#ef4444','#ec4899','#84cc16',
+            '#6366f1','#f97316','#14b8a6','#a855f7'
+        ];
 
         function mmGenId() { return 'n' + Date.now() + Math.random().toString(36).slice(2,6); }
 
@@ -6879,6 +7133,33 @@
         let mmDragNodeId = null;
         let mmDragNodeOffset = { x: 0, y: 0 };
         let mmCanvasEventsAttached = false;
+        let mmTheme = 'dark'; // 'dark' | 'light'
+
+        // ── THEME TOGGLE ──────────────────────────────
+        function mmApplyTheme() {
+            const container = document.getElementById('mm-canvas-container');
+            if (!container) return;
+            container.classList.remove('mm-theme-dark', 'mm-theme-light');
+            container.classList.add('mm-theme-' + mmTheme);
+            const btn = document.getElementById('mm-toggle-theme-btn');
+            if (btn) {
+                if (mmTheme === 'dark') {
+                    btn.className = 'px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl text-sm font-semibold flex items-center gap-1.5 shadow-md';
+                    btn.innerHTML = '<i class="fas fa-sun text-xs"></i>';
+                    btn.title = 'Ganti ke mode terang';
+                } else {
+                    btn.className = 'px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-xl text-sm font-semibold flex items-center gap-1.5 shadow-md';
+                    btn.innerHTML = '<i class="fas fa-moon text-xs"></i>';
+                    btn.title = 'Ganti ke mode gelap';
+                }
+            }
+        }
+
+        function mmToggleTheme() {
+            mmTheme = mmTheme === 'dark' ? 'light' : 'dark';
+            try { localStorage.setItem('mm_theme', mmTheme); } catch(e) {}
+            mmApplyTheme();
+        }
 
         // ── NODE WIDTH ESTIMATE ──────────────────────────────
         function mmEstimateNodeWidth(text) {
@@ -6889,7 +7170,7 @@
         function mmAutoLayout() {
             if (!mmCurrentNodes) return;
             const container = document.getElementById('mm-canvas-container');
-            const cw = container ? container.offsetWidth : 1200;
+            const cw = container ? container.offsetWidth  : 1200;
             const ch = container ? container.offsetHeight : 700;
             const cx = cw / 2;
             const cy = ch / 2;
@@ -6900,40 +7181,59 @@
             }
 
             const level1 = mmCurrentNodes.children || [];
-            const r1 = 220;
+            const n1 = level1.length;
+            // Radius scales with count so nodes don't crowd
+            const r1 = Math.max(220, n1 * 55);
+
             level1.forEach((child, i) => {
                 if (child.x === undefined) {
-                    const angle = (i / level1.length) * 2 * Math.PI - Math.PI / 2;
+                    // Start from -90° (top) and distribute evenly
+                    const angle = (i / n1) * 2 * Math.PI - Math.PI / 2;
                     child.x = cx + r1 * Math.cos(angle);
                     child.y = cy + r1 * Math.sin(angle);
                 }
                 const parentAngle = Math.atan2(child.y - cy, child.x - cx);
                 const level2 = child.children || [];
-                const r2 = 170;
+                const n2 = level2.length;
+                const r2 = Math.max(150, n2 * 50);
                 level2.forEach((grandchild, j) => {
                     if (grandchild.x === undefined) {
-                        const spread = Math.PI * 0.7;
+                        const spread = Math.min(Math.PI * 0.75, n2 * 0.45);
                         const startAngle = parentAngle - spread / 2;
-                        const angle2 = level2.length === 1
+                        const angle2 = n2 === 1
                             ? parentAngle
-                            : startAngle + (j / (level2.length - 1)) * spread;
+                            : startAngle + (j / (n2 - 1)) * spread;
                         grandchild.x = child.x + r2 * Math.cos(angle2);
                         grandchild.y = child.y + r2 * Math.sin(angle2);
                     }
-                    // Level 3+
                     const pAngle2 = Math.atan2(grandchild.y - child.y, grandchild.x - child.x);
                     const level3 = grandchild.children || [];
-                    const r3 = 140;
-                    level3.forEach((n3, k) => {
-                        if (n3.x === undefined) {
-                            const spread3 = Math.PI * 0.5;
+                    const n3 = level3.length;
+                    const r3 = Math.max(120, n3 * 44);
+                    level3.forEach((n3node, k) => {
+                        if (n3node.x === undefined) {
+                            const spread3 = Math.min(Math.PI * 0.6, n3 * 0.4);
                             const startAngle3 = pAngle2 - spread3 / 2;
-                            const a3 = level3.length === 1
+                            const a3 = n3 === 1
                                 ? pAngle2
-                                : startAngle3 + (k / (level3.length - 1)) * spread3;
-                            n3.x = grandchild.x + r3 * Math.cos(a3);
-                            n3.y = grandchild.y + r3 * Math.sin(a3);
+                                : startAngle3 + (k / (n3 - 1)) * spread3;
+                            n3node.x = grandchild.x + r3 * Math.cos(a3);
+                            n3node.y = grandchild.y + r3 * Math.sin(a3);
                         }
+                        // Level 4 (rare but handle)
+                        const pAngle3 = Math.atan2(n3node.y - grandchild.y, n3node.x - grandchild.x);
+                        const level4 = n3node.children || [];
+                        const n4 = level4.length;
+                        const r4 = Math.max(100, n4 * 38);
+                        level4.forEach((n4node, l) => {
+                            if (n4node.x === undefined) {
+                                const spread4 = Math.min(Math.PI * 0.5, n4 * 0.35);
+                                const startAngle4 = pAngle3 - spread4 / 2;
+                                const a4 = n4 === 1 ? pAngle3 : startAngle4 + (l / (n4 - 1)) * spread4;
+                                n4node.x = n3node.x + r4 * Math.cos(a4);
+                                n4node.y = n3node.y + r4 * Math.sin(a4);
+                            }
+                        });
                     });
                 });
             });
@@ -6943,51 +7243,78 @@
         function mmRenderConnections() {
             const svgEl = document.getElementById('mm-svg-connections');
             if (!svgEl || !mmCurrentNodes) return;
+
+            const defs = [];
             const paths = [];
             const nh = 44;
+            let gradIdx = 0;
 
-            function drawEdges(parent) {
+            function hexToRgba(hex, alpha) {
+                const r = parseInt(hex.slice(1,3),16);
+                const g = parseInt(hex.slice(3,5),16);
+                const b = parseInt(hex.slice(5,7),16);
+                return `rgba(${r},${g},${b},${alpha})`;
+            }
+
+            function drawEdges(parent, depth) {
                 (parent.children || []).forEach(child => {
                     const pw = mmEstimateNodeWidth(parent.text);
                     const cw = mmEstimateNodeWidth(child.text);
                     const isRoot = parent.id === mmCurrentNodes.id;
+                    const nh_parent = isRoot ? 56 : (depth === 0 ? 44 : 36);
+                    const nh_child  = depth === 0 ? 44 : 36;
                     let sx, sy, ex, ey, c1x, c1y, c2x, c2y;
+
                     if (isRoot) {
-                        // from center of root to edge of child
                         const angle = Math.atan2(child.y - parent.y, child.x - parent.x);
-                        const rootHalfW = mmEstimateNodeWidth(parent.text) / 2 + 8;
-                        const rootHalfH = nh / 2 + 4;
+                        const rootHalfW = mmEstimateNodeWidth(parent.text) / 2 + 10;
+                        const rootHalfH = nh_parent / 2 + 6;
                         sx = parent.x + rootHalfW * Math.cos(angle);
                         sy = parent.y + rootHalfH * Math.sin(angle);
-                        // enter child at the near edge
-                        const cDist = cw / 2 + 4;
+                        const cDist = cw / 2 + 6;
                         const rAngle = Math.atan2(parent.y - child.y, parent.x - child.x);
                         ex = child.x + cDist * Math.cos(rAngle);
-                        ey = child.y + (nh / 2) * Math.sin(rAngle);
-                        c1x = sx + (ex - sx) * 0.45;
-                        c1y = sy;
-                        c2x = sx + (ex - sx) * 0.55;
-                        c2y = ey;
+                        ey = child.y + (nh_child / 2) * Math.sin(rAngle);
+                        const dist = Math.hypot(ex - sx, ey - sy);
+                        const ctrl = dist * 0.42;
+                        c1x = sx + Math.cos(angle) * ctrl;
+                        c1y = sy + Math.sin(angle) * ctrl;
+                        c2x = ex + Math.cos(rAngle) * ctrl;
+                        c2y = ey + Math.sin(rAngle) * ctrl;
                     } else {
-                        // horizontal bezier from right of parent to left of child (or vice versa)
                         const goRight = child.x >= parent.x;
                         if (goRight) {
-                            sx = parent.x + pw / 2; sy = parent.y;
-                            ex = child.x - cw / 2; ey = child.y;
+                            sx = parent.x + pw/2; sy = parent.y;
+                            ex = child.x - cw/2;  ey = child.y;
                         } else {
-                            sx = parent.x - pw / 2; sy = parent.y;
-                            ex = child.x + cw / 2; ey = child.y;
+                            sx = parent.x - pw/2; sy = parent.y;
+                            ex = child.x + cw/2;  ey = child.y;
                         }
-                        const ctrl = Math.abs(ex - sx) * 0.5;
+                        const dist = Math.hypot(ex - sx, ey - sy);
+                        const ctrl = dist * 0.45;
                         c1x = sx + (goRight ? ctrl : -ctrl); c1y = sy;
-                        c2x = ex + (goRight ? -ctrl : ctrl); c2y = ey;
+                        c2x = ex + (goRight ? -ctrl : ctrl);  c2y = ey;
                     }
-                    paths.push(`<path d="M${sx},${sy} C${c1x},${c1y} ${c2x},${c2y} ${ex},${ey}" stroke="${child.color}" stroke-opacity="0.75" stroke-width="2.5" fill="none" stroke-linecap="round"/>`);
-                    drawEdges(child);
+
+                    // Gradient edge
+                    const gid = `mmg${gradIdx++}`;
+                    const pColor = isRoot ? mmCurrentNodes.color : parent.color;
+                    const cColor = child.color;
+                    const sw = isRoot ? 2.5 : (depth <= 1 ? 2 : 1.5);
+                    const opacity = isRoot ? 0.85 : (depth <= 1 ? 0.7 : 0.55);
+
+                    defs.push(`<linearGradient id="${gid}" x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="${pColor}" stop-opacity="${opacity}"/>
+                        <stop offset="100%" stop-color="${cColor}" stop-opacity="${opacity}"/>
+                    </linearGradient>`);
+
+                    paths.push(`<path d="M${sx},${sy} C${c1x},${c1y} ${c2x},${c2y} ${ex},${ey}" stroke="url(#${gid})" stroke-width="${sw}" fill="none" stroke-linecap="round"/>`);
+
+                    drawEdges(child, depth + 1);
                 });
             }
-            drawEdges(mmCurrentNodes);
-            svgEl.innerHTML = paths.join('');
+            drawEdges(mmCurrentNodes, 0);
+            svgEl.innerHTML = `<defs>${defs.join('')}</defs>${paths.join('')}`;
         }
 
         // ── RENDER NODES DOM ──────────────────────────────
@@ -6995,21 +7322,49 @@
             const layer = document.getElementById('mm-nodes-layer');
             if (!layer || !mmCurrentNodes) return;
             layer.innerHTML = '';
-            const nh = 44;
 
-            function renderNode(node, isRoot) {
+            function getNodeLevel(node) {
+                // Find depth from root
+                function findDepth(curr, target, depth) {
+                    if (curr.id === target.id) return depth;
+                    for (const c of (curr.children || [])) {
+                        const d = findDepth(c, target, depth + 1);
+                        if (d !== -1) return d;
+                    }
+                    return -1;
+                }
+                return findDepth(mmCurrentNodes, node, 0);
+            }
+
+            function getNodeHeight(level) {
+                if (level === 0) return 56;
+                if (level === 1) return 44;
+                if (level === 2) return 38;
+                return 34;
+            }
+
+            function renderNode(node, level) {
                 const w = mmEstimateNodeWidth(node.text);
-                const h = isRoot ? 56 : nh;
+                const h = getNodeHeight(level);
                 const left = node.x - w / 2;
-                const top = node.y - h / 2;
+                const top  = node.y - h / 2;
                 const isSelected = mmSelectedNodeId === node.id;
-                const isEditing = mmEditingNodeId === node.id;
+                const isEditing  = mmEditingNodeId  === node.id;
                 const hasMaterials = node.materials && node.materials.length > 0;
+                const childCount = (node.children || []).length;
+
+                const bgColor = node.color;
+                // Create a slightly darker shade for box-shadow glow
+                const glowShadow = `0 4px 20px ${bgColor}55, 0 2px 8px rgba(0,0,0,0.4)`;
+                const glowShadowSelected = `0 0 0 3px white, 0 0 28px ${bgColor}cc, 0 8px 32px rgba(0,0,0,0.6)`;
+
+                const levelClass = level === 0 ? 'mm-node-root' : (level === 1 ? 'mm-node-l1' : (level === 2 ? 'mm-node-l2' : 'mm-node-l3'));
 
                 const div = document.createElement('div');
-                div.className = 'mm-node' + (isRoot ? ' mm-node-root' : '') + (isSelected ? ' mm-node-selected' : '');
+                div.className = 'mm-node ' + levelClass + (isSelected ? ' mm-node-selected' : '');
                 div.dataset.nodeId = node.id;
-                div.style.cssText = `left:${left}px;top:${top}px;background:${node.color};--node-color:${node.color};width:${w}px;height:${h}px;`;
+                div.dataset.level = level;
+                div.style.cssText = `left:${left}px;top:${top}px;background:${bgColor};--node-color:${bgColor};width:${w}px;height:${h}px;box-shadow:${isSelected ? glowShadowSelected : glowShadow};`;
 
                 if (isEditing) {
                     const inp = document.createElement('input');
@@ -7033,8 +7388,13 @@
                     div.appendChild(span);
                     if (hasMaterials) {
                         const badge = document.createElement('span');
-                        badge.style.cssText = 'font-size:10px;opacity:0.85;margin-left:2px;';
+                        badge.className = 'mm-child-count';
                         badge.textContent = '📎' + node.materials.length;
+                        div.appendChild(badge);
+                    } else if (childCount > 0 && level > 0) {
+                        const badge = document.createElement('span');
+                        badge.className = 'mm-child-count';
+                        badge.textContent = childCount;
                         div.appendChild(badge);
                     }
                 }
@@ -7043,18 +7403,30 @@
                 if (isSelected && !isEditing) {
                     const tb = document.createElement('div');
                     tb.className = 'mm-node-toolbar';
+
                     const btns = [
-                        { icon: '✏️', title: 'Edit', action: `mmStartEdit('${node.id}')` },
-                        { icon: '➕', title: 'Tambah Sub', action: `mmAddChildCanvas('${node.id}')` },
-                        { icon: '🎨', title: 'Warna', action: `mmShowColorPicker('${node.id}')` },
-                        { icon: '📎', title: 'Materi', action: `mmShowMaterials()` },
+                        { icon: 'fa-pen', title: 'Edit', action: `mmStartEdit('${node.id}')` },
+                        { icon: 'fa-plus', title: 'Tambah Sub-node', action: `mmAddChildCanvas('${node.id}')` },
+                        { icon: 'fa-palette', title: 'Ubah Warna', action: `mmShowColorPicker('${node.id}')` },
+                        { icon: 'fa-paperclip', title: 'Materi', action: `mmShowMaterials()`, sep: true },
                     ];
-                    if (!isRoot) btns.push({ icon: '🗑️', title: 'Hapus', action: `mmDeleteCanvasNode('${node.id}')` });
-                    btns.forEach(b => {
+                    if (!node.id === mmCurrentNodes.id) {
+                        // not root — no delete
+                    }
+                    if (node.id !== mmCurrentNodes.id) {
+                        btns.push({ icon: 'fa-trash', title: 'Hapus Node', action: `mmDeleteCanvasNode('${node.id}')`, danger: true });
+                    }
+
+                    btns.forEach((b, i) => {
+                        if (b.sep) {
+                            const sep = document.createElement('div');
+                            sep.className = 'mm-tb-sep';
+                            tb.appendChild(sep);
+                        }
                         const btn = document.createElement('button');
                         btn.title = b.title;
-                        btn.textContent = b.icon;
-                        btn.style.background = 'transparent';
+                        btn.innerHTML = `<i class="fas ${b.icon}" style="font-size:12px"></i>`;
+                        if (b.danger) btn.classList.add('mm-tb-danger');
                         btn.setAttribute('onclick', b.action + '; event.stopPropagation()');
                         tb.appendChild(btn);
                     });
@@ -7066,11 +7438,10 @@
                     if (e.target.closest('.mm-node-toolbar')) return;
                     e.stopPropagation();
                     mmDragNodeId = node.id;
-                    const rect = div.getBoundingClientRect();
                     const container = document.getElementById('mm-canvas-container');
                     const cr = container.getBoundingClientRect();
                     mmDragNodeOffset.x = (e.clientX - cr.left - mmTransform.x) / mmTransform.scale - node.x;
-                    mmDragNodeOffset.y = (e.clientY - cr.top - mmTransform.y) / mmTransform.scale - node.y;
+                    mmDragNodeOffset.y = (e.clientY - cr.top  - mmTransform.y) / mmTransform.scale - node.y;
                 });
                 div.addEventListener('click', e => {
                     if (e.target.closest('.mm-node-toolbar')) return;
@@ -7083,9 +7454,9 @@
                 });
 
                 layer.appendChild(div);
-                (node.children || []).forEach(c => renderNode(c, false));
+                (node.children || []).forEach(c => renderNode(c, level + 1));
             }
-            renderNode(mmCurrentNodes, true);
+            renderNode(mmCurrentNodes, 0);
         }
 
         // ── APPLY TRANSFORM ──────────────────────────────
@@ -7094,6 +7465,8 @@
             const layer = document.getElementById('mm-nodes-layer');
             if (svgEl) svgEl.style.transform = `translate(${mmTransform.x}px,${mmTransform.y}px) scale(${mmTransform.scale})`;
             if (layer) layer.style.transform = `translate(${mmTransform.x}px,${mmTransform.y}px) scale(${mmTransform.scale})`;
+            const lbl = document.getElementById('mm-zoom-label');
+            if (lbl) lbl.textContent = Math.round(mmTransform.scale * 100) + '%';
         }
 
         // ── MAIN RENDER ──────────────────────────────
@@ -7113,8 +7486,9 @@
             if (!container) return;
             mmCanvasEventsAttached = true;
 
+            // ── Mouse pan ──
             container.addEventListener('mousedown', e => {
-                if (e.target.closest('.mm-node') || e.target.closest('.mm-node-toolbar')) return;
+                if (e.target.closest('.mm-node') || e.target.closest('.mm-node-toolbar') || e.target.closest('#mm-hud')) return;
                 mmIsPanning = true;
                 mmPanStart.x = e.clientX - mmTransform.x;
                 mmPanStart.y = e.clientY - mmTransform.y;
@@ -7128,14 +7502,15 @@
                     if (node) {
                         const cr = container.getBoundingClientRect();
                         node.x = (e.clientX - cr.left - mmTransform.x) / mmTransform.scale - mmDragNodeOffset.x;
-                        node.y = (e.clientY - cr.top - mmTransform.y) / mmTransform.scale - mmDragNodeOffset.y;
-                        // Update DOM position directly for performance
+                        node.y = (e.clientY - cr.top  - mmTransform.y) / mmTransform.scale - mmDragNodeOffset.y;
+                        // Update DOM position directly (no full re-render while dragging)
                         const el = container.querySelector(`.mm-node[data-node-id="${mmDragNodeId}"]`);
                         if (el) {
+                            const level = parseInt(el.dataset.level || 0);
+                            const h = level === 0 ? 56 : (level === 1 ? 44 : (level === 2 ? 38 : 34));
                             const w = mmEstimateNodeWidth(node.text);
-                            const h = node.id === mmCurrentNodes.id ? 56 : 44;
                             el.style.left = (node.x - w/2) + 'px';
-                            el.style.top = (node.y - h/2) + 'px';
+                            el.style.top  = (node.y - h/2) + 'px';
                         }
                         mmRenderConnections();
                     }
@@ -7146,31 +7521,105 @@
                 }
             });
 
-            container.addEventListener('mouseup', () => {
+            const stopDrag = () => {
                 mmDragNodeId = null;
                 mmIsPanning = false;
                 container.classList.remove('panning');
-            });
+            };
+            container.addEventListener('mouseup',    stopDrag);
+            container.addEventListener('mouseleave', stopDrag);
 
-            container.addEventListener('mouseleave', () => {
-                mmDragNodeId = null;
-                mmIsPanning = false;
-                container.classList.remove('panning');
-            });
-
+            // ── Scroll-wheel zoom ──
             container.addEventListener('wheel', e => {
                 e.preventDefault();
                 const cr = container.getBoundingClientRect();
                 const mx = e.clientX - cr.left;
                 const my = e.clientY - cr.top;
                 const prevScale = mmTransform.scale;
-                const newScale = Math.min(3, Math.max(0.2, prevScale * (1 - e.deltaY * 0.001)));
-                // Zoom toward mouse cursor
+                const factor = e.deltaY > 0 ? 0.92 : 1.09;
+                const newScale = Math.min(3, Math.max(0.15, prevScale * factor));
                 mmTransform.x = mx - (mx - mmTransform.x) * (newScale / prevScale);
                 mmTransform.y = my - (my - mmTransform.y) * (newScale / prevScale);
                 mmTransform.scale = newScale;
                 mmApplyTransform();
             }, { passive: false });
+
+            // ── Touch support ──
+            let touchStart = null;
+            let touchDist  = null;
+            container.addEventListener('touchstart', e => {
+                if (e.touches.length === 1) {
+                    const t = e.touches[0];
+                    const nodeEl = t.target.closest('.mm-node');
+                    if (nodeEl) {
+                        const nid = nodeEl.dataset.nodeId;
+                        const node = mmFindNodeById(mmCurrentNodes, nid);
+                        if (node) {
+                            mmDragNodeId = nid;
+                            const cr = container.getBoundingClientRect();
+                            mmDragNodeOffset.x = (t.clientX - cr.left - mmTransform.x) / mmTransform.scale - node.x;
+                            mmDragNodeOffset.y = (t.clientY - cr.top  - mmTransform.y) / mmTransform.scale - node.y;
+                            return;
+                        }
+                    }
+                    touchStart = { x: t.clientX - mmTransform.x, y: t.clientY - mmTransform.y };
+                } else if (e.touches.length === 2) {
+                    touchDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                }
+                e.preventDefault();
+            }, { passive: false });
+
+            container.addEventListener('touchmove', e => {
+                e.preventDefault();
+                if (e.touches.length === 1) {
+                    const t = e.touches[0];
+                    if (mmDragNodeId) {
+                        const node = mmFindNodeById(mmCurrentNodes, mmDragNodeId);
+                        if (node) {
+                            const cr = container.getBoundingClientRect();
+                            node.x = (t.clientX - cr.left - mmTransform.x) / mmTransform.scale - mmDragNodeOffset.x;
+                            node.y = (t.clientY - cr.top  - mmTransform.y) / mmTransform.scale - mmDragNodeOffset.y;
+                            const el = container.querySelector(`.mm-node[data-node-id="${mmDragNodeId}"]`);
+                            if (el) {
+                                const level = parseInt(el.dataset.level || 0);
+                                const h = level === 0 ? 56 : (level === 1 ? 44 : (level === 2 ? 38 : 34));
+                                const w = mmEstimateNodeWidth(node.text);
+                                el.style.left = (node.x - w/2) + 'px';
+                                el.style.top  = (node.y - h/2) + 'px';
+                            }
+                            mmRenderConnections();
+                        }
+                    } else if (touchStart) {
+                        mmTransform.x = t.clientX - touchStart.x;
+                        mmTransform.y = t.clientY - touchStart.y;
+                        mmApplyTransform();
+                    }
+                } else if (e.touches.length === 2 && touchDist !== null) {
+                    const newDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const cr = container.getBoundingClientRect();
+                    const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - cr.left;
+                    const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - cr.top;
+                    const prevScale = mmTransform.scale;
+                    const newScale  = Math.min(3, Math.max(0.15, prevScale * (newDist / touchDist)));
+                    mmTransform.x = mx - (mx - mmTransform.x) * (newScale / prevScale);
+                    mmTransform.y = my - (my - mmTransform.y) * (newScale / prevScale);
+                    mmTransform.scale = newScale;
+                    touchDist = newDist;
+                    mmApplyTransform();
+                }
+            }, { passive: false });
+
+            container.addEventListener('touchend', () => {
+                mmDragNodeId = null;
+                touchStart   = null;
+                touchDist    = null;
+            });
         }
 
         // ── SELECT NODE ──────────────────────────────
@@ -7209,22 +7658,18 @@
             const color = MM_COLORS[mmCurrentNodes.children.length % MM_COLORS.length];
             const newNode = mmNewNode('Kategori baru', color);
             mmCurrentNodes.children.push(newNode);
-            // Position radially from root
+            // Re-lay-out ALL level-1 nodes so they don't overlap
             const count = mmCurrentNodes.children.length;
-            const angle = ((count - 1) / count) * 2 * Math.PI - Math.PI / 2;
-            const r = 220;
+            const r = Math.max(220, count * 55);
             const cx = mmCurrentNodes.x || 600;
             const cy = mmCurrentNodes.y || 350;
-            newNode.x = cx + r * Math.cos(angle);
-            newNode.y = cy + r * Math.sin(angle);
-            // Re-layout remaining nodes
             mmCurrentNodes.children.forEach((ch, i) => {
                 const a = (i / count) * 2 * Math.PI - Math.PI / 2;
                 ch.x = cx + r * Math.cos(a);
                 ch.y = cy + r * Math.sin(a);
             });
             mmSelectedNodeId = newNode.id;
-            mmEditingNodeId = newNode.id;
+            mmEditingNodeId  = newNode.id;
             mmRenderCanvas();
             showToast('✅ Kategori utama ditambahkan');
         }
@@ -7323,6 +7768,13 @@
             } else {
                 mmViewMode = 'canvas';
                 if (btn) btn.innerHTML = '<i class="fas fa-list text-xs"></i> List';
+                // Sembunyikan list view dulu
+                const listEl = document.getElementById('mm-tree-view-list');
+                if (listEl) listEl.classList.add('hidden');
+                const svg = document.getElementById('mm-svg-connections');
+                if (svg) svg.style.display = '';
+                // Re-render canvas dengan reset events
+                mmCanvasEventsAttached = false;
                 mmRenderCanvas();
             }
         }
@@ -7504,7 +7956,20 @@
         function mmDeleteSelectedNode() { if (mmSelectedNodeId) mmDeleteCanvasNode(mmSelectedNodeId); }
         function mmDeleteNodeById(node, id) { mmRemoveNodeFromTree(id); }
         function mmAddChild() { if (mmSelectedNodeId) mmAddChildCanvas(mmSelectedNodeId); }
-        function mmZoom(delta) { mmTransform.scale = Math.min(2, Math.max(0.4, mmTransform.scale + delta)); mmApplyTransform(); }
+        function mmZoom(delta) { 
+            const container = document.getElementById('mm-canvas-container');
+            if (!container) return;
+            const cw = container.offsetWidth;
+            const ch = container.offsetHeight;
+            const prevScale = mmTransform.scale;
+            const newScale = Math.min(3, Math.max(0.15, prevScale + delta));
+            // Zoom toward canvas center
+            const mx = cw / 2, my = ch / 2;
+            mmTransform.x = mx - (mx - mmTransform.x) * (newScale / prevScale);
+            mmTransform.y = my - (my - mmTransform.y) * (newScale / prevScale);
+            mmTransform.scale = newScale;
+            mmApplyTransform();
+        }
         function mmFitView() { mmZoomFit(); }
 
         // ── COLOR PICKER ──────────────────────────────
@@ -7515,11 +7980,17 @@
             const node = mmFindNodeById(mmCurrentNodes, id);
             if (!node) return;
             const grid = document.getElementById('color-picker-grid');
+            const colorNames = {
+                '#8b5cf6':'Violet','#3b82f6':'Biru','#06b6d4':'Cyan','#10b981':'Hijau',
+                '#f59e0b':'Kuning','#ef4444':'Merah','#ec4899':'Pink','#84cc16':'Lime',
+                '#6366f1':'Indigo','#f97316':'Oranye','#14b8a6':'Teal','#a855f7':'Ungu'
+            };
             grid.innerHTML = MM_COLORS.map(color => `
                 <button onclick="mmSetColor('${color}')"
-                        class="w-full aspect-square rounded-xl transition-all hover:scale-110 hover:shadow-lg flex items-center justify-center"
-                        style="background: ${color}">
-                    ${node.color === color ? '<i class="fas fa-check text-white text-xl"></i>' : ''}
+                        class="relative w-full aspect-square rounded-xl transition-all hover:scale-110 hover:shadow-lg flex flex-col items-center justify-center gap-1 group"
+                        style="background: ${color}; box-shadow: 0 4px 12px ${color}55">
+                    ${node.color === color ? '<i class="fas fa-check text-white text-lg drop-shadow"></i>' : ''}
+                    <span style="font-size:9px;color:rgba(255,255,255,0.8);font-weight:600;letter-spacing:0.02em;position:absolute;bottom:4px;left:0;right:0;text-align:center;">${colorNames[color]||''}</span>
                 </button>
             `).join('');
             document.getElementById('modal-color-picker').classList.remove('hidden');
@@ -7592,6 +8063,9 @@
             document.getElementById('editor-mindmap').classList.remove('hidden');
             const toggleBtn = document.getElementById('mm-toggle-view-btn');
             if (toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-list text-xs"></i> List';
+            // Load dan apply saved theme
+            try { mmTheme = localStorage.getItem('mm_theme') || 'dark'; } catch(e) { mmTheme = 'dark'; }
+            mmApplyTheme();
             setTimeout(() => { mmRenderCanvas(); setTimeout(mmZoomFit, 80); }, 50);
             setTimeout(() => document.getElementById('mm-judul').focus(), 100);
         }
