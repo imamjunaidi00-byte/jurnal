@@ -161,6 +161,13 @@ exports.download = async (req, res) => {
     if (req.query.tahunAjaran)   where.tahunAjaran   = req.query.tahunAjaran;
     if (req.query.mataPelajaran) where.mataPelajaran = req.query.mataPelajaran;
 
+    // Filter: hanya ambil yang ada mata pelajarannya (hindari duplikat baris kosong)
+    const { Op } = require('sequelize');
+    where.mataPelajaran = where.mataPelajaran || { [Op.and]: [
+      { [Op.ne]: '' },
+      { [Op.ne]: null },
+    ]};
+
     const list = await Nilai.findAll({
       where,
       include: [{ model: Siswa, as: 'siswaRef', attributes: ['nama','nisn'] }],
@@ -168,48 +175,44 @@ exports.download = async (req, res) => {
       raw: true, nest: true,
     });
 
-    const data = list.map((n, i) => {
-      // Parse tpList untuk ekspansi ke kolom TP1, TP2, ...
-      let tpCols = {};
-      try {
-        const tpArr = JSON.parse(n.tpList || '[]');
-        if (Array.isArray(tpArr)) {
-          tpArr.forEach((tp, idx) => {
-            tpCols[tp.kode || `TP${idx+1}`] = tp.nilai || 0;
-          });
-        }
-      } catch(e) {}
+    // Cari jumlah TP terbanyak di semua baris agar kolom konsisten
+    let maxTP = 0;
+    const allTpLists = list.map(n => {
+      try { return JSON.parse(n.tpList || '[]'); } catch(e) { return []; }
+    });
+    allTpLists.forEach(arr => { if (arr.length > maxTP) maxTP = arr.length; });
+    if (maxTP === 0) maxTP = 3; // minimal 3 kolom TP
 
-      const rataTP = n.nilaiAkhir || n.naPengetahuan || 0;
-      const pts    = n.pts || 0;
-      const pas    = n.pas || 0;
-      const naKeter = n.naKeterampilan || 0;
+    const data = list.map((n, i) => {
+      const tpArr = allTpLists[i] || [];
+      // Buat kolom TP1..TPn, kosong diisi 0
+      const tpCols = {};
+      for (let t = 1; t <= maxTP; t++) {
+        tpCols[`TP${t}`] = tpArr[t-1]?.nilai ?? 0;
+      }
 
       return {
         No:               i + 1,
         Nama:             n.siswaRef.nama,
         NISN:             n.siswaRef.nisn,
-        'Kelas':          n.kelas,
+        Kelas:            n.kelas,
         'Mata Pelajaran': n.mataPelajaran,
         ...tpCols,
-        'Rata TP':        rataTP,
-        'PTS':            pts,
-        'PAS':            pas,
-        'NA Pengetahuan': n.naPengetahuan,
-        'Praktek':        n.praktek,
-        'Proyek':         n.proyek,
-        'Portofolio':     n.portofolio,
-        'NA Keterampilan':naKeter,
-        'NA Akhir':       n.naAkhir,
-        'Predikat':       n.predikat,
+        PTS:              n.pts || 0,
+        PAS:              n.pas || 0,
+        Praktek:          n.praktek    || 0,
+        Proyek:           n.proyek     || 0,
+        Portofolio:       n.portofolio || 0,
       };
     });
 
     const buffer = writeExcel(data, 'Nilai');
-    res.setHeader('Content-Disposition', 'attachment; filename="nilai.xlsx"');
+    const safeKelas = (req.query.kelas || 'semua').replace(/[\s\/\\]/g, '_');
+    res.setHeader('Content-Disposition', `attachment; filename="nilai_${safeKelas}.xlsx"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     return res.send(buffer);
   } catch (err) {
+    console.error('[download] error:', err.message);
     return fail(res, 'Gagal mengunduh nilai.', 500);
   }
 };
@@ -229,12 +232,13 @@ exports.downloadTemplate = async (req, res) => {
       attributes: ['id', 'nama', 'nisn'],
     });
 
-    // Buat baris template — siswa sudah terisi, nilai kosong (0)
+    // Buat baris template — format IDENTIK dengan export agar bisa langsung re-import
     const data = siswaList.map((s, i) => ({
       'No':             i + 1,
       'Nama':           s.nama,
       'NISN':           s.nisn || '',
-      'Mata Pelajaran': '',   // harus diisi user
+      'Kelas':          kelas,
+      'Mata Pelajaran': '',   // isi nama mata pelajaran — harus sama semua baris
       'TP1':            0,
       'TP2':            0,
       'TP3':            0,
@@ -245,10 +249,10 @@ exports.downloadTemplate = async (req, res) => {
       'Portofolio':     0,
     }));
 
-    // Jika kelas kosong, buat 1 baris contoh
     if (!data.length) {
       data.push({
         'No': 1, 'Nama': 'Contoh Siswa', 'NISN': '0012345678',
+        'Kelas': kelas,
         'Mata Pelajaran': 'Nama Mapel',
         'TP1': 85, 'TP2': 80, 'TP3': 90,
         'PTS': 78, 'PAS': 82,
@@ -260,25 +264,31 @@ exports.downloadTemplate = async (req, res) => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
 
-    // Set lebar kolom
     ws['!cols'] = [
-      { wch: 5 }, { wch: 30 }, { wch: 15 }, { wch: 25 },
-      { wch: 6 }, { wch: 6 }, { wch: 6 }, { wch: 6 }, { wch: 6 },
-      { wch: 8 }, { wch: 8 }, { wch: 10 },
+      { wch: 5 },  // No
+      { wch: 32 }, // Nama
+      { wch: 14 }, // NISN
+      { wch: 16 }, // Kelas
+      { wch: 25 }, // Mata Pelajaran
+      { wch: 7 }, { wch: 7 }, { wch: 7 }, // TP1-3
+      { wch: 7 }, { wch: 7 }, // PTS, PAS
+      { wch: 9 }, { wch: 9 }, { wch: 11 }, // Praktek-Porto
     ];
 
     const petunjuk = [
-      { Petunjuk: '=== PETUNJUK PENGISIAN TEMPLATE NILAI ===' },
+      { Petunjuk: '=== PETUNJUK PENGISIAN NILAI ===' },
       { Petunjuk: '' },
-      { Petunjuk: '1. Kolom "No", "Nama", "NISN" — jangan diubah, digunakan untuk pencocokan data siswa.' },
-      { Petunjuk: '2. Kolom "Mata Pelajaran" — isi nama mata pelajaran (harus sama untuk semua baris).' },
-      { Petunjuk: '3. Kolom TP1, TP2, TP3 — nilai Tujuan Pembelajaran (0-100). Bisa tambah TP4, TP5, dst.' },
-      { Petunjuk: '4. Kolom PTS — Penilaian Tengah Semester (0-100). Kosongkan jika tidak ada.' },
-      { Petunjuk: '5. Kolom PAS — Penilaian Akhir Semester (0-100). Kosongkan jika tidak ada.' },
-      { Petunjuk: '6. Kolom Praktek, Proyek, Portofolio — nilai keterampilan (0-100).' },
-      { Petunjuk: '7. NA Akhir, Predikat dihitung otomatis saat import.' },
-      { Petunjuk: '6. Kolom TP bersifat dinamis: tambahkan TP4, TP5, ... sesuai kebutuhan.' },
-      { Petunjuk: '7. Simpan file tetap dalam format .xlsx atau .xls sebelum diupload.' },
+      { Petunjuk: '⚠️  FORMAT FILE INI SAMA DENGAN HASIL EXPORT — langsung bisa diimport kembali.' },
+      { Petunjuk: '' },
+      { Petunjuk: '1. Jangan ubah kolom No, Nama, NISN, Kelas — digunakan untuk pencocokan siswa.' },
+      { Petunjuk: '2. Isi kolom "Mata Pelajaran" dengan nama mapel yang SAMA untuk semua baris.' },
+      { Petunjuk: '3. TP1, TP2, TP3 = nilai Tujuan Pembelajaran (angka 0-100).' },
+      { Petunjuk: '   Bisa tambah kolom TP4, TP5, ... sesuai jumlah TP.' },
+      { Petunjuk: '4. PTS = Penilaian Tengah Semester (0-100). Isi 0 jika tidak ada.' },
+      { Petunjuk: '5. PAS = Penilaian Akhir Semester (0-100). Isi 0 jika tidak ada.' },
+      { Petunjuk: '6. Praktek, Proyek, Portofolio = nilai keterampilan (0-100).' },
+      { Petunjuk: '7. NA dan Predikat dihitung otomatis — tidak perlu diisi.' },
+      { Petunjuk: '8. Simpan sebagai .xlsx sebelum diupload.' },
       { Petunjuk: '' },
       { Petunjuk: `Kelas        : ${kelas}` },
       { Petunjuk: `Semester     : ${semester}` },
