@@ -120,7 +120,8 @@ exports.syncPartial = async (req, res) => {
   try {
     let result;
     if (type === 'walikelas') {
-      // Pull kelas data dari SDMS lalu jalankan syncWaliKelas untuk setiap kelas
+      // Pull kelas data dari SDMS lalu update Kelas.waliKelas dan mirror ke Guru
+      const { Kelas } = require('../models/index');
       const data = await pullFromSdms();
       let synced = 0, failed = 0, errors = [];
       for (const k of (data.kelas || [])) {
@@ -128,6 +129,11 @@ exports.syncPartial = async (req, res) => {
           const kelasNama  = (k.nama      || '').trim();
           const waliNama   = (k.waliKelas || k.wali_kelas || '').trim();
           if (!kelasNama) { failed++; continue; }
+          // Update Kelas.waliKelas first, then mirror to Guru
+          await Kelas.update(
+            { waliKelas: waliNama },
+            { where: { nama: kelasNama, guruId: null } }
+          );
           await syncWaliKelas(kelasNama, waliNama);
           synced++;
         } catch (e) {
@@ -253,10 +259,17 @@ async function handleWebhookDelete(entity, items) {
   }
 
   if (entity === 'walikelas') {
-    // Clear homeroom assignment
+    // Clear homeroom assignment: update Kelas.waliKelas then clear Guru flags
+    const { Kelas } = require('../models/index');
     for (const item of items) {
       const kelasNama = (item.kelasNama || '').trim();
-      if (kelasNama) await syncWaliKelas(kelasNama, '');
+      if (kelasNama) {
+        await Kelas.update(
+          { waliKelas: '' },
+          { where: { nama: kelasNama, guruId: null } }
+        );
+        await syncWaliKelas(kelasNama, '');
+      }
     }
     return { affected: items.length };
   }

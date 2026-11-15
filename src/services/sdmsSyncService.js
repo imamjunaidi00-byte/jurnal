@@ -551,6 +551,7 @@ async function fullSync() {
     kelas:     null,
     siswa:     null,
     guru:      null,
+    walikelas: null,
     errors:    [],
   };
 
@@ -570,6 +571,25 @@ async function fullSync() {
     } else {
       result.kelas = { created: 0, updated: 0, failed: 0 };
     }
+
+    // 2b. Explicit walikelas mirroring step — ensure Kelas.waliKelas and
+    //     Guru.isWaliKelas/kelasWali are fully consistent after kelas upsert.
+    //     (upsertKelas already calls syncWaliKelas per item; this step runs
+    //     the same mirror again to populate result.walikelas for callers.)
+    const wkResults = { synced: 0, failed: 0 };
+    for (const k of (data.kelas || [])) {
+      const kelasNama = (k.nama      || '').trim();
+      const waliNama  = (k.waliKelas || k.wali_kelas || '').trim();
+      if (!kelasNama) { wkResults.failed++; continue; }
+      try {
+        await syncWaliKelas(kelasNama, waliNama);
+        wkResults.synced++;
+      } catch (e) {
+        wkResults.failed++;
+        result.errors.push(`walikelas ${kelasNama}: ${e.message}`);
+      }
+    }
+    result.walikelas = wkResults;
 
     // 3. Upsert Siswa (termasuk mark-as-exited untuk siswa yang tidak ada di SDMS)
     if (data.siswa?.length) {
