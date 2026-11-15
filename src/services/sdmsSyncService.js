@@ -92,6 +92,54 @@ async function pullFromSdms() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// SYNC: Walikelas — mirror Kelas.waliKelas ke Guru.isWaliKelas / Guru.kelasWali
+// ══════════════════════════════════════════════════════════════════════════════
+/**
+ * syncWaliKelas(kelasNama, waliKelasNama)
+ *
+ * Called once per kelas after the Kelas row is saved.
+ * 1. If waliKelasNama is empty → clear any Guru whose kelasWali === kelasNama.
+ * 2. Find Guru where LOWER(nama) = LOWER(waliKelasNama).
+ * 3. If found: set isWaliKelas=true, kelasWali=kelasNama.
+ * 4. Clear isWaliKelas / kelasWali on any OTHER Guru whose kelasWali === kelasNama.
+ *
+ * @param {string} kelasNama       - kelas.nama (e.g. "X RPL 1")
+ * @param {string} waliKelasNama   - kelas.waliKelas from SDMS (may be empty)
+ */
+async function syncWaliKelas(kelasNama, waliKelasNama) {
+  if (!waliKelasNama) {
+    // Remove stale homeroom flags for this class only
+    await Guru.update(
+      { isWaliKelas: false, kelasWali: '' },
+      { where: { kelasWali: kelasNama } }
+    );
+    return;
+  }
+
+  // Find the target guru (case-insensitive)
+  const target = await Guru.findOne({
+    where: sequelize.where(
+      sequelize.fn('LOWER', sequelize.col('nama')),
+      waliKelasNama.toLowerCase()
+    ),
+  });
+
+  // Clear stale assignments on other gurus for this class
+  const clearWhere = { kelasWali: kelasNama };
+  if (target) clearWhere.id = { [Op.ne]: target.id };
+  await Guru.update(
+    { isWaliKelas: false, kelasWali: '' },
+    { where: clearWhere }
+  );
+
+  if (target) {
+    await target.update({ isWaliKelas: true, kelasWali: kelasNama });
+  } else {
+    console.warn(`[SDMS Sync] syncWaliKelas: Guru "${waliKelasNama}" tidak ditemukan untuk kelas "${kelasNama}" — akan dicoba lagi saat sync berikutnya.`);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // UPSERT: Kelas
 // ══════════════════════════════════════════════════════════════════════════════
 async function upsertKelas(kelasList) {
@@ -128,6 +176,9 @@ async function upsertKelas(kelasList) {
         });
         created++;
       }
+
+      // Mirror walikelas assignment to Guru table
+      await syncWaliKelas(nama, waliKelas);
     } catch (e) {
       failed++;
       errors.push({ item: k.nama, error: e.message });
@@ -570,4 +621,4 @@ async function testConnection() {
   return json;
 }
 
-module.exports = { fullSync, syncOne, testConnection, pullFromSdms };
+module.exports = { fullSync, syncOne, testConnection, pullFromSdms, upsertKelas, upsertSiswa, upsertGuru, syncWaliKelas };

@@ -173,6 +173,10 @@ connectDB().then(async () => {
     console.warn('⚠️  Auto-migrate warning:', migrateErr.message);
   }
 
+  // ─── SDMS Auto-Sync Scheduler ──────────────────────────────────────────────
+  const { startScheduler } = require('./src/services/sdmsSyncScheduler');
+  startScheduler();
+
   const server = app.listen(PORT, () => {
     console.log(`\n🚀 E-Journal SMK v2.0 berjalan di port ${PORT}`);
     console.log(`📱 Akses: http://localhost:${PORT}`);
