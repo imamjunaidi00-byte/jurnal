@@ -88,6 +88,9 @@ app.use('/api/auth', rateLimit(15), require('./src/routes/auth'));
 // Sync dari SDMS — hanya admin
 app.use('/api/sync', require('./src/routes/sync'));
 
+// Alias webhook dari SDMS (format event-driven SDMS: POST /api/webhooks/sdms)
+app.use('/api/webhooks', require('./src/routes/sdmsWebhook'));
+
 // Admin
 app.use('/api/admin',        require('./src/routes/admin'));
 app.use('/api/admin/kelas',  adminOnly, require('./src/routes/kelas'));
