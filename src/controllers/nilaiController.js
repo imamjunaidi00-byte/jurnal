@@ -11,12 +11,14 @@ const { Op, fn, col } = require('sequelize');
 function hitungNilaiRow(row) {
   let rataTP = 0;
 
-  // Coba parse tpList — sistem TP baru
+  // Coba parse tpList — sistem TP baru, filter nilai 0
   try {
     const tpList = typeof row.tpList === 'string' ? JSON.parse(row.tpList) : (row.tpList || []);
     if (Array.isArray(tpList) && tpList.length > 0) {
-      const totalTP = tpList.reduce((sum, tp) => sum + (Number(tp.nilai) || 0), 0);
-      rataTP = Math.round(totalTP / tpList.length);
+      const tpVals = tpList.map(tp => Number(tp.nilai) || 0).filter(v => v > 0);
+      if (tpVals.length > 0) {
+        rataTP = Math.round(tpVals.reduce((a, b) => a + b, 0) / tpVals.length);
+      }
     }
   } catch(e) {}
 
@@ -36,7 +38,11 @@ function hitungNilaiRow(row) {
   const praktek    = Math.min(100, Math.max(0, Number(row.praktek    || 0)));
   const proyek     = Math.min(100, Math.max(0, Number(row.proyek     || 0)));
   const portofolio = Math.min(100, Math.max(0, Number(row.portofolio || 0)));
-  const naKeterampilan = Math.round((praktek + proyek + portofolio) / 3);
+  // Hanya rata-rata komponen keterampilan yang diisi (> 0)
+  const skillVals  = [praktek, proyek, portofolio].filter(v => v > 0);
+  const naKeterampilan = skillVals.length > 0
+    ? Math.round(skillVals.reduce((a, b) => a + b, 0) / skillVals.length)
+    : 0;
 
   const naAkhir = Math.round((nilaiAkhir * 0.6) + (naKeterampilan * 0.4));
 

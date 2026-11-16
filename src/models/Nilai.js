@@ -6,14 +6,16 @@ const { sequelize } = require('../config/database');
 // Hitung nilai turunan
 function hitungNilai(instance) {
   let nilaiAkhir = 0;
-  
+
   // Coba parse tpList (Tujuan Pembelajaran) — sistem baru
   try {
     const tpList = typeof instance.tpList === 'string' ? JSON.parse(instance.tpList) : (instance.tpList || []);
     if (Array.isArray(tpList) && tpList.length > 0) {
-      // Hitung rata-rata nilai TP
-      const totalTP = tpList.reduce((sum, tp) => sum + (Number(tp.nilai) || 0), 0);
-      nilaiAkhir = Math.round(totalTP / tpList.length);
+      // Hanya hitung TP yang memang diisi (nilai > 0) agar kolom kosong tidak menekan rata-rata
+      const tpVals = tpList.map(tp => Number(tp.nilai) || 0).filter(v => v > 0);
+      if (tpVals.length > 0) {
+        nilaiAkhir = Math.round(tpVals.reduce((a, b) => a + b, 0) / tpVals.length);
+      }
     }
   } catch(e) {}
 
@@ -25,11 +27,15 @@ function hitungNilai(instance) {
     nilaiAkhir = Math.round((uh * 0.2) + (pts * 0.3) + (pas * 0.5));
   }
 
-  // Keterampilan tetap sama (Praktek + Proyek + Portofolio)
+  // Keterampilan — hanya rata-rata komponen yang diisi (> 0)
+  // agar satu komponen yang diisi tidak terbagi oleh komponen kosong
   const praktek    = Number(instance.praktek    || 0);
   const proyek     = Number(instance.proyek     || 0);
   const portofolio = Number(instance.portofolio || 0);
-  const naKeterampilan = Math.round((praktek + proyek + portofolio) / 3);
+  const skillVals  = [praktek, proyek, portofolio].filter(v => v > 0);
+  const naKeterampilan = skillVals.length > 0
+    ? Math.round(skillVals.reduce((a, b) => a + b, 0) / skillVals.length)
+    : 0;
 
   // NA Akhir = 60% nilaiAkhir (dari TP atau UH) + 40% keterampilan
   const naAkhir = Math.round((nilaiAkhir * 0.6) + (naKeterampilan * 0.4));
