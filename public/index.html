@@ -3517,7 +3517,8 @@
         function getRataSkill(d, type) {
             const cols = skillColumns[type];
             if (!cols.length) return 0;
-            const vals = cols.map(c => Number(d[type + '_' + c.id] || 0));
+            const vals = cols.map(c => Number(d[type + '_' + c.id] || 0)).filter(v => v > 0);
+            if (!vals.length) return 0;
             return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
         }
 
@@ -3584,7 +3585,7 @@
         function hitungNilaiDetailRow(siswaId) {
             const d = detailNilaiData[siswaId] || {};
             // Hitung rata-rata TP
-            const tpVals = tpColumns.map(tp => Number(d['tp_' + tp.id] || 0));
+            const tpVals = tpColumns.map(tp => Number(d['tp_' + tp.id] || 0)).filter(v => v > 0);
             const rataTP = tpVals.length > 0
                 ? Math.round(tpVals.reduce((a, b) => a + b, 0) / tpVals.length)
                 : 0;
@@ -3867,7 +3868,7 @@
                     nilai: Math.min(100, Math.max(0, Number(d['tp_' + tp.id] || 0))),
                 }));
 
-                const tpVals = tpList.map(tp => tp.nilai);
+                const tpVals = tpList.map(tp => tp.nilai).filter(v => v > 0);
                 const nilaiAkhir = tpVals.length > 0
                     ? Math.round(tpVals.reduce((a, b) => a + b, 0) / tpVals.length)
                     : 0;
