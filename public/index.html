@@ -3850,8 +3850,12 @@
             const kelas = document.getElementById('detail-kelas').value;
             const siswaKelas = dataSiswa.filter(s => s.kelas === kelas);
             if (!siswaKelas.length) return showToast('Tidak ada siswa', 'error');
-            const mapelArr = Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel : [];
-            const mapel = mapelArr.length ? mapelArr[0] : '';
+
+            // Ambil mapel dari kelasMapelMapping terlebih dahulu (lebih akurat per kelas),
+            // fallback ke mapel pertama guru jika mapping belum diset.
+            const mapel = CONFIG.kelasMapelMapping?.[kelas] ||
+                (Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel[0] : '') || '';
+            if (!mapel) return showToast('Mata pelajaran belum diset. Atur di menu Mapel & Kelas.', 'error');
 
             const data = siswaKelas.map(s => {
                 const d = detailNilaiData[s.id] || {};
@@ -3872,6 +3876,9 @@
                 const proyek     = getRataSkill(d, 'proyek');
                 const portofolio = getRataSkill(d, 'portofolio');
 
+                // Catatan: pts dan pas TIDAK dikirim agar tidak menimpa nilai yang
+                // sudah diisi di tab Kelola Nilai. Tab Detail hanya mengurus
+                // nilai huruf (uh, praktek, proyek, portofolio) beserta detailnya.
                 return {
                     siswaId: s.id, kelas,
                     semester: CONFIG.semester, tahunAjaran: CONFIG.tahunAjaran,

@@ -106,19 +106,29 @@ exports.bulkSave = async (req, res) => {
       return row;
     });
 
+    // Validasi field wajib
+    const invalid = rows.find(r => !r.siswaId || !r.kelas || !r.semester || !r.tahunAjaran || !r.mataPelajaran);
+    if (invalid) return fail(res, 'Setiap item harus memiliki siswaId, kelas, semester, tahunAjaran, dan mataPelajaran.', 400);
+
     // Upsert — hanya update field yang MEMANG dikirim item.
     // Penting: uhDetail & tampilkan tidak boleh ditimpa kalau item tidak membawanya
     // (mis. simpanNilai/publishSemuaNilai dari tab Kelola Nilai), agar detail nilai
     // dari tab Input Detail tidak hilang.
-    const baseFields = ['uh','pts','pas','tpList','nilaiAkhir','praktek','proyek','portofolio',
+    // Field yang selalu di-update saat upsert
+    const baseFields = ['uh','tpList','nilaiAkhir','praktek','proyek','portofolio',
                         'naPengetahuan','naKeterampilan','naAkhir','predikat'];
-    const optionalFields = ['deskripsi','uhDetail','praktekGrade','proyekGrade',
+    // Field yang hanya di-update kalau memang dikirim oleh frontend
+    // pts dan pas ikut ke sini agar tab Input Detail tidak menimpa nilai
+    // PTS/PAS yang sudah diisi di tab Kelola Nilai.
+    const optionalFields = ['pts','pas','deskripsi','uhDetail','praktekGrade','proyekGrade',
                             'portofolioGrade','tampilkan','guru'];
     const sentFields = new Set(
       items.flatMap(it => Object.keys(it || {}))
     );
+    // baseFields dikurangi pts & pas (sudah masuk optional)
+    const coreFields = baseFields.filter(f => !['pts','pas'].includes(f));
     const fields = [
-      ...baseFields,
+      ...coreFields,
       ...optionalFields.filter(f => sentFields.has(f)),
       'updatedAt',
     ];
