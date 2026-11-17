@@ -918,7 +918,7 @@
                         <div class="flex flex-wrap gap-2 w-full lg:w-auto">
                             <select id="nilai-kelas" onchange="onNilaiKelasChange()" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 text-sm shadow-sm"></select>
                             <select id="nilai-mapel" onchange="loadNilai()" class="hidden px-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 text-sm shadow-sm"></select>
-                            <select id="nilai-semester-print" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 text-sm shadow-sm">
+                            <select id="nilai-semester-print" onchange="loadNilai()" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 text-sm shadow-sm">
                                 <option value="Ganjil">Semester Ganjil</option>
                                 <option value="Genap">Semester Genap</option>
                             </select>
@@ -5947,12 +5947,13 @@
         async function loadNilai() {
             const kelas = document.getElementById('nilai-kelas').value;
             const mapel = document.getElementById('nilai-mapel')?.value || '';
+            const semester = document.getElementById('nilai-semester-print')?.value || CONFIG.semester;
             const mapelParam = mapel ? `&mataPelajaran=${encodeURIComponent(mapel)}` : '';
             try {
                 const [resNilai, resAbsen, resSikap] = await Promise.all([
-                    api.get(`/api/nilai?kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}`),
-                    api.get(`/api/absensi/rekap?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`),
-                    api.get(`/api/sikap?kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`)
+                    api.get(`/api/nilai?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}`),
+                    api.get(`/api/absensi/rekap?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`),
+                    api.get(`/api/sikap?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`)
                 ]);
                 if (resNilai.success) {
                     nilaiData = {};
@@ -6127,11 +6128,12 @@
             // Simpan ke DB sekaligus
             const mapel = document.getElementById('nilai-mapel')?.value ||
                 (Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel[0] : '') || '';
+            const semester = document.getElementById('nilai-semester-print')?.value || CONFIG.semester;
             const data = siswaKelas.map(s => {
                 const n = nilaiData[s.id] || {};
                 return {
                     siswaId: s.id, kelas,
-                    semester: CONFIG.semester, tahunAjaran: CONFIG.tahunAjaran,
+                    semester, tahunAjaran: CONFIG.tahunAjaran,
                     mataPelajaran: mapel, guru: CONFIG.guru.nama,
                     praktek: n.praktek||0, proyek: n.proyek||0, portofolio: n.portofolio||0,
                     tampilkan: status
@@ -6170,12 +6172,13 @@
                 CONFIG.kelasMapelMapping?.[kelas] ||
                 (Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel[0] : CONFIG.guru.mapel) || '';
             if (!mapel) return showToast('Mata pelajaran belum diatur untuk kelas ini. Silakan atur di Pengaturan → Profil atau hubungi admin.', 'error');
+            const semester = document.getElementById('nilai-semester-print')?.value || CONFIG.semester;
             const data = siswaKelas.map(s => {
                 const n = nilaiData[s.id] || {};
                 return { 
                     siswaId: s.id, 
                     kelas, 
-                    semester: CONFIG.semester, 
+                    semester, 
                     tahunAjaran: CONFIG.tahunAjaran, 
                     mataPelajaran: mapel, 
                     guru: CONFIG.guru.nama, 
@@ -6338,12 +6341,13 @@
             const kelas = document.getElementById('nilai-kelas').value;
             if (!kelas) return showToast('Pilih kelas terlebih dahulu', 'error');
             const mapel = document.getElementById('nilai-mapel')?.value || '';
+            const semester = document.getElementById('nilai-semester-print')?.value || CONFIG.semester;
             const safeKelas = kelas.replace(/[\s\/\\]/g, '_');
             const mapelParam = mapel ? `&mataPelajaran=${encodeURIComponent(mapel)}` : '';
             showToast('⏳ Menyiapkan file Excel nilai...');
             await downloadWithAuth(
-                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}`,
-                `nilai_${safeKelas}_${CONFIG.semester}.xlsx`
+                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}`,
+                `nilai_${safeKelas}_${semester}.xlsx`
             );
         }
 
@@ -6351,12 +6355,13 @@
             const kelas = document.getElementById('nilai-kelas').value;
             if (!kelas) return showToast('Pilih kelas terlebih dahulu', 'error');
             const mapel = document.getElementById('nilai-mapel')?.value || '';
+            const semester = document.getElementById('nilai-semester-print')?.value || CONFIG.semester;
             const safeKelas = kelas.replace(/[\s\/\\]/g, '_');
             const mapelParam = mapel ? `&mataPelajaran=${encodeURIComponent(mapel)}` : '';
             showToast('⏳ Menyiapkan file Excel nilai...');
             await downloadWithAuth(
-                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}`,
-                `nilai_${safeKelas}_${CONFIG.semester}.xlsx`
+                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}`,
+                `nilai_${safeKelas}_${semester}.xlsx`
             );
         }
 
@@ -6377,14 +6382,15 @@
         async function downloadTemplateNilai() {
             const kelas = document.getElementById('nilai-kelas').value;
             if (!kelas) return showToast('Pilih kelas terlebih dahulu', 'error');
+            const semester = document.getElementById('nilai-semester-print')?.value || CONFIG.semester;
             const btn = document.getElementById('btn-download-template-nilai');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memuat...';
             try {
                 const safeKelas = kelas.replace(/[\s\/\\]/g, '_');
                 await downloadWithAuth(
-                    `/api/nilai/template?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`,
-                    `template_nilai_${safeKelas}_${CONFIG.semester}.xlsx`
+                    `/api/nilai/template?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`,
+                    `template_nilai_${safeKelas}_${semester}.xlsx`
                 );
             } finally {
                 btn.disabled = false;
@@ -6446,7 +6452,7 @@
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
                 formData.append('kelas', kelas);
-                formData.append('semester', CONFIG.semester);
+                formData.append('semester', document.getElementById('nilai-semester-print')?.value || CONFIG.semester);
                 formData.append('tahunAjaran', CONFIG.tahunAjaran);
                 if (mapelOverride) formData.append('mataPelajaran', mapelOverride);
 
@@ -9332,6 +9338,9 @@
          * Dipanggil saat simpanProfil() dan saat loadConfigFromServer selesai.
          */
         function syncSemesterTahunAjaran(semester, tahun) {
+            // Nilai tab — semester selector (juga mengontrol load/import/export)
+            const elNilaiSmt = document.getElementById('nilai-semester-print');
+            if (elNilaiSmt) elNilaiSmt.value = semester;
             // Filter jadwal mengajar
             const elJadwalSmt = document.getElementById('filter-semester-jadwal');
             const elJadwalThn = document.getElementById('filter-tahun-jadwal');
