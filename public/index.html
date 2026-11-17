@@ -916,7 +916,8 @@
                             <p class="text-sm text-gray-500 mt-1">Input dan cetak nilai per semester</p>
                         </div>
                         <div class="flex flex-wrap gap-2 w-full lg:w-auto">
-                            <select id="nilai-kelas" onchange="loadNilai()" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 text-sm shadow-sm"></select>
+                            <select id="nilai-kelas" onchange="onNilaiKelasChange()" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 text-sm shadow-sm"></select>
+                            <select id="nilai-mapel" onchange="loadNilai()" class="hidden px-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 text-sm shadow-sm"></select>
                             <select id="nilai-semester-print" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-primary-500 text-sm shadow-sm">
                                 <option value="Ganjil">Semester Ganjil</option>
                                 <option value="Genap">Semester Genap</option>
@@ -3139,6 +3140,7 @@
             if (td) td.value = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
             await loadSiswa();
             loadAbsensi();  // dataSiswa sudah terisi karena loadSiswa() di-await
+            { const kInit = document.getElementById('nilai-kelas')?.value || ''; if (kInit) updateNilaiMapelDropdown(kInit); }
             loadNilai();
             loadSikap();
             loadSchedule();
@@ -3896,7 +3898,7 @@
                     showToast('✅ Nilai TP berhasil disimpan!');
                     // Sync kelas ke tab Kelola Nilai lalu reload
                     const nilaiKelasEl = document.getElementById('nilai-kelas');
-                    if (nilaiKelasEl) nilaiKelasEl.value = kelas;
+                    if (nilaiKelasEl) { nilaiKelasEl.value = kelas; updateNilaiMapelDropdown(kelas); }
                     await loadNilai();
                     showToast(`✅ Tersimpan! Rata-rata TP sudah masuk ke Kelola Nilai.`);
                 } else showToast(res.message || 'Gagal menyimpan', 'error');
@@ -5896,11 +5898,59 @@
         // ── NILAI ────────────────────────────────────
         let absensiRekap = {}; // { siswaId: { hadir, sakit, izin, alpha, pct } }
 
+        // Helper: build list of mapel for a kelas from dataGuruKelas
+        function getMapelListForKelas(kelas) {
+            const gkData = window.dataGuruKelas || [];
+            const mapelSet = new Set();
+            gkData.forEach(gk => {
+                if (gk.kelasRef?.nama === kelas && gk.mapelNama) mapelSet.add(gk.mapelNama);
+            });
+            // Fallback: single entry from kelasMapelMapping
+            if (!mapelSet.size && CONFIG.kelasMapelMapping?.[kelas]) {
+                mapelSet.add(CONFIG.kelasMapelMapping[kelas]);
+            }
+            // Fallback: guru mapel list
+            if (!mapelSet.size) {
+                const mapelArr = Array.isArray(CONFIG.guru?.mapel) ? CONFIG.guru.mapel : (CONFIG.guru?.mapel ? [CONFIG.guru.mapel] : []);
+                mapelArr.forEach(m => { if (m) mapelSet.add(m); });
+            }
+            return [...mapelSet];
+        }
+
+        // Update nilai-mapel dropdown and show/hide it; return selected mapel
+        function updateNilaiMapelDropdown(kelas) {
+            const mapelList = getMapelListForKelas(kelas);
+            const sel = document.getElementById('nilai-mapel');
+            if (!sel) return mapelList[0] || '';
+            const prev = sel.value;
+            if (mapelList.length <= 1) {
+                // Single mapel — hide dropdown, just set value
+                sel.innerHTML = mapelList.length ? `<option value="${mapelList[0]}">${mapelList[0]}</option>` : '';
+                sel.value = mapelList[0] || '';
+                sel.classList.add('hidden');
+            } else {
+                sel.innerHTML = mapelList.map(m => `<option value="${m}"${m === prev ? ' selected' : ''}>${m}</option>`).join('');
+                // Restore previous selection if still valid
+                if (!mapelList.includes(sel.value)) sel.value = mapelList[0];
+                sel.classList.remove('hidden');
+            }
+            return sel.value;
+        }
+
+        // Called when nilai-kelas changes
+        function onNilaiKelasChange() {
+            const kelas = document.getElementById('nilai-kelas').value;
+            updateNilaiMapelDropdown(kelas);
+            loadNilai();
+        }
+
         async function loadNilai() {
             const kelas = document.getElementById('nilai-kelas').value;
+            const mapel = document.getElementById('nilai-mapel')?.value || '';
+            const mapelParam = mapel ? `&mataPelajaran=${encodeURIComponent(mapel)}` : '';
             try {
                 const [resNilai, resAbsen, resSikap] = await Promise.all([
-                    api.get(`/api/nilai?kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`),
+                    api.get(`/api/nilai?kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}`),
                     api.get(`/api/absensi/rekap?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`),
                     api.get(`/api/sikap?kelas=${encodeURIComponent(kelas)}&semester=${CONFIG.semester}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`)
                 ]);
@@ -6075,8 +6125,8 @@
             renderNilaiTable(kelas);
 
             // Simpan ke DB sekaligus
-            const mapelArr = Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel : [];
-            const mapel = mapelArr.length ? mapelArr[0] : '';
+            const mapel = document.getElementById('nilai-mapel')?.value ||
+                (Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel[0] : '') || '';
             const data = siswaKelas.map(s => {
                 const n = nilaiData[s.id] || {};
                 return {
@@ -6114,9 +6164,10 @@
             const kelas = document.getElementById('nilai-kelas').value;
             const siswaKelas = dataSiswa.filter(s => s.kelas === kelas);
             if (!siswaKelas.length) return showToast('Tidak ada siswa di kelas ini', 'error');
-            // Prioritas: mapping kelas→mapel (akurat untuk guru multi-kelas/mapel),
-            // fallback ke mapel pertama dari profil guru
-            const mapel = CONFIG.kelasMapelMapping?.[kelas] ||
+            // Prioritas: dropdown nilai-mapel (akurat untuk guru multi-mapel),
+            // fallback ke mapping kelas→mapel, lalu ke mapel pertama dari profil guru
+            const mapel = document.getElementById('nilai-mapel')?.value ||
+                CONFIG.kelasMapelMapping?.[kelas] ||
                 (Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel[0] : CONFIG.guru.mapel) || '';
             if (!mapel) return showToast('Mata pelajaran belum diatur untuk kelas ini. Silakan atur di Pengaturan → Profil atau hubungi admin.', 'error');
             const data = siswaKelas.map(s => {
@@ -6153,8 +6204,9 @@
             const bk = (CONFIG.bobotNilai?.keterampilan ?? 40) / 100;
             const bh = (CONFIG.bobotNilai?.kehadiran ?? 0) / 100;
 
-            // Auto mapel dari mapping kelas
-            const mapel = CONFIG.kelasMapelMapping?.[kelas] ||
+            // Auto mapel dari dropdown nilai-mapel, fallback ke mapping kelas
+            const mapel = document.getElementById('nilai-mapel')?.value ||
+                CONFIG.kelasMapelMapping?.[kelas] ||
                 (Array.isArray(CONFIG.guru.mapel) ? CONFIG.guru.mapel.join(', ') : CONFIG.guru.mapel) || '-';
 
             const rows = siswaKelas.map((s, i) => {
@@ -6285,10 +6337,12 @@
         async function downloadNilai() {
             const kelas = document.getElementById('nilai-kelas').value;
             if (!kelas) return showToast('Pilih kelas terlebih dahulu', 'error');
+            const mapel = document.getElementById('nilai-mapel')?.value || '';
             const safeKelas = kelas.replace(/[\s\/\\]/g, '_');
+            const mapelParam = mapel ? `&mataPelajaran=${encodeURIComponent(mapel)}` : '';
             showToast('⏳ Menyiapkan file Excel nilai...');
             await downloadWithAuth(
-                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`,
+                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}`,
                 `nilai_${safeKelas}_${CONFIG.semester}.xlsx`
             );
         }
@@ -6296,10 +6350,12 @@
         async function exportNilaiExcel() {
             const kelas = document.getElementById('nilai-kelas').value;
             if (!kelas) return showToast('Pilih kelas terlebih dahulu', 'error');
+            const mapel = document.getElementById('nilai-mapel')?.value || '';
             const safeKelas = kelas.replace(/[\s\/\\]/g, '_');
+            const mapelParam = mapel ? `&mataPelajaran=${encodeURIComponent(mapel)}` : '';
             showToast('⏳ Menyiapkan file Excel nilai...');
             await downloadWithAuth(
-                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}`,
+                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(CONFIG.semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}`,
                 `nilai_${safeKelas}_${CONFIG.semester}.xlsx`
             );
         }
@@ -10113,6 +10169,11 @@ async function refreshSetelahKelasUpdate() {
       const el = document.getElementById(id);
       if (el) el.innerHTML = kelasopts || fallback;
     });
+    // Update mapel dropdown sesuai kelas yang terpilih di nilai-kelas
+    const nilaiKelasEl2 = document.getElementById('nilai-kelas');
+    if (nilaiKelasEl2?.value && typeof updateNilaiMapelDropdown === 'function') {
+      updateNilaiMapelDropdown(nilaiKelasEl2.value);
+    }
 
     // 5. Update sidebar tags kelas
     const tagsEl = document.getElementById('sidebar-kelas-tags');
