@@ -3621,6 +3621,9 @@
             const current = col?.deskripsi || '';
             document.getElementById('modal-judul-title').textContent = titleLabel;
             document.getElementById('modal-judul-input').value = current;
+            // Info "aktif setelah Simpan Nilai" hanya relevan untuk TP
+            // (judul skill dikirim langsung dari localStorage saat export).
+            document.getElementById('modal-judul-note-tp').style.display = (type === 'tp') ? '' : 'none';
             document.getElementById('modal-judul-kolom').classList.remove('hidden');
             setTimeout(() => document.getElementById('modal-judul-input').focus(), 50);
         }
@@ -3908,29 +3911,29 @@
                 const judul = tp.deskripsi || '';
                 const judulShort = judul.length > 12 ? judul.slice(0,12)+'…' : judul;
                 const headerText = judul ? `${escHtml(tp.kode)}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${escHtml(judulShort)}</span>` : escHtml(tp.kode);
-                const titleAttr = judul ? ` title="${escHtml(judul)}"` : '';
-                return `<th class="px-2 py-3 text-center font-semibold bg-blue-50 text-blue-700 text-xs"${titleAttr}>${headerText}</th>`;
+                const titleAttr = judul ? ` title="${escHtml(judul)}"` : ` title="Klik untuk beri judul ${escHtml(tp.kode)}"`;
+                return `<th class="px-2 py-3 text-center font-semibold bg-blue-50 text-blue-700 text-xs cursor-pointer hover:bg-blue-100"${titleAttr} onclick="editJudulKolom('tp',${tp.id})">${headerText}</th>`;
             }).join('');
             const praktekHeaders = skillColumns.praktek.map(c => {
                 const judul = c.deskripsi || '';
                 const judulShort = judul.length > 12 ? judul.slice(0,12)+'…' : judul;
                 const headerText = judul ? `${escHtml(c.kode)}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${escHtml(judulShort)}</span>` : escHtml(c.kode);
-                const titleAttr = judul ? ` title="${escHtml(judul)}"` : '';
-                return `<th class="px-2 py-3 text-center font-semibold bg-green-50 text-green-700 text-xs"${titleAttr}>${headerText}</th>`;
+                const titleAttr = judul ? ` title="${escHtml(judul)}"` : ` title="Klik untuk beri judul ${escHtml(c.kode)}"`;
+                return `<th class="px-2 py-3 text-center font-semibold bg-green-50 text-green-700 text-xs cursor-pointer hover:bg-green-100"${titleAttr} onclick="editJudulKolom('praktek',${c.id})">${headerText}</th>`;
             }).join('');
             const proyekHeaders = skillColumns.proyek.map(c => {
                 const judul = c.deskripsi || '';
                 const judulShort = judul.length > 12 ? judul.slice(0,12)+'…' : judul;
                 const headerText = judul ? `${escHtml(c.kode)}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${escHtml(judulShort)}</span>` : escHtml(c.kode);
-                const titleAttr = judul ? ` title="${escHtml(judul)}"` : '';
-                return `<th class="px-2 py-3 text-center font-semibold bg-purple-50 text-purple-700 text-xs"${titleAttr}>${headerText}</th>`;
+                const titleAttr = judul ? ` title="${escHtml(judul)}"` : ` title="Klik untuk beri judul ${escHtml(c.kode)}"`;
+                return `<th class="px-2 py-3 text-center font-semibold bg-purple-50 text-purple-700 text-xs cursor-pointer hover:bg-purple-100"${titleAttr} onclick="editJudulKolom('proyek',${c.id})">${headerText}</th>`;
             }).join('');
             const portoHeaders = skillColumns.portofolio.map(c => {
                 const judul = c.deskripsi || '';
                 const judulShort = judul.length > 12 ? judul.slice(0,12)+'…' : judul;
                 const headerText = judul ? `${escHtml(c.kode)}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${escHtml(judulShort)}</span>` : escHtml(c.kode);
-                const titleAttr = judul ? ` title="${escHtml(judul)}"` : '';
-                return `<th class="px-2 py-3 text-center font-semibold bg-pink-50 text-pink-700 text-xs"${titleAttr}>${headerText}</th>`;
+                const titleAttr = judul ? ` title="${escHtml(judul)}"` : ` title="Klik untuk beri judul ${escHtml(c.kode)}"`;
+                return `<th class="px-2 py-3 text-center font-semibold bg-pink-50 text-pink-700 text-xs cursor-pointer hover:bg-pink-100"${titleAttr} onclick="editJudulKolom('portofolio',${c.id})">${headerText}</th>`;
             }).join('');
 
             header.innerHTML = `
@@ -6488,8 +6491,13 @@
             const safeKelas = kelas.replace(/[\s\/\\]/g, '_');
             const mapelParam = mapel ? `&mataPelajaran=${encodeURIComponent(mapel)}` : '';
             showToast('⏳ Menyiapkan file Excel nilai...');
+            const skillJudulMap1 = {};
+            ['praktek','proyek','portofolio'].forEach(type => {
+                (skillColumns[type] || []).forEach(c => { if (c.deskripsi) skillJudulMap1[c.kode] = c.deskripsi; });
+            });
+            const skillJudulParam1 = Object.keys(skillJudulMap1).length ? `&skillJudul=${encodeURIComponent(JSON.stringify(skillJudulMap1))}` : '';
             await downloadWithAuth(
-                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}`,
+                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}${skillJudulParam1}`,
                 `nilai_${safeKelas}_${semester}.xlsx`
             );
         }
@@ -6502,8 +6510,13 @@
             const safeKelas = kelas.replace(/[\s\/\\]/g, '_');
             const mapelParam = mapel ? `&mataPelajaran=${encodeURIComponent(mapel)}` : '';
             showToast('⏳ Menyiapkan file Excel nilai...');
+            const skillJudulMap2 = {};
+            ['praktek','proyek','portofolio'].forEach(type => {
+                (skillColumns[type] || []).forEach(c => { if (c.deskripsi) skillJudulMap2[c.kode] = c.deskripsi; });
+            });
+            const skillJudulParam2 = Object.keys(skillJudulMap2).length ? `&skillJudul=${encodeURIComponent(JSON.stringify(skillJudulMap2))}` : '';
             await downloadWithAuth(
-                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}`,
+                `/api/nilai/download?kelas=${encodeURIComponent(kelas)}&semester=${encodeURIComponent(semester)}&tahunAjaran=${encodeURIComponent(CONFIG.tahunAjaran)}${mapelParam}${skillJudulParam2}`,
                 `nilai_${safeKelas}_${semester}.xlsx`
             );
         }
@@ -10600,6 +10613,7 @@ async function hapusGuruKelas(id) {
                     onkeydown="if(event.key==='Enter'){event.preventDefault();simpanJudulKolom();}"
                     class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none">
                 <p class="text-xs text-gray-400 mt-1">Kosongkan untuk menghapus judul.</p>
+                <p id="modal-judul-note-tp" class="text-xs text-amber-500 mt-1">💡 Judul TP aktif di Excel setelah klik <strong>Simpan Nilai</strong>.</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="tutupJudulModal()" class="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition-colors">Batal</button>

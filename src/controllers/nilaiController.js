@@ -211,6 +211,24 @@ exports.download = async (req, res) => {
       });
     }
 
+    // Parse judul kolom skill dari query param (dikirim frontend dari localStorage)
+    let skillJudulMap = {};
+    if (req.query.skillJudul) {
+      try { skillJudulMap = JSON.parse(req.query.skillJudul); } catch (_) {}
+    }
+    // Bangun header kolom skill: "Praktek (judul1, judul2)" jika ada judul, fallback generik
+    const skillHeaderFor = (keyPrefix) => {
+      const judulList = Object.keys(skillJudulMap)
+        .filter(k => k.toLowerCase().startsWith(keyPrefix.toLowerCase()))
+        .sort((a, b) => (parseInt(a.replace(/\D/g,''), 10) || 0) - (parseInt(b.replace(/\D/g,''), 10) || 0))
+        .map(k => skillJudulMap[k])
+        .filter(Boolean);
+      return judulList.length ? ` (${judulList.join(', ')})` : '';
+    };
+    const praktekHeader    = `Praktek${skillHeaderFor('Praktek')}`;
+    const proyekHeader     = `Proyek${skillHeaderFor('Proyek')}`;
+    const portofolioHeader = `Portofolio${skillHeaderFor('Porto')}`;
+
     const data = list.map((n, i) => {
       const tpArr = allTpLists[i] || [];
       // Buat kolom TP1..TPn, kosong diisi 0
@@ -229,9 +247,9 @@ exports.download = async (req, res) => {
         ...tpCols,
         PTS:              n.pts || 0,
         PAS:              n.pas || 0,
-        Praktek:          n.praktek    || 0,
-        Proyek:           n.proyek     || 0,
-        Portofolio:       n.portofolio || 0,
+        [praktekHeader]:    n.praktek    || 0,
+        [proyekHeader]:     n.proyek     || 0,
+        [portofolioHeader]: n.portofolio || 0,
       };
     });
 
