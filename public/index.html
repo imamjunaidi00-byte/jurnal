@@ -3473,11 +3473,39 @@
         };
         let _skillIdCounter = { praktek: 1, proyek: 1, portofolio: 1 };
 
+        // Helper: escape HTML special chars before inserting into innerHTML
+        function escHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function _saveSkillColumns() {
+            try { localStorage.setItem('ejournal_skill_columns', JSON.stringify(skillColumns)); } catch(e) {}
+        }
+
+        function _loadSkillColumns() {
+            try {
+                const raw = localStorage.getItem('ejournal_skill_columns');
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                // Validate minimal structure
+                if (parsed && typeof parsed === 'object' && Array.isArray(parsed.praktek)) {
+                    skillColumns = parsed;
+                    // Rebuild _skillIdCounter from saved data
+                    ['praktek','proyek','portofolio'].forEach(type => {
+                        if (Array.isArray(skillColumns[type]) && skillColumns[type].length > 0) {
+                            _skillIdCounter[type] = Math.max(...skillColumns[type].map(c => c.id));
+                        }
+                    });
+                }
+            } catch(e) {}
+        }
+
         function tambahSkillCol(type) {
             _skillIdCounter[type]++;
             const n = _skillIdCounter[type];
             const cfg = skillConfig[type];
             skillColumns[type].push({ id: n, kode: cfg.prefix + n, label: cfg.label + ' ' + n });
+            _saveSkillColumns();
             renderSkillColumnsList(type);
             renderDetailNilaiTable(document.getElementById('detail-kelas').value);
         }
@@ -3490,6 +3518,7 @@
                 const d = detailNilaiData[sid];
                 if (d) delete d[type + '_' + id];
             });
+            _saveSkillColumns();
             renderSkillColumnsList(type);
             renderDetailNilaiTable(document.getElementById('detail-kelas').value);
         }
@@ -3502,8 +3531,8 @@
             el.innerHTML = cols.map(c => {
                 const judul = c.deskripsi || '';
                 const judulTrunc = judul.length > 20 ? judul.slice(0, 20) + '…' : judul;
-                const label = judul ? `${c.kode}: ${judulTrunc}` : c.kode;
-                const titleAttr = judul ? ` title="${judul.replace(/"/g,'&quot;')}"` : '';
+                const label = judul ? `${escHtml(c.kode)}: ${escHtml(judulTrunc)}` : escHtml(c.kode);
+                const titleAttr = judul ? ` title="${escHtml(judul)}"` : '';
                 return `<span class="inline-flex items-center gap-1 px-2 py-1 bg-${cfg.color}-100 text-${cfg.color}-800 rounded-lg text-xs font-medium cursor-pointer hover:bg-${cfg.color}-200 transition-colors"${titleAttr}>
                     <span onclick="editJudulKolom('${type}',${c.id})">${label}</span>
                     <button onclick="hapusSkillCol('${type}',${c.id})" ${cols.length <= 1 ? 'disabled class="opacity-30 cursor-not-allowed"' : `class="hover:text-red-500 transition-colors"`}>
@@ -3584,6 +3613,7 @@
             } else {
                 const col = skillColumns[type]?.find(c => c.id === id);
                 if (col) col.deskripsi = judul;
+                _saveSkillColumns();
                 renderSkillColumnsList(type);
             }
             renderDetailNilaiTable(document.getElementById('detail-kelas').value);
@@ -3597,8 +3627,8 @@
             el.innerHTML = tpColumns.map(tp => {
                 const judul = tp.deskripsi || '';
                 const judulTrunc = judul.length > 20 ? judul.slice(0, 20) + '…' : judul;
-                const label = judul ? `${tp.kode}: ${judulTrunc}` : tp.kode;
-                const titleAttr = judul ? ` title="${judul.replace(/"/g,'&quot;')}"` : '';
+                const label = judul ? `${escHtml(tp.kode)}: ${escHtml(judulTrunc)}` : escHtml(tp.kode);
+                const titleAttr = judul ? ` title="${escHtml(judul)}"` : '';
                 return `<span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-medium cursor-pointer hover:bg-blue-200 transition-colors"${titleAttr}>
                     <span onclick="editJudulKolom('tp',${tp.id})">${label}</span>
                     <button onclick="hapusTP(${tp.id})" ${tpColumns.length <= 1 ? 'disabled class="opacity-30 cursor-not-allowed"' : 'class="hover:text-red-500 transition-colors"'}>
@@ -3702,6 +3732,8 @@
                 const lastKelas = localStorage.getItem('ejournal_detail_kelas');
                 if (lastKelas && [...sel.options].some(o => o.value === lastKelas)) sel.value = lastKelas;
             } catch(e) {}
+            // Load skillColumns dari localStorage (judul/deskripsi kolom skill)
+            _loadSkillColumns();
             renderTPColumnsList();
             renderAllSkillLists();
             if (kl.length) {
@@ -3843,26 +3875,30 @@
             // Build header dinamis untuk kolom TP dan Skill
             const tpHeaders = tpColumns.map(tp => {
                 const judul = tp.deskripsi || '';
-                const headerText = judul ? `${tp.kode}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${judul.length > 12 ? judul.slice(0,12)+'…' : judul}</span>` : tp.kode;
-                const titleAttr = judul ? ` title="${judul.replace(/"/g,'&quot;')}"` : '';
+                const judulShort = judul.length > 12 ? judul.slice(0,12)+'…' : judul;
+                const headerText = judul ? `${escHtml(tp.kode)}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${escHtml(judulShort)}</span>` : escHtml(tp.kode);
+                const titleAttr = judul ? ` title="${escHtml(judul)}"` : '';
                 return `<th class="px-2 py-3 text-center font-semibold bg-blue-50 text-blue-700 text-xs"${titleAttr}>${headerText}</th>`;
             }).join('');
             const praktekHeaders = skillColumns.praktek.map(c => {
                 const judul = c.deskripsi || '';
-                const headerText = judul ? `${c.kode}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${judul.length > 12 ? judul.slice(0,12)+'…' : judul}</span>` : c.kode;
-                const titleAttr = judul ? ` title="${judul.replace(/"/g,'&quot;')}"` : '';
+                const judulShort = judul.length > 12 ? judul.slice(0,12)+'…' : judul;
+                const headerText = judul ? `${escHtml(c.kode)}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${escHtml(judulShort)}</span>` : escHtml(c.kode);
+                const titleAttr = judul ? ` title="${escHtml(judul)}"` : '';
                 return `<th class="px-2 py-3 text-center font-semibold bg-green-50 text-green-700 text-xs"${titleAttr}>${headerText}</th>`;
             }).join('');
             const proyekHeaders = skillColumns.proyek.map(c => {
                 const judul = c.deskripsi || '';
-                const headerText = judul ? `${c.kode}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${judul.length > 12 ? judul.slice(0,12)+'…' : judul}</span>` : c.kode;
-                const titleAttr = judul ? ` title="${judul.replace(/"/g,'&quot;')}"` : '';
+                const judulShort = judul.length > 12 ? judul.slice(0,12)+'…' : judul;
+                const headerText = judul ? `${escHtml(c.kode)}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${escHtml(judulShort)}</span>` : escHtml(c.kode);
+                const titleAttr = judul ? ` title="${escHtml(judul)}"` : '';
                 return `<th class="px-2 py-3 text-center font-semibold bg-purple-50 text-purple-700 text-xs"${titleAttr}>${headerText}</th>`;
             }).join('');
             const portoHeaders = skillColumns.portofolio.map(c => {
                 const judul = c.deskripsi || '';
-                const headerText = judul ? `${c.kode}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${judul.length > 12 ? judul.slice(0,12)+'…' : judul}</span>` : c.kode;
-                const titleAttr = judul ? ` title="${judul.replace(/"/g,'&quot;')}"` : '';
+                const judulShort = judul.length > 12 ? judul.slice(0,12)+'…' : judul;
+                const headerText = judul ? `${escHtml(c.kode)}<br><span class="font-normal truncate block max-w-[80px]" style="font-size:0.65rem;opacity:0.8">${escHtml(judulShort)}</span>` : escHtml(c.kode);
+                const titleAttr = judul ? ` title="${escHtml(judul)}"` : '';
                 return `<th class="px-2 py-3 text-center font-semibold bg-pink-50 text-pink-700 text-xs"${titleAttr}>${headerText}</th>`;
             }).join('');
 
