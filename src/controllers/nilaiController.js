@@ -199,7 +199,7 @@ exports.download = async (req, res) => {
     allTpLists.forEach(arr => { if (arr.length > maxTP) maxTP = arr.length; });
     if (maxTP === 0) maxTP = 3; // minimal 3 kolom TP
 
-    // Kumpulkan deskripsi TP dari baris pertama yang punya deskripsi (bukan sama dengan kode)
+    // Kumpulkan deskripsi TP dari semua baris yang punya deskripsi (bukan sama dengan kode)
     const tpDeskripsiHeaders = {};
     for (const tpArr of allTpLists) {
       if (!tpArr.length) continue;
@@ -209,7 +209,6 @@ exports.download = async (req, res) => {
           tpDeskripsiHeaders[tpNum] = tp.deskripsi;
         }
       });
-      if (Object.keys(tpDeskripsiHeaders).length >= maxTP) break;
     }
 
     const data = list.map((n, i) => {

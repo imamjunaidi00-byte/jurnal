@@ -3478,13 +3478,23 @@
             return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
+        // Partisi localStorage per guru agar data satu guru tidak menimpa guru lain
+        // di perangkat yang dipakai bersama (mis. lab komputer).
+        function _guruKey(base) {
+            try {
+                const gi = JSON.parse(localStorage.getItem('guru_info') || '{}');
+                const uid = gi.id || gi.username || '';
+                return uid ? base + '_' + uid : base;
+            } catch(e) { return base; }
+        }
+
         function _saveSkillColumns() {
-            try { localStorage.setItem('ejournal_skill_columns', JSON.stringify(skillColumns)); } catch(e) {}
+            try { localStorage.setItem(_guruKey('ejournal_skill_columns'), JSON.stringify(skillColumns)); } catch(e) {}
         }
 
         function _loadSkillColumns() {
             try {
-                const raw = localStorage.getItem('ejournal_skill_columns');
+                const raw = localStorage.getItem(_guruKey('ejournal_skill_columns'));
                 if (!raw) return;
                 const parsed = JSON.parse(raw);
                 // Validate minimal structure
@@ -3496,6 +3506,22 @@
                             _skillIdCounter[type] = Math.max(...skillColumns[type].map(c => c.id));
                         }
                     });
+                }
+            } catch(e) {}
+        }
+
+        function _saveTPColumns() {
+            try { localStorage.setItem(_guruKey('ejournal_tp_columns'), JSON.stringify(tpColumns)); } catch(e) {}
+        }
+
+        function _loadTPColumns() {
+            try {
+                const raw = localStorage.getItem(_guruKey('ejournal_tp_columns'));
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    tpColumns = parsed;
+                    _tpIdCounter = Math.max(...parsed.map(c => c.id));
                 }
             } catch(e) {}
         }
@@ -3561,6 +3587,7 @@
             _tpIdCounter++;
             const kode = 'TP' + _tpIdCounter;
             tpColumns.push({ id: _tpIdCounter, kode, deskripsi: '' });
+            _saveTPColumns();
             renderTPColumnsList();
             renderDetailNilaiTable(document.getElementById('detail-kelas').value);
         }
@@ -3573,6 +3600,7 @@
                 const d = detailNilaiData[sid];
                 if (d) delete d['tp_' + tpId];
             });
+            _saveTPColumns();
             renderTPColumnsList();
             renderDetailNilaiTable(document.getElementById('detail-kelas').value);
         }
@@ -3609,6 +3637,7 @@
             if (type === 'tp') {
                 const col = tpColumns.find(c => c.id === id);
                 if (col) col.deskripsi = judul;
+                _saveTPColumns();
                 renderTPColumnsList();
             } else {
                 const col = skillColumns[type]?.find(c => c.id === id);
@@ -3733,6 +3762,7 @@
                 if (lastKelas && [...sel.options].some(o => o.value === lastKelas)) sel.value = lastKelas;
             } catch(e) {}
             // Load skillColumns dari localStorage (judul/deskripsi kolom skill)
+            _loadTPColumns();
             _loadSkillColumns();
             renderTPColumnsList();
             renderAllSkillLists();
@@ -3855,6 +3885,7 @@
                             }
                         });
                     }
+                    _saveTPColumns();
                     renderTPColumnsList();
                     renderAllSkillLists();
                 }
@@ -10566,6 +10597,7 @@ async function hapusGuruKelas(id) {
                 <label class="block text-xs font-semibold text-gray-600 mb-1">Judul / Deskripsi</label>
                 <input type="text" id="modal-judul-input" maxlength="80"
                     placeholder="Contoh: Memahami Jaringan Dasar"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();simpanJudulKolom();}"
                     class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 outline-none">
                 <p class="text-xs text-gray-400 mt-1">Kosongkan untuk menghapus judul.</p>
             </div>
