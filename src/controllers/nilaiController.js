@@ -199,12 +199,26 @@ exports.download = async (req, res) => {
     allTpLists.forEach(arr => { if (arr.length > maxTP) maxTP = arr.length; });
     if (maxTP === 0) maxTP = 3; // minimal 3 kolom TP
 
+    // Kumpulkan deskripsi TP dari baris pertama yang punya deskripsi (bukan sama dengan kode)
+    const tpDeskripsiHeaders = {};
+    for (const tpArr of allTpLists) {
+      if (!tpArr.length) continue;
+      tpArr.forEach((tp, idx) => {
+        const tpNum = parseInt((tp.kode || '').replace(/^TP/i, ''), 10) || (idx + 1);
+        if (tp.deskripsi && tp.deskripsi !== tp.kode && !tpDeskripsiHeaders[tpNum]) {
+          tpDeskripsiHeaders[tpNum] = tp.deskripsi;
+        }
+      });
+      if (Object.keys(tpDeskripsiHeaders).length >= maxTP) break;
+    }
+
     const data = list.map((n, i) => {
       const tpArr = allTpLists[i] || [];
       // Buat kolom TP1..TPn, kosong diisi 0
       const tpCols = {};
       for (let t = 1; t <= maxTP; t++) {
-        tpCols[`TP${t}`] = tpArr[t-1]?.nilai ?? 0;
+        const header = tpDeskripsiHeaders[t] ? `TP${t} - ${tpDeskripsiHeaders[t]}` : `TP${t}`;
+        tpCols[header] = tpArr[t-1]?.nilai ?? 0;
       }
 
       return {
