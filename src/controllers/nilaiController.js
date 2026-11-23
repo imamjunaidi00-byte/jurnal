@@ -431,19 +431,36 @@ exports.importNilai = async (req, res) => {
 
       // Ambil nilai, clamp 0-100
       const clamp = (v) => Math.min(100, Math.max(0, Math.round(Number(v) || 0)));
-      
-      // Deteksi kolom TP dinamis (TP1, TP2, TP3, ...)
-      const tpKeys = Object.keys(row).filter(k => /^TP\d+$/i.test(k)).sort();
+      // Cari key kolom skill: cocok eksak dulu, lalu toleran terhadap judul
+      // yang digabung di header export (mis. "Praktek (Instalasi Jaringan)")
+      const findSkillKey = (base) => {
+        const keys = Object.keys(row);
+        const lower = keys.map(k => k.toLowerCase());
+        let idx = lower.indexOf(base.toLowerCase());
+        if (idx === -1) idx = lower.findIndex(k => k.startsWith(base.toLowerCase()));
+        return idx === -1 ? null : keys[idx];
+      };
+      const praktekKey    = findSkillKey('Praktek');
+      const proyekKey     = findSkillKey('Proyek');
+      const portofolioKey = findSkillKey('Portofolio');
+
+      // Deteksi kolom TP dinamis; header bisa "TP1" atau "TP1 - <judul>" (hasil export)
+      const tpNum = (k) => (parseInt(k.match(/^TP(\d+)/i)?.[1], 10) || 0);
+      const tpKeys = Object.keys(row).filter(k => /^TP\d+/i.test(k))
+        .sort((a, b) => tpNum(a) - tpNum(b));
       let tpList = [];
       let nilaiAkhir = 0;
-      
+
       if (tpKeys.length > 0) {
         // Mode TP: buat array tpList dari kolom TP yang ditemukan
-        tpList = tpKeys.map(k => ({
-          kode: k.toUpperCase(),
-          deskripsi: k.toUpperCase(),
-          nilai: clamp(row[k]),
-        }));
+        tpList = tpKeys.map(k => {
+          const kode = `TP${tpNum(k)}`;
+          return {
+            kode,
+            deskripsi: kode,
+            nilai: clamp(row[k]),
+          };
+        });
         const totalTP = tpList.reduce((sum, tp) => sum + tp.nilai, 0);
         nilaiAkhir = tpList.length > 0 ? Math.round(totalTP / tpList.length) : 0;
       }
@@ -462,9 +479,9 @@ exports.importNilai = async (req, res) => {
         uh:            tpKeys.length > 0 ? null : clamp(row['UH'] || row['uh'] || 0),
         pts:           clamp(row['PTS'] || row['pts'] || 0),
         pas:           clamp(row['PAS'] || row['pas'] || 0),
-        praktek:       clamp(row['Praktek'] || row['praktek'] || 0),
-        proyek:        clamp(row['Proyek']  || row['proyek']  || 0),
-        portofolio:    clamp(row['Portofolio'] || row['portofolio'] || 0),
+        praktek:       clamp(row[praktekKey] || row['praktek'] || 0),
+        proyek:        clamp(row[proyekKey]  || row['proyek']  || 0),
+        portofolio:    clamp(row[portofolioKey] || row['portofolio'] || 0),
       };
 
       // Hitung nilai akhir
